@@ -163,6 +163,8 @@ exit 0
 EOF
 	chmod 755 "$tmpdir/DEBIAN/$script"
 done
+sed -e "s,^\(exit 0\)$,\ndepmod $version\n\1," -i "$tmpdir/DEBIAN/postinst"
+sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/postinst"
 
 # Build kernel header package
 (cd $srctree; find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl) > "$objtree/debian/hdrsrcfiles"
