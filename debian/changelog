@@ -1,0 +1,5 @@
+droid4-linux (5.1.0-1) unstable; urgency=medium
+
+  * Rework maemo/ascii branch.
+
+ -- Ivan J. <parazyd@dyne.org>  Tue, 21 May 2019 16:55:22 +0200

@@ -1,0 +1,33 @@
+Source: droid4-linux
+Section: droid4
+Priority: optional
+Maintainer: Ivan J. <parazyd@dyne.org>
+Build-Depends:
+ debhelper (>= 10),
+ bc,
+ flex,
+ bison,
+ libssl-dev:native,
+ libssl-dev,
+ liblz4-tool
+Standards-Version: 4.3.0
+Homepage: https://www.kernel.org/
+
+Package: linux-image-droid4
+Architecture: armhf armel
+Description: Linux kernel for Motorola Droid4
+ This package contains the Linux kernel, modules, and corresponding other files.
+
+Package: linux-headers-droid4
+Architecture: armhf armel
+Provides: linux-headers
+Description: Linux kernel headers for Motorola Droid4
+ This package provides kernel header files for Motorola Droid4
+ .
+ This is useful for people who need to build external modules
+
+Package: linux-image-droid4-dbg
+Architecture: armhf armel
+Description: Linux kernel debugging symbols for Motorola Droid4
+ This package will come in handy if you need to debug the kernel. It provides
+ all the necessary debug symbols for the kernel and its modules.

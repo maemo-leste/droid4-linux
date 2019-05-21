@@ -1,0 +1,4 @@
+#!/bin/sh
+#
+# /boot/boot needed for our way of kexecboot.
+ln -snf /boot /boot/boot
