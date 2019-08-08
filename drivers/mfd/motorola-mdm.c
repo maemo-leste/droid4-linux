@@ -491,7 +491,8 @@ static int motmdm_dlci_write(struct device *dev, struct motmdm_dlci *mot_dlci,
 		err = count;
 
 	kfree(cmd);
-	pm_runtime_put(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return err;
 }
@@ -1085,7 +1086,7 @@ static int motmdm_probe(struct serdev_device *serdev)
 	if (err)
 		return err;
 
-	pm_runtime_set_autosuspend_delay(dev, 50);
+	pm_runtime_set_autosuspend_delay(dev, 200);
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_enable(dev);
 	err = pm_runtime_get_sync(dev);
