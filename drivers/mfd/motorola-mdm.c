@@ -1145,7 +1145,13 @@ static int motmdm_probe(struct serdev_device *serdev)
 		goto cdev_cleanup;
 
 	if (ddata->cfg->aggressive_pm) {
-		pm_runtime_set_autosuspend_delay(&serdev->ctrl->dev, 50);
+		/*
+		 * Configure SoC 8250 device for 700 ms autosuspend delay, values
+		 * around 600 ms and shorter cause spurious wake-up events at least
+		 * on droid 4.
+		 */
+		pm_runtime_set_autosuspend_delay(serdev->ctrl->dev.parent, 700);
+
 		pm_runtime_put(&serdev->ctrl->dev);
 	}
 
