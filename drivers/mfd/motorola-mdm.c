@@ -1152,7 +1152,14 @@ static int motmdm_probe(struct serdev_device *serdev)
 		 */
 		pm_runtime_set_autosuspend_delay(serdev->ctrl->dev.parent, 700);
 
+		/* Allow parent serdev device to idle when open, balanced in remove*/
 		pm_runtime_put(&serdev->ctrl->dev);
+
+		/*
+		 * Keep parent SoC 8250 device active during use because of the OOB
+		 * GPIO wake-up signaling shared with USB PHY.
+		 */
+		pm_suspend_ignore_children(&serdev->ctrl->dev, false);
 	}
 
 	return 0;
