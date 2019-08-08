@@ -1164,9 +1164,9 @@ close:
 	serdev_device_close(serdev);
 
 disable:
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
-	pm_runtime_dont_use_autosuspend(dev);
 	gsm_serdev_unregister_device(gsd);
 
 	return err;
@@ -1191,9 +1191,9 @@ static void motmdm_remove(struct serdev_device *serdev)
 	serdev_device_close(serdev);
 	gsm_serdev_unregister_device(gsd);
 
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
-	pm_runtime_dont_use_autosuspend(dev);
 }
 
 static struct serdev_device_driver motmdm_driver = {
