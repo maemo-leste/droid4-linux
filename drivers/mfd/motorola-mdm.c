@@ -491,7 +491,8 @@ static int motmdm_dlci_write(struct device *dev, struct motmdm_dlci *mot_dlci,
 		err = count;
 
 	kfree(cmd);
-	pm_runtime_put(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return err;
 }
@@ -1085,7 +1086,7 @@ static int motmdm_probe(struct serdev_device *serdev)
 	if (err)
 		return err;
 
-	pm_runtime_set_autosuspend_delay(dev, 50);
+	pm_runtime_set_autosuspend_delay(dev, 200);
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_enable(dev);
 	err = pm_runtime_get_sync(dev);
@@ -1145,8 +1146,21 @@ static int motmdm_probe(struct serdev_device *serdev)
 		goto cdev_cleanup;
 
 	if (ddata->cfg->aggressive_pm) {
-		pm_runtime_set_autosuspend_delay(&serdev->ctrl->dev, 50);
+		/*
+		 * Configure SoC 8250 device for 700 ms autosuspend delay, values
+		 * around 600 ms and shorter cause spurious wake-up events at least
+		 * on droid 4.
+		 */
+		pm_runtime_set_autosuspend_delay(serdev->ctrl->dev.parent, 700);
+
+		/* Allow parent serdev device to idle when open, balanced in remove*/
 		pm_runtime_put(&serdev->ctrl->dev);
+
+		/*
+		 * Keep parent SoC 8250 device active during use because of the OOB
+		 * GPIO wake-up signaling shared with USB PHY.
+		 */
+		pm_suspend_ignore_children(&serdev->ctrl->dev, false);
 	}
 
 	return 0;
@@ -1158,9 +1172,9 @@ close:
 	serdev_device_close(serdev);
 
 disable:
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
-	pm_runtime_dont_use_autosuspend(dev);
 	gsm_serdev_unregister_device(gsd);
 
 	return err;
@@ -1185,9 +1199,9 @@ static void motmdm_remove(struct serdev_device *serdev)
 	serdev_device_close(serdev);
 	gsm_serdev_unregister_device(gsd);
 
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
-	pm_runtime_dont_use_autosuspend(dev);
 }
 
 static struct serdev_device_driver motmdm_driver = {
