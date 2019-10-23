@@ -1996,6 +1996,14 @@ config MFD_VEXPRESS_SYSREG
 	  System Registers are the platform configuration block
 	  on the ARM Ltd. Versatile Express board.
 
+config MFD_MOTMDM
+	tristate "Motorola Modem TS 27.010 Serdev Driver"
+	depends on SERIAL_DEV_BUS && PHY_MAPPHONE_MDM6600
+	help
+	  Select this for Motorola modems using TS 27.010 serial line
+	  discipline such as MDM6600 modem found on Motorola Mapphone
+	  series of devices such as Droid 4.
+
 config RAVE_SP_CORE
 	tristate "RAVE SP MCU core driver"
 	depends on SERIAL_DEV_BUS
