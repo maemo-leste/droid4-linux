@@ -1,0 +1,18 @@
+Motorola MDM modem device tree binding
+
+Required properties:
+- compatible		: Must be one of "motorola,mapphone-mdm6600-serdev"
+			  or a generic "motorola,mdm6600"
+- phys			: USB PHY with shared pins for UART power management
+- phy-names		: Name for the USB PHY
+- reg			: SPI chip select
+
+Example:
+
+&uart1 {
+	modem {
+		compatible = "motorola,mapphone-mdm6600-serdev";
+		phys = <&fsusb1_phy>;
+		phy-names = "usb";
+	};
+};
