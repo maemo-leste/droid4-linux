@@ -167,7 +167,7 @@ static int led_bl_parse_levels(struct device *dev,
 	} else if (num_levels >= 0)
 		dev_warn(dev, "Not enough levels defined\n");
 
-	ret = of_property_read_u32(node, "default-brightness", &value);
+	ret = of_property_read_u32(node, "default-brightness-level", &value);
 	if (!ret && value <= priv->max_brightness)
 		priv->default_brightness = value;
 	else if (!ret  && value > priv->max_brightness)
