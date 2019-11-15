@@ -31,7 +31,7 @@ static struct sg_table *omap_gem_map_dma_buf(
 	/* camera, etc, need physically contiguous.. but we need a
 	 * better way to know this..
 	 */
-	ret = omap_gem_pin(obj, &dma_addr);
+	ret = omap_gem_pin(obj, &dma_addr, true);
 	if (ret)
 		goto out;
 
