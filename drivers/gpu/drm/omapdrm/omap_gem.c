@@ -787,7 +787,7 @@ int omap_gem_pin(struct drm_gem_object *obj, dma_addr_t *dma_addr)
 			if (omap_obj->flags & OMAP_BO_TILED) {
 				block = tiler_reserve_2d(fmt,
 						omap_obj->width,
-						omap_obj->height, 0);
+						omap_obj->height, PAGE_SIZE);
 			} else {
 				block = tiler_reserve_1d(obj->size);
 			}
