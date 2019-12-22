@@ -1,3 +1,9 @@
+droid4-linux (5.4.0-1) unstable; urgency=medium
+
+  * Update to latest droid4-pending-v5.4 with initial PowerVR patch
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 22 Dec 2019 11:40:10 +0100
+
 droid4-linux (5.2.0-1) unstable; urgency=medium
 
   * Update to latest droid4-pending-v5.2
