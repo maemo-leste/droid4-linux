@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Ivan J. <parazyd@dyne.org>
 Build-Depends:
  debhelper (>= 10),
+ rsync,
  kmod,
  bc,
  flex,
