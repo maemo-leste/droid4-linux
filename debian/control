@@ -4,12 +4,14 @@ Priority: optional
 Maintainer: Ivan J. <parazyd@dyne.org>
 Build-Depends:
  debhelper (>= 10),
+ kmod,
  bc,
  flex,
  bison,
  libssl-dev:native,
  libssl-dev,
  liblz4-tool,
+ u-boot-tools,
  device-tree-compiler
 Standards-Version: 4.3.0
 Homepage: https://www.kernel.org/
