@@ -16,7 +16,7 @@ endif
 
 build-arch:
 	$(MAKE) ARCH=$(ARCH) $(CONFIG)
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) zImage modules $(DTB)
+	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) zImage modules dtbs $(DTB)
 
 binary-arch:
 ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_TARGET_MULTIARCH))
