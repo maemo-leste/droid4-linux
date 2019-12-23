@@ -9,7 +9,8 @@ Build-Depends:
  bison,
  libssl-dev:native,
  libssl-dev,
- liblz4-tool
+ liblz4-tool,
+ device-tree-compiler
 Standards-Version: 4.3.0
 Homepage: https://www.kernel.org/
 
