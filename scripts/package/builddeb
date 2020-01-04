@@ -164,8 +164,9 @@ test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_i
 case "$script" in
 postinst)
 	depmod $version
+	mkdir -p /boot/boot
 	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb
-	cp -f /boot/vmlinuz-$version /boot/zImage
+	cp -f /boot/vmlinuz-$version /boot/boot/zImage
 	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /boot/boot/omap4-droid4-xt894.dtb
 	;;
 postrm)
