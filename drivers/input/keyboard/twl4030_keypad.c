@@ -174,23 +174,6 @@ static int twl4030_read_kp_matrix_state(struct twl4030_keypad *kp, u16 *state)
 	return ret;
 }
 
-static bool twl4030_is_in_ghost_state(struct twl4030_keypad *kp, u16 *key_state)
-{
-	int i;
-	u16 check = 0;
-
-	for (i = 0; i < kp->n_rows; i++) {
-		u16 col = key_state[i];
-
-		if ((col & check) && hweight16(col) > 1)
-			return true;
-
-		check |= col;
-	}
-
-	return false;
-}
-
 static void twl4030_kp_scan(struct twl4030_keypad *kp, bool release_all)
 {
 	struct input_dev *input = kp->input;
@@ -204,9 +187,6 @@ static void twl4030_kp_scan(struct twl4030_keypad *kp, bool release_all)
 		int ret = twl4030_read_kp_matrix_state(kp, new_state);
 
 		if (ret < 0)	/* panic ... */
-			return;
-
-		if (twl4030_is_in_ghost_state(kp, new_state))
 			return;
 	}
 
