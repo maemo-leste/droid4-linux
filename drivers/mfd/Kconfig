@@ -1998,7 +1998,7 @@ config MFD_VEXPRESS_SYSREG
 
 config MFD_MOTMDM
 	tristate "Motorola Modem TS 27.010 Serdev Driver"
-	depends on SERIAL_DEV_BUS && PHY_MAPPHONE_MDM6600
+	depends on SERIAL_DEV_BUS && PHY_MAPPHONE_MDM6600 && N_GSM
 	help
 	  Select this for Motorola modems using TS 27.010 serial line
 	  discipline such as MDM6600 modem found on Motorola Mapphone
