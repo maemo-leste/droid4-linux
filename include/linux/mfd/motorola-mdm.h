@@ -1,8 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-struct gsm_serdev_dlci;
-struct kfifo;
-struct motmdm_response;
+#ifndef _LINUX_MFD_MOTMDM_H
+#define _LINUX_MFD_MOTMDM_H
+
+#include <linux/kfifo.h>
+#include <linux/serdev-gsm.h>
 
 enum motmdm_dlci_nr {
 	MOTMDM_DLCI1 = 1,
@@ -82,3 +84,5 @@ int motmdm_write(struct device *dev, struct motmdm_dlci *mot_dlci,
 	else
 		return -EINVAL;
 }
+
+#endif	/* _LINUX_MFD_MOTMDM_H */
