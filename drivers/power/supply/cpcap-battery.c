@@ -110,6 +110,8 @@ struct cpcap_coulomb_counter_data {
 enum cpcap_battery_state {
 	CPCAP_BATTERY_STATE_PREVIOUS,
 	CPCAP_BATTERY_STATE_LATEST,
+	CPCAP_BATTERY_STATE_LOW,
+	CPCAP_BATTERY_STATE_HIGH,
 	CPCAP_BATTERY_STATE_NR,
 };
 
@@ -181,6 +183,18 @@ static struct cpcap_battery_state_data *
 cpcap_battery_previous(struct cpcap_battery_ddata *ddata)
 {
 	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_PREVIOUS);
+}
+
+static struct cpcap_battery_state_data *
+cpcap_battery_get_lowest(struct cpcap_battery_ddata *ddata)
+{
+	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_LOW);
+}
+
+static struct cpcap_battery_state_data *
+cpcap_battery_get_highest(struct cpcap_battery_ddata *ddata)
+{
+	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_HIGH);
 }
 
 static int cpcap_charger_battery_temperature(struct cpcap_battery_ddata *ddata,
@@ -400,9 +414,19 @@ static bool cpcap_battery_full(struct cpcap_battery_ddata *ddata)
 	return false;
 }
 
+static bool cpcap_battery_low(struct cpcap_battery_ddata *ddata)
+{
+	struct cpcap_battery_state_data *state = cpcap_battery_latest(ddata);
+
+	if (state->current_ua && state->voltage <= 3300000)
+		return true;
+
+	return false;
+}
+
 static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 {
-	struct cpcap_battery_state_data state, *latest, *previous;
+	struct cpcap_battery_state_data state, *latest, *previous, *tmp;
 	ktime_t now;
 	int error;
 
@@ -430,6 +454,18 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	previous = cpcap_battery_previous(ddata);
 	memcpy(previous, latest, sizeof(*previous));
 	memcpy(latest, &state, sizeof(*latest));
+
+	if (cpcap_battery_full(ddata)) {
+		tmp = cpcap_battery_get_highest(ddata);
+		/* Update highest charge seen? */
+		if (latest->counter_uah <= tmp->counter_uah)
+			memcpy(tmp, latest, sizeof(*tmp));
+	} else if (cpcap_battery_low(ddata)) {
+		tmp = cpcap_battery_get_lowest(ddata);
+		/* Update lowest charge seen? */
+		if (latest->counter_uah >= tmp->counter_uah)
+			memcpy(tmp, latest, sizeof(*tmp));
+	}
 
 	return 0;
 }
