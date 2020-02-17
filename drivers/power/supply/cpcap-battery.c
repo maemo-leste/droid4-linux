@@ -136,6 +136,29 @@ struct cpcap_battery_ddata {
 	u16 vendor;
 };
 
+struct cpcap_battery_capacity {
+	int capacity;
+	int voltage;
+	int percentage;
+};
+
+#define CPCAP_CAP(l, v, p)			\
+{						\
+	.capacity = (l),			\
+	.voltage = (v),				\
+	.percentage = (p),			\
+},
+
+/* Pessimistic battery capacity mapping before high or low value is seen */
+static const struct cpcap_battery_capacity cpcap_battery_cap[] = {
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN,        0,   0)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL, 3100000,   0)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_LOW,      3300000,   2)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_NORMAL,   3700000,  50)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_HIGH,     4000000,  75)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_FULL,     4200000 - 18000, 100)
+};
+
 #define CPCAP_NO_BATTERY	-400
 
 static struct cpcap_battery_state_data *
@@ -411,6 +434,40 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	return 0;
 }
 
+static void cpcap_battery_get_rough(struct cpcap_battery_ddata *ddata,
+				    int *level, int *percentage)
+{
+	struct cpcap_battery_state_data *latest;
+	const struct cpcap_battery_capacity *cap = NULL;
+	int voltage, i;
+
+	latest = cpcap_battery_latest(ddata);
+	voltage = latest->voltage;
+
+	for (i = ARRAY_SIZE(cpcap_battery_cap) - 1; i >=0; i--) {
+		cap = &cpcap_battery_cap[i];
+		if (voltage >= cap->voltage)
+			break;
+	}
+
+	if (!cap)
+		return;
+
+	if (level)
+		*level = cap->capacity;
+	if (percentage)
+		*percentage = cap->percentage;
+}
+
+static int cpcap_battery_get_rough_capacity(struct cpcap_battery_ddata *ddata)
+{
+	int capacity = 0;
+
+	cpcap_battery_get_rough(ddata, &capacity, NULL);
+
+	return capacity;
+}
+
 static enum power_supply_property cpcap_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -516,18 +573,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		val->intval = div64_s64(tmp, 100);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
-		if (cpcap_battery_full(ddata))
-			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
-		else if (latest->voltage >= 3750000)
-			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
-		else if (latest->voltage >= 3300000)
-			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
-		else if (latest->voltage > 3100000)
-			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-		else if (latest->voltage <= 3100000)
-			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
-		else
-			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+		val->intval = cpcap_battery_get_rough_capacity(ddata);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		val->intval = ddata->config.info.charge_full_design;
