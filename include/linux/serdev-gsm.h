@@ -1,10 +1,14 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-struct serdev_device;
-struct gsm_mux;
-struct gsm_config;
-struct gsm_dlci;
+#ifndef _LINUX_SERDEV_GSM_H
+#define _LINUX_SERDEV_GSM_H
+
+#include <linux/device.h>
+#include <linux/serdev.h>
+#include <linux/types.h>
+
 struct gsm_serdev_dlci;
+struct gsm_config;
 
 /**
  * struct gsm_serdev - serdev-gsm instance
@@ -225,3 +229,4 @@ void gsm_serdev_data_kick(struct gsm_serdev *gsd)
 }
 
 #endif	/* CONFIG_SERIAL_DEV_BUS */
+#endif	/* _LINUX_SERDEV_GSM_H */
