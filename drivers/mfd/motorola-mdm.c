@@ -524,6 +524,8 @@ int motmdm_register_dlci(struct device *dev, struct motmdm_dlci *mot_dlci)
 	mot_dlci->handle_command = motmdm_dlci_handle_command;
 	INIT_LIST_HEAD(&mot_dlci->list);
 	init_waitqueue_head(&mot_dlci->read_queue);
+	list_add_tail(&mot_dlci->node, &ddata->dlcis);
+	mot_dlci->privdata = ddata;
 	gsm_dlci->line = mot_dlci->line;
 	gsm_dlci->receive_buf = motmdm_dlci_receive_buf;
 
@@ -533,11 +535,7 @@ int motmdm_register_dlci(struct device *dev, struct motmdm_dlci *mot_dlci)
 			 mot_dlci->line, err);
 		kfifo_free(&mot_dlci->read_fifo);
 		memset(gsm_dlci, 0, sizeof(*gsm_dlci));
-	} else {
-		mot_dlci->privdata = ddata;
 	}
-
-	list_add_tail(&mot_dlci->node, &ddata->dlcis);
 
 	pm_runtime_put(dev);
 
