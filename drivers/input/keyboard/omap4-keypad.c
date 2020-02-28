@@ -109,6 +109,34 @@ static void kbd_write_irqreg(struct omap4_keypad *keypad_data,
 		     keypad_data->base + keypad_data->irqreg_offset + offset);
 }
 
+static void omap4_keypad_scan_state(struct omap4_keypad *keypad_data,
+				    unsigned char *key_state,
+				    bool down)
+{
+	struct input_dev *input_dev = keypad_data->input;
+	unsigned int col, row, code, changed;
+	bool key_down;
+
+	for (row = 0; row < keypad_data->rows; row++) {
+		changed = key_state[row] ^ keypad_data->key_state[row];
+		if (!changed)
+			continue;
+
+		for (col = 0; col < keypad_data->cols; col++) {
+			if (changed & (1 << col)) {
+				code = MATRIX_SCAN_CODE(row, col,
+						keypad_data->row_shift);
+				key_down = key_state[row] & (1 << col);
+				if (key_down != down)
+					continue;
+				input_event(input_dev, EV_MSC, MSC_SCAN, code);
+				input_report_key(input_dev,
+						 keypad_data->keymap[code],
+						 key_down);
+			}
+		}
+	}
+}
 
 /* Interrupt handlers */
 static irqreturn_t omap4_keypad_irq_handler(int irq, void *dev_id)
@@ -125,7 +153,6 @@ static bool omap4_keypad_scan_keys(struct omap4_keypad *keypad_data, bool clear)
 {
 	struct input_dev *input_dev = keypad_data->input;
 	unsigned char key_state[ARRAY_SIZE(keypad_data->key_state)];
-	unsigned int col, row, code, changed;
 	u32 *rows_lo = (u32 *)key_state;
 	u32 *rows_hi = rows_lo + 1;
 
@@ -138,22 +165,11 @@ static bool omap4_keypad_scan_keys(struct omap4_keypad *keypad_data, bool clear)
 		*rows_hi = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE63_32);
 	}
 
-	for (row = 0; row < keypad_data->rows; row++) {
-		changed = key_state[row] ^ keypad_data->key_state[row];
-		if (!changed)
-			continue;
+	/* Scan for key up evetns for lost key-up interrupts */
+	omap4_keypad_scan_state(keypad_data, key_state, false);
 
-		for (col = 0; col < keypad_data->cols; col++) {
-			if (changed & (1 << col)) {
-				code = MATRIX_SCAN_CODE(row, col,
-						keypad_data->row_shift);
-				input_event(input_dev, EV_MSC, MSC_SCAN, code);
-				input_report_key(input_dev,
-						 keypad_data->keymap[code],
-						 key_state[row] & (1 << col));
-			}
-		}
-	}
+	/* Scan for key down events */
+	omap4_keypad_scan_state(keypad_data, key_state, true);
 
 	input_sync(input_dev);
 
