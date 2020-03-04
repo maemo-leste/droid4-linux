@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2015-2019 Texas Instruments Incorporated -  http://www.ti.com/
- * Authors: Tomi Valkeinen <tomi.valkeinen@ti.com>
- *          Jean-Jacques Hiblot <jjhiblot@ti.com>
+ * Author: Tomi Valkeinen <tomi.valkeinen@ti.com>
+ *
+ * Based on pwm_bl.c
  */
 
 #include <linux/backlight.h>
@@ -167,23 +168,13 @@ static int led_bl_parse_levels(struct device *dev,
 	} else if (num_levels >= 0)
 		dev_warn(dev, "Not enough levels defined\n");
 
-	ret = of_property_read_u32(node, "default-brightness", &value);
+	ret = of_property_read_u32(node, "default-brightness-level", &value);
 	if (!ret && value <= priv->max_brightness)
 		priv->default_brightness = value;
 	else if (!ret  && value > priv->max_brightness)
 		dev_warn(dev, "Invalid default brightness. Ignoring it\n");
 
 	return 0;
-}
-
-static void led_bl_cleanup(void *data)
-{
-	struct led_bl_data *priv = data;
-	int i;
-
-	led_bl_power_off(priv);
-	for (i = 0; i < priv->nb_leds; i++)
-		led_sysfs_enable(priv->leds[i]);
 }
 
 static int led_bl_probe(struct platform_device *pdev)
@@ -210,28 +201,38 @@ static int led_bl_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = devm_add_action_or_reset(&pdev->dev, led_bl_cleanup, priv);
-	if (ret)
-		return ret;
-
-	for (i = 0; i < priv->nb_leds; i++)
-		led_sysfs_disable(priv->leds[i]);
-
 	memset(&props, 0, sizeof(struct backlight_properties));
 	props.type = BACKLIGHT_RAW;
 	props.max_brightness = priv->max_brightness;
 	props.brightness = priv->default_brightness;
 	props.power = (priv->default_brightness > 0) ? FB_BLANK_POWERDOWN :
 		      FB_BLANK_UNBLANK;
-	priv->bl_dev = devm_backlight_device_register(&pdev->dev,
-			dev_name(&pdev->dev), &pdev->dev, priv, &led_bl_ops,
-			&props);
+	priv->bl_dev = backlight_device_register(dev_name(&pdev->dev),
+			&pdev->dev, priv, &led_bl_ops, &props);
 	if (IS_ERR(priv->bl_dev)) {
 		dev_err(&pdev->dev, "Failed to register backlight\n");
 		return PTR_ERR(priv->bl_dev);
 	}
 
+	for (i = 0; i < priv->nb_leds; i++)
+		led_sysfs_disable(priv->leds[i]);
+
 	backlight_update_status(priv->bl_dev);
+
+	return 0;
+}
+
+static int led_bl_remove(struct platform_device *pdev)
+{
+	struct led_bl_data *priv = platform_get_drvdata(pdev);
+	struct backlight_device *bl = priv->bl_dev;
+	int i;
+
+	backlight_device_unregister(bl);
+
+	led_bl_power_off(priv);
+	for (i = 0; i < priv->nb_leds; i++)
+		led_sysfs_enable(priv->leds[i]);
 
 	return 0;
 }
@@ -246,9 +247,10 @@ MODULE_DEVICE_TABLE(of, led_bl_of_match);
 static struct platform_driver led_bl_driver = {
 	.driver		= {
 		.name		= "led-backlight",
-		.of_match_table	= led_bl_of_match,
+		.of_match_table	= of_match_ptr(led_bl_of_match),
 	},
 	.probe		= led_bl_probe,
+	.remove		= led_bl_remove,
 };
 
 module_platform_driver(led_bl_driver);

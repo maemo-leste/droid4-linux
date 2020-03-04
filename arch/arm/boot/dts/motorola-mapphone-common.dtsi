@@ -184,11 +184,11 @@
 	};
 
 	backlight: backlight {
-	         compatible = "led-backlight";
+		compatible = "led-backlight";
 
-		 leds = <&backlight_led>;
-		 brightness-levels = <31 63 95 127 159 191 223 255>;
-		 default-brightness = <6>;
+		leds = <&backlight_led>;
+		brightness-levels = <31 63 95 127 159 191 223 255>;
+		default-brightness-level = <6>;
 	};
 };
 
