@@ -1179,7 +1179,7 @@ static void ccdc_configure(struct isp_ccdc_device *ccdc)
 	/* Use the raw, unprocessed data when writing to memory. The H3A and
 	 * histogram modules are still fed with lens shading corrected data.
 	 */
-	syn_mode &= ~ISPCCDC_SYN_MODE_VP2SDR;
+	syn_mode |= ISPCCDC_SYN_MODE_VP2SDR;
 
 	if (ccdc->output & CCDC_OUTPUT_MEMORY)
 		syn_mode |= ISPCCDC_SYN_MODE_WEN;
