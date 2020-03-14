@@ -1,13 +1,12 @@
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index e376ae46be08..38cb095d352a 100755
+index 66620610d7f8..c33a73a9c228 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -193,15 +193,28 @@ set -e
+@@ -193,9 +193,23 @@ set -e
  export DEB_MAINT_PARAMS="\$*"
  
  # Tell initramfs builder whether it's wanted
 -export INITRD=$(if_enabled_echo CONFIG_BLK_DEV_INITRD Yes No)
-+# export INITRD=$(if_enabled_echo CONFIG_BLK_DEV_INITRD Yes No)
 +export INITRD=No
  
  test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_image_path" $debhookdir/$script.d
@@ -28,9 +27,3 @@ index e376ae46be08..38cb095d352a 100755
  exit 0
  EOF
  	chmod 755 "$tmpdir/DEBIAN/$script"
- done
--sed -e "s,^\(exit 0\)$,\ndepmod $version\n\1," -i "$tmpdir/DEBIAN/postinst"
--sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/postinst"
- 
- if [ "$ARCH" != "um" ]; then
- 	deploy_kernel_headers debian/linux-headers
