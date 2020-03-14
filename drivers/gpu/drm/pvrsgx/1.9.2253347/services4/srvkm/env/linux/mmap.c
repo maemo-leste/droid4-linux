@@ -1374,7 +1374,7 @@ MMapVOpenExt(struct vm_area_struct* ps_vma)
 			FindOffsetStructByPID(priv, OSGetCurrentProcessIDKM());
 	if (WARN_ON(!psOffsetStruct))
 		return;
-	LinuxLockMutex(&g_sMMapMutex);
+	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 	MMapVOpenNoLock(ps_vma, psOffsetStruct);
 	LinuxUnLockMutex(&g_sMMapMutex);
 }
@@ -1388,7 +1388,7 @@ MMapVCloseExt(struct vm_area_struct* ps_vma)
 			FindOffsetStructByPID(priv, OSGetCurrentProcessIDKM());
 	if (WARN_ON(!psOffsetStruct))
 		return;
-	LinuxLockMutex(&g_sMMapMutex);
+	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 	MMapVCloseNoLock(ps_vma, psOffsetStruct);
 
 	drm_gem_vm_close(ps_vma);
@@ -1416,7 +1416,7 @@ PVRMMapExt(struct file* pFile, struct vm_area_struct* ps_vma)
 
     PVR_UNREFERENCED_PARAMETER(pFile);
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
     ui32ByteSize = ps_vma->vm_end - ps_vma->vm_start;
 
