@@ -1,4 +1,3 @@
-0001-Run-depmod-and-ln-in-debian-postinst.patch
 0002-Do-not-remove-the-debian-directory-in-make-mrproper.patch
 0003-wip-temporarily-undo-arch-change.patch
 0004-wip-more-build-hacks.patch
