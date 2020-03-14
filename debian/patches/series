@@ -1,0 +1,8 @@
+0001-Run-depmod-and-ln-in-debian-postinst.patch
+0002-Do-not-remove-the-debian-directory-in-make-mrproper.patch
+0003-wip-temporarily-undo-arch-change.patch
+0004-wip-more-build-hacks.patch
+0005-wip-do-not-build-libc-headers-for-now.patch
+0006-Add-necessary-droid4-quirks-to-scripts-package-build.patch
+0007-Use-cp-instead-of-ln-in-scripts-package-builddeb.patch
+series

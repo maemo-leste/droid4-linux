@@ -1,0 +1,48 @@
+From 69a7b7cfb0b8351a48b46c65354428b7dd229f9e Mon Sep 17 00:00:00 2001
+From: parazyd <parazyd@dyne.org>
+Date: Sat, 4 Jan 2020 14:53:13 +0100
+Subject: [PATCH 6/7] Add necessary droid4 quirks to scripts/package/builddeb.
+
+---
+ scripts/package/builddeb | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/scripts/package/builddeb b/scripts/package/builddeb
+index cf007c4f37f1..48d3cb2e060f 100755
+--- a/scripts/package/builddeb
++++ b/scripts/package/builddeb
+@@ -156,15 +156,28 @@ set -e
+ export DEB_MAINT_PARAMS="\$*"
+ 
+ # Tell initramfs builder whether it's wanted
+-export INITRD=$(if_enabled_echo CONFIG_BLK_DEV_INITRD Yes No)
++# export INITRD=$(if_enabled_echo CONFIG_BLK_DEV_INITRD Yes No)
++export INITRD=No
+ 
+ test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_image_path" $debhookdir/$script.d
++
++case "$script" in
++postinst)
++	depmod $version
++	rm -f /boot/boot /boot/zImage /boot/omap4-droid4-xt894.dtb
++	ln -s /boot/vmlinuz-$version /boot/zImage
++	ln -s /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /boot/omap4-droid4-xt894.dtb
++	ln -s /boot /boot/boot
++	;;
++postrm)
++	rm -f /boot/zImage /boot/boot /boot/omap4-droid4-xt894.dtb
++	;;
++esac
++
+ exit 0
+ EOF
+ 	chmod 755 "$tmpdir/DEBIAN/$script"
+ done
+-sed -e "s,^\(exit 0\)$,\ndepmod $version\n\1," -i "$tmpdir/DEBIAN/postinst"
+-sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/postinst"
+ 
+ # Build kernel header package
+ (cd $srctree; find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl) > "$objtree/debian/hdrsrcfiles"
+-- 
+2.25.1
+

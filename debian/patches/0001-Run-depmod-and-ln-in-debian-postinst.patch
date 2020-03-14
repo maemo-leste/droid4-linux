@@ -1,0 +1,25 @@
+From 98410c4a73f3b2ffbee70133bd7525ac298b733d Mon Sep 17 00:00:00 2001
+From: parazyd <parazyd@dyne.org>
+Date: Tue, 21 May 2019 19:16:26 +0200
+Subject: [PATCH 1/7] Run depmod and ln in debian/postinst.
+
+---
+ scripts/package/builddeb | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/scripts/package/builddeb b/scripts/package/builddeb
+index c4c580f547ef..08bb13c8a6bf 100755
+--- a/scripts/package/builddeb
++++ b/scripts/package/builddeb
+@@ -163,6 +163,8 @@ exit 0
+ EOF
+ 	chmod 755 "$tmpdir/DEBIAN/$script"
+ done
++sed -e "s,^\(exit 0\)$,\ndepmod $version\n\1," -i "$tmpdir/DEBIAN/postinst"
++sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/postinst"
+ 
+ # Build kernel header package
+ (cd $srctree; find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl) > "$objtree/debian/hdrsrcfiles"
+-- 
+2.25.1
+
