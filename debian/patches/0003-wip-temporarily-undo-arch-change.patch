@@ -1,33 +1,17 @@
-From 4ab2aacd11e9e35b861fe63f6d2276c1bcb59264 Mon Sep 17 00:00:00 2001
-From: Merlijn Wajer <merlijn@wizzup.org>
-Date: Mon, 23 Dec 2019 20:37:12 +0100
-Subject: [PATCH 3/7] wip: temporarily undo arch change
-
----
- scripts/package/builddeb | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
-
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index 08bb13c8a6bf..d24507eec234 100755
+index 1939fe84642b..8a23c3a3c3cd 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -132,11 +132,11 @@ fi
- if [ "$ARCH" != "um" ]; then
- 	$MAKE -f $srctree/Makefile headers
- 	$MAKE -f $srctree/Makefile headers_install INSTALL_HDR_PATH="$libc_headers_dir/usr"
--	# move asm headers to /usr/include/<libc-machine>/asm to match the structure
--	# used by Debian-based distros (to support multi-arch)
--	host_arch=$(dpkg-architecture -a$(cat debian/arch) -qDEB_HOST_MULTIARCH)
--	mkdir $libc_headers_dir/usr/include/$host_arch
--	mv $libc_headers_dir/usr/include/asm $libc_headers_dir/usr/include/$host_arch/
-+	## move asm headers to /usr/include/<libc-machine>/asm to match the structure
-+	## used by Debian-based distros (to support multi-arch)
-+	#host_arch=$(dpkg-architecture -a$(cat debian/arch) -qDEB_HOST_MULTIARCH)
-+	#mkdir $libc_headers_dir/usr/include/$host_arch
-+	#mv $libc_headers_dir/usr/include/asm $libc_headers_dir/usr/include/$host_arch/
- fi
+@@ -94,9 +94,9 @@ deploy_libc_headers () {
  
- # Install the maintainer scripts
--- 
-2.25.1
-
+ 	# move asm headers to /usr/include/<libc-machine>/asm to match the structure
+ 	# used by Debian-based distros (to support multi-arch)
+-	host_arch=$(dpkg-architecture -a$(cat debian/arch) -qDEB_HOST_MULTIARCH)
+-	mkdir $pdir/usr/include/$host_arch
+-	mv $pdir/usr/include/asm $pdir/usr/include/$host_arch/
++	#host_arch=$(dpkg-architecture -a$(cat debian/arch) -qDEB_HOST_MULTIARCH)
++	#mkdir $pdir/usr/include/$host_arch
++	#mv $pdir/usr/include/asm $pdir/usr/include/$host_arch/
+ }
+ 
+ version=$KERNELRELEASE

@@ -1,21 +1,10 @@
-From 5cb2c86f0ae5a8522202505b2b28b264ef524c7e Mon Sep 17 00:00:00 2001
-From: parazyd <parazyd@dyne.org>
-Date: Sat, 4 Jan 2020 15:46:36 +0100
-Subject: [PATCH 7/7] Use cp instead of ln in scripts/package/builddeb.
-
-kexecboot doesn't do symlinks.
----
- scripts/package/builddeb | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
- mode change 100755 => 100644 scripts/package/builddeb
-
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
 old mode 100755
 new mode 100644
-index 48d3cb2e060f..a339f7ac429b
+index 38cb095d352a..3d3f8d1effee
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -164,13 +164,13 @@ test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_i
+@@ -201,13 +201,13 @@ test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_i
  case "$script" in
  postinst)
  	depmod $version
@@ -34,6 +23,3 @@ index 48d3cb2e060f..a339f7ac429b
  	;;
  esac
  
--- 
-2.25.1
-

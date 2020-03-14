@@ -1,17 +1,8 @@
-From 69a7b7cfb0b8351a48b46c65354428b7dd229f9e Mon Sep 17 00:00:00 2001
-From: parazyd <parazyd@dyne.org>
-Date: Sat, 4 Jan 2020 14:53:13 +0100
-Subject: [PATCH 6/7] Add necessary droid4 quirks to scripts/package/builddeb.
-
----
- scripts/package/builddeb | 19 ++++++++++++++++---
- 1 file changed, 16 insertions(+), 3 deletions(-)
-
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index cf007c4f37f1..48d3cb2e060f 100755
+index e376ae46be08..38cb095d352a 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -156,15 +156,28 @@ set -e
+@@ -193,15 +193,28 @@ set -e
  export DEB_MAINT_PARAMS="\$*"
  
  # Tell initramfs builder whether it's wanted
@@ -41,8 +32,5 @@ index cf007c4f37f1..48d3cb2e060f 100755
 -sed -e "s,^\(exit 0\)$,\ndepmod $version\n\1," -i "$tmpdir/DEBIAN/postinst"
 -sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/postinst"
  
- # Build kernel header package
- (cd $srctree; find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl) > "$objtree/debian/hdrsrcfiles"
--- 
-2.25.1
-
+ if [ "$ARCH" != "um" ]; then
+ 	deploy_kernel_headers debian/linux-headers

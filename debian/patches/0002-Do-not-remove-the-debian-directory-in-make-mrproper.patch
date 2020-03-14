@@ -1,17 +1,8 @@
-From ca84748dbb62f0b838a2c42e8b61df2fdc948538 Mon Sep 17 00:00:00 2001
-From: Merlijn Wajer <merlijn@wizzup.org>
-Date: Mon, 23 Dec 2019 13:31:46 +0100
-Subject: [PATCH 2/7] Do not remove the debian directory in make mrproper.
-
----
- Makefile | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/Makefile b/Makefile
-index 6a01b073915e..aedd610e9b56 100644
+index e25db579ce74..a4a6c673d083 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1362,7 +1362,7 @@ CLEAN_FILES += modules.builtin.modinfo modules.nsdeps
+@@ -1352,7 +1352,7 @@ CLEAN_FILES += modules.builtin modules.builtin.modinfo modules.nsdeps
  # Directories & files removed with 'make mrproper'
  MRPROPER_DIRS  += include/config include/generated          \
  		  arch/$(SRCARCH)/include/generated .tmp_objdiff \
@@ -20,6 +11,3 @@ index 6a01b073915e..aedd610e9b56 100644
  MRPROPER_FILES += .config .config.old .version \
  		  Module.symvers \
  		  signing_key.pem signing_key.priv signing_key.x509	\
--- 
-2.25.1
-

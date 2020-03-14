@@ -1,25 +1,18 @@
-From 435c850ca1290b305c85114086c8afc82e1e482f Mon Sep 17 00:00:00 2001
-From: Merlijn Wajer <merlijn@wizzup.org>
-Date: Mon, 23 Dec 2019 21:50:32 +0100
-Subject: [PATCH 5/7] wip: do not build libc headers for now
-
----
- scripts/package/builddeb | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index 64c47a0dc6ad..cf007c4f37f1 100755
+index b3911e2d5a61..e376ae46be08 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -188,7 +188,7 @@ rm -f "$objtree/debian/hdrsrcfiles" "$objtree/debian/hdrobjfiles"
+@@ -205,10 +205,10 @@ sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/posti
  
  if [ "$ARCH" != "um" ]; then
- 	create_package "$kernel_headers_packagename" "$kernel_headers_dir"
--	create_package "$libc_headers_packagename" "$libc_headers_dir"
-+	#create_package "$libc_headers_packagename" "$libc_headers_dir"
+ 	deploy_kernel_headers debian/linux-headers
+-	create_package linux-headers-$version debian/linux-headers
++	create_package linux-headers-droid4 debian/linux-headers
+ 
+-	deploy_libc_headers debian/linux-libc-dev
+-	create_package linux-libc-dev debian/linux-libc-dev
++	#deploy_libc_headers debian/linux-libc-dev
++	#create_package linux-libc-dev debian/linux-libc-dev
  fi
  
  create_package "$packagename" "$tmpdir"
--- 
-2.25.1
-
