@@ -52,6 +52,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	PVR_DRM_MAKENAME(x, y) PVR_DRM_MAKENAME_HELPER(x, y)
 
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
+struct platform_device;
 #define	LDM_DEV	struct platform_device
 #endif
 
