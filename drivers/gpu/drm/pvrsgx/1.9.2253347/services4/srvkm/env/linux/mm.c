@@ -167,7 +167,7 @@ static IMG_VOID DebugMemAllocRecordRemove(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_V
 static IMG_CHAR *DebugMemAllocRecordTypeToString(DEBUG_MEM_ALLOC_TYPE eAllocType);
 
 
-static struct proc_dir_entry *g_SeqFileMemoryRecords;
+static struct pvr_proc_dir_entry *g_SeqFileMemoryRecords;
 static void* ProcSeqNextMemoryRecords(struct seq_file *sfile,void* el,loff_t off);
 static void ProcSeqShowMemoryRecords(struct seq_file *sfile,void* el);
 static void* ProcSeqOff2ElementMemoryRecords(struct seq_file * sfile, loff_t off);
@@ -201,7 +201,7 @@ static IMG_UINT32 g_LinuxMemAreaWaterMark;
 static IMG_UINT32 g_LinuxMemAreaHighWaterMark;
 
 
-static struct proc_dir_entry *g_SeqFileMemArea;
+static struct pvr_proc_dir_entry *g_SeqFileMemArea;
 
 static void* ProcSeqNextMemArea(struct seq_file *sfile,void* el,loff_t off);
 static void ProcSeqShowMemArea(struct seq_file *sfile,void* el);
