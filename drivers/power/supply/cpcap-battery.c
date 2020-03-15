@@ -469,15 +469,15 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	if (cpcap_battery_full(ddata)) {
 		full = cpcap_battery_get_full(ddata);
 		/* Update full state value? */
-		if (latest->counter_uah <= full->counter_uah ||
-		    !full->voltage) {
+		if (!full->voltage) {
 			memcpy(full, latest, sizeof(*full));
 
 			empty = cpcap_battery_get_empty(ddata);
-			if (empty->voltage && empty->voltage != -1)
+			if (empty->voltage) {
 				ddata->charge_full =
 					empty->counter_uah - full->counter_uah;
-			else if (ddata->charge_full) {
+				empty->voltage = -1;
+			} else if (ddata->charge_full) {
 				/* Initialize with user provided data */
 				empty->counter_uah =
 					full->counter_uah + ddata->charge_full;
@@ -488,18 +488,15 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	} else if (cpcap_battery_low(ddata)) {
 		empty = cpcap_battery_get_empty(ddata);
 		/* Update empty state value? */
-		if (latest->counter_uah >= empty->counter_uah ||
-		    !empty->voltage) {
+		if (!empty->voltage || empty->voltage == -1) {
 			memcpy(empty, latest, sizeof(*empty));
 
 			full = cpcap_battery_get_full(ddata);
-			if (full->voltage)
+			if (full->voltage) {
 				ddata->charge_full =
 					empty->counter_uah - full->counter_uah;
-			else if (ddata->charge_full)
-				/* Initialize with user provided data */
-				full->counter_uah =
-					empty->counter_uah - ddata->charge_full;
+				full->voltage = 0;
+			}
 		}
 	}
 
@@ -638,9 +635,9 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		empty = cpcap_battery_get_empty(ddata);
 		if (!empty->voltage || !ddata->charge_full)
 			return -ENODATA;
-		val->intval = (empty->counter_uah -
-			       latest->counter_uah) * 100;
-		val->intval /= ddata->charge_full;
+		val->intval = empty->counter_uah - latest->counter_uah;
+		val->intval = clamp(val->intval, 0, ddata->charge_full);
+		val->intval = val->intval * 100 / ddata->charge_full;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		val->intval = cpcap_battery_get_capacity_level(ddata);
@@ -650,6 +647,10 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		if (!empty->voltage)
 			return -ENODATA;
 		val->intval = empty->counter_uah - latest->counter_uah;
+		if (val->intval < 0)
+			val->intval = 0;
+		else if (ddata->charge_full && ddata->charge_full < val->intval)
+			val->intval = ddata->charge_full;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 		if (!ddata->charge_full)
