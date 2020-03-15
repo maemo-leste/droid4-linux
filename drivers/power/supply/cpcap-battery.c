@@ -408,7 +408,8 @@ static bool cpcap_battery_full(struct cpcap_battery_ddata *ddata)
 	struct cpcap_battery_state_data *state = cpcap_battery_latest(ddata);
 
 	if (state->voltage >=
-	    (ddata->config.bat.constant_charge_voltage_max_uv - 18000))
+	    (ddata->config.bat.constant_charge_voltage_max_uv - 18000) &&
+		state->current_ua > -100000)
 		return true;
 
 	return false;
