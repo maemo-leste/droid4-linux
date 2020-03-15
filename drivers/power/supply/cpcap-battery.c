@@ -627,7 +627,9 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		empty = cpcap_battery_get_empty(ddata);
 		if (!empty->voltage || !ddata->charge_full)
 			return -ENODATA;
-		val->intval = empty->counter_uah - latest->counter_uah;
+		/* (ddata->charge_full / 200) is needed for rounding */
+		val->intval = empty->counter_uah - latest->counter_uah +
+			ddata->charge_full / 200;
 		val->intval = clamp(val->intval, 0, ddata->charge_full);
 		val->intval = val->intval * 100 / ddata->charge_full;
 		break;
