@@ -434,7 +434,7 @@ static bool cpcap_battery_low(struct cpcap_battery_ddata *ddata)
 
 static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 {
-	struct cpcap_battery_state_data state, *latest, *previous, *tmp;
+	struct cpcap_battery_state_data state, *latest, *previous, *low, *high;
 	ktime_t now;
 	int error;
 
@@ -464,15 +464,40 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	memcpy(latest, &state, sizeof(*latest));
 
 	if (cpcap_battery_full(ddata)) {
-		tmp = cpcap_battery_get_highest(ddata);
+		high = cpcap_battery_get_highest(ddata);
 		/* Update highest charge seen? */
-		if (latest->counter_uah <= tmp->counter_uah)
-			memcpy(tmp, latest, sizeof(*tmp));
+		if (latest->counter_uah <= high->counter_uah ||
+		    !high->voltage) {
+			memcpy(high, latest, sizeof(*high));
+
+			low = cpcap_battery_get_lowest(ddata);
+			if (low->voltage && low->voltage != -1)
+				ddata->charge_full =
+					low->counter_uah - high->counter_uah;
+			else if (ddata->charge_full) {
+				/* Initialize with user provided data */
+				low->counter_uah =
+					high->counter_uah + ddata->charge_full;
+				/* Mark it as initialized */
+				low->voltage = -1;
+			}
+		}
 	} else if (cpcap_battery_low(ddata)) {
-		tmp = cpcap_battery_get_lowest(ddata);
+		low = cpcap_battery_get_lowest(ddata);
 		/* Update lowest charge seen? */
-		if (latest->counter_uah >= tmp->counter_uah)
-			memcpy(tmp, latest, sizeof(*tmp));
+		if (latest->counter_uah >= low->counter_uah ||
+		    !low->voltage) {
+			memcpy(low, latest, sizeof(*low));
+
+			high = cpcap_battery_get_highest(ddata);
+			if (high->voltage)
+				ddata->charge_full =
+					low->counter_uah - high->counter_uah;
+			else if (ddata->charge_full)
+				/* Initialize with user provided data */
+				high->counter_uah =
+					low->counter_uah - ddata->charge_full;
+		}
 	}
 
 	return 0;
