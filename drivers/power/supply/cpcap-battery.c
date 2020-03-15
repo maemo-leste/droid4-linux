@@ -142,24 +142,22 @@ struct cpcap_battery_ddata {
 struct cpcap_battery_capacity {
 	int capacity;
 	int voltage;
-	int percentage;
 };
 
-#define CPCAP_CAP(l, v, p)			\
+#define CPCAP_CAP(l, v)				\
 {						\
 	.capacity = (l),			\
 	.voltage = (v),				\
-	.percentage = (p),			\
 },
 
 /* Pessimistic battery capacity mapping before high or low value is seen */
 static const struct cpcap_battery_capacity cpcap_battery_cap[] = {
-	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN,        0,   0)
-	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL, 3100000,   0)
-	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_LOW,      3300000,   2)
-	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_NORMAL,   3700000,  50)
-	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_HIGH,     4000000,  75)
-	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_FULL,     4200000 - 18000, 100)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN,        0)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL, 3100000)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_LOW,      3300000)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_NORMAL,   3700000)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_HIGH,     4000000)
+	CPCAP_CAP(POWER_SUPPLY_CAPACITY_LEVEL_FULL,     4200000 - 18000)
 };
 
 #define CPCAP_NO_BATTERY	-400
@@ -503,8 +501,7 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	return 0;
 }
 
-static void cpcap_battery_get_rough(struct cpcap_battery_ddata *ddata,
-				    int *level, int *percentage)
+static int cpcap_battery_get_capacity_level(struct cpcap_battery_ddata *ddata)
 {
 	struct cpcap_battery_state_data *latest;
 	const struct cpcap_battery_capacity *cap = NULL;
@@ -520,30 +517,9 @@ static void cpcap_battery_get_rough(struct cpcap_battery_ddata *ddata,
 	}
 
 	if (!cap)
-		return;
+		return 0;
 
-	if (level)
-		*level = cap->capacity;
-	if (percentage)
-		*percentage = cap->percentage;
-}
-
-static int cpcap_battery_get_rough_capacity(struct cpcap_battery_ddata *ddata)
-{
-	int capacity = 0;
-
-	cpcap_battery_get_rough(ddata, &capacity, NULL);
-
-	return capacity;
-}
-
-static int cpcap_battery_get_rough_percentage(struct cpcap_battery_ddata *ddata)
-{
-	int percentage = 0;
-
-	cpcap_battery_get_rough(ddata, NULL, &percentage);
-
-	return percentage;
+	return cap->capacity;
 }
 
 static enum power_supply_property cpcap_battery_props[] = {
@@ -662,7 +638,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		val->intval /= ddata->charge_full;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
-		val->intval = cpcap_battery_get_rough_capacity(ddata);
+		val->intval = cpcap_battery_get_capacity_level(ddata);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		low = cpcap_battery_get_lowest(ddata);
