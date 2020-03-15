@@ -573,10 +573,10 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 				      union power_supply_propval *val)
 {
 	struct cpcap_battery_ddata *ddata = power_supply_get_drvdata(psy);
-	struct cpcap_battery_state_data *latest, *previous, *low, *high;
+	struct cpcap_battery_state_data *latest, *previous, *low;
 	u32 sample;
 	s32 accumulator;
-	int cached, delta, est;
+	int cached;
 	s64 tmp;
 
 	cached = cpcap_battery_update_status(ddata);
@@ -654,25 +654,12 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		val->intval = div64_s64(tmp, 100);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		est = cpcap_battery_get_rough_percentage(ddata);
-		high = cpcap_battery_get_highest(ddata);
-		if (high->voltage) {
-			delta = latest->counter_uah - high->counter_uah;
-			val->intval = (ddata->config.info.charge_full_design -
-				       delta) * 100;
-			val->intval /= ddata->config.info.charge_full_design;
-			delta = abs(val->intval - est);
-			break;
-		}
 		low = cpcap_battery_get_lowest(ddata);
-		if (low->voltage) {
-			delta = low->counter_uah - latest->counter_uah;
-			val->intval = (delta * 100) /
-				ddata->config.info.charge_full_design;
-			delta = abs(val->intval - est);
-			break;
-		}
-		val->intval = est;
+		if (!low->voltage || !ddata->charge_full)
+			return -ENODATA;
+		val->intval = (low->counter_uah -
+			       latest->counter_uah) * 100;
+		val->intval /= ddata->charge_full;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		val->intval = cpcap_battery_get_rough_capacity(ddata);
