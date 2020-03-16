@@ -778,9 +778,14 @@ void omap_gem_dma_sync_buffer(struct drm_gem_object *obj,
 {
 	struct drm_device *dev = obj->dev;
 	struct omap_gem_object *omap_obj = to_omap_bo(obj);
-	int i, npages = obj->size >> PAGE_SHIFT;
+	int error, i, npages = obj->size >> PAGE_SHIFT;
 	struct page **pages = omap_obj->pages;
 	bool dirty = false;
+
+	error = omap_gem_op_sync(obj, OMAP_GEM_READ | OMAP_GEM_WRITE);
+#ifdef SYNCDBG
+	WARN(error, "omap_gem_op_sync failed: %i\n", error);
+#endif
 
 	if (omap_gem_is_cached_coherent(obj))
 		return;
