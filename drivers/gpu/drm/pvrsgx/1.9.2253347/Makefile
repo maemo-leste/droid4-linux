@@ -137,7 +137,8 @@ ccflags-y += \
 	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
 	-DSUPPORT_DRI_DRM_EXTERNAL \
 	-DSUPPORT_LINUX_USING_SHARED_WORKQUEUES \
-	-DSUPPORT_MEMINFO_IDS
+	-DSUPPORT_MEMINFO_IDS \
+	-DSYS_USING_INTERRUPTS
 
 # Must not be set for omap5-sgx-ddk-um-linux.git glsdk_7.03.00.03 userspace
 ccflags-n += \
@@ -249,7 +250,6 @@ ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_li
 ccflags-y += -DSUPPORT_DMABUF
 
 # these must not be set or we can't compile successfully for omap
-ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors, asynchronous external abort
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
