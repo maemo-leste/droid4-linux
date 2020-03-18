@@ -916,8 +916,8 @@ static void motmdm_cdev_cleanup(struct device *dev)
 	struct motmdm_cdev *cdata, *tmp;
 
 	list_for_each_entry_safe(cdata, tmp, &ddata->cdevs, node) {
-		motmdm_cdev_free_one(cdata);
 		list_del(&cdata->node);
+		motmdm_cdev_free_one(cdata);
 	}
 
 	class_destroy(ddata->class);
