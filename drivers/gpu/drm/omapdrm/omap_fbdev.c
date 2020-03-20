@@ -153,7 +153,7 @@ static int omap_fbdev_create(struct drm_fb_helper *helper,
 	 * to it).  Then we just need to be sure that we are able to re-
 	 * pin it in case of an opps.
 	 */
-	ret = omap_gem_pin(fbdev->bo, &dma_addr);
+	ret = omap_gem_pin(fbdev->bo, &dma_addr, true);
 	if (ret) {
 		dev_err(dev->dev, "could not pin framebuffer\n");
 		ret = -ENOMEM;
