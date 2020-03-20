@@ -3128,7 +3128,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	pm_runtime_enable(dev);
 	pm_runtime_use_autosuspend(dev);
-	pm_runtime_set_autosuspend_delay(dev, 600);
+	pm_runtime_set_autosuspend_delay(dev, -1);
 	error = pm_runtime_get_sync(dev);
 	if (error < 0) {
 		pm_runtime_put_noidle(dev);
