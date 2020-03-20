@@ -783,8 +783,19 @@ void omap_gem_dma_sync_buffer(struct drm_gem_object *obj,
 	struct page **pages = omap_obj->pages;
 	bool dirty = false;
 
-	if (omap_gem_is_using_page_faults(obj))
+	if (omap_gem_is_using_page_faults(obj)) {
+		for (i = 0; i < npages; i++) {
+			if (!omap_obj->dma_addrs[i])
+				continue;
+
+			dma_sync_single_for_device(dev->dev,
+						   omap_obj->dma_addrs[i],
+						   PAGE_SIZE,
+						   DMA_TO_DEVICE);
+		}
+
 		return;
+	}
 
 	for (i = 0; i < npages; i++) {
 		if (!omap_obj->dma_addrs[i]) {
