@@ -1,0 +1,12 @@
+diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
+index d7ef9c9ad1d6..7b8d6adcfded 100644
+--- a/arch/arm/configs/omap2plus_defconfig
++++ b/arch/arm/configs/omap2plus_defconfig
+@@ -339,6 +339,7 @@ CONFIG_REGULATOR_TPS65217=y
+ CONFIG_REGULATOR_TPS65218=y
+ CONFIG_REGULATOR_TPS65910=y
+ CONFIG_REGULATOR_TWL4030=y
++CONFIG_AK8975=m
+ CONFIG_RC_CORE=m
+ CONFIG_LIRC=y
+ CONFIG_RC_DEVICES=y

@@ -4,3 +4,4 @@
 0005-wip-do-not-build-libc-headers-for-now.patch
 0006-Add-necessary-droid4-quirks-to-scripts-package-build.patch
 0007-Use-cp-instead-of-ln-in-scripts-package-builddeb.patch
+0008-enable-droid4-magnetometer.patch
