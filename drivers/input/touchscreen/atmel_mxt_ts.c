@@ -2969,6 +2969,7 @@ static int mxt_input_open(struct input_dev *input_dev)
 	if (data->suspend_mode == MXT_SUSPEND_T9_CTRL)
 		pm_runtime_get(dev);
 
+	pm_runtime_use_autosuspend(dev);
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
 
@@ -2992,8 +2993,8 @@ static void mxt_input_close(struct input_dev *input_dev)
 		return;
 	}
 
-	pm_runtime_mark_last_busy(dev);
-	pm_runtime_put_autosuspend(dev);
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_put_sync(dev);
 }
 
 static int mxt_parse_device_properties(struct mxt_data *data)
@@ -3127,7 +3128,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	pm_runtime_enable(dev);
-	pm_runtime_use_autosuspend(dev);
+	/* Autosuspend won't be enabled until in open */
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_set_autosuspend_delay(dev, -1);
 	error = pm_runtime_get_sync(dev);
 	if (error < 0) {
@@ -3147,13 +3149,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto err_disable;
 	}
 
-	pm_runtime_mark_last_busy(dev);
-	pm_runtime_put_autosuspend(dev);
+	pm_runtime_put_sync(dev);
 
 	return 0;
 
 err_disable:
-	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
 	mxt_free_input_device(data);
