@@ -1,3 +1,10 @@
+droid4-linux (5.6.1-1) unstable; urgency=medium
+
+  * Add device tree changes from tmlind/droid4-pending-5.6, should help with
+    wifi on some devices, and hopefully modem hangs
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Thu, 30 Apr 2020 22:42:13 +0200
+
 droid4-linux (5.6.0-2) unstable; urgency=medium
 
   * Update to latest droid4-pending-v5.6 from tmlind
