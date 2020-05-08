@@ -276,7 +276,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 ******************************************************************************/
 IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 {
-#if 0
 #if !defined(NO_HARDWARE)
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 
@@ -291,13 +290,8 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 	SysDisableSGXInterrupts(psSysData);
 
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	{
-		int res = pm_runtime_put_sync(&gpsPVRLDMDev->dev);
-		if (res < 0)
-		{
-			PVR_DPF((PVR_DBG_ERROR, "DisableSGXClocks: pm_runtime_put_sync failed (%d)", -res));
-		}
-	}
+	pm_runtime_mark_last_busy(&gpsPVRLDMDev->dev);
+	pm_runtime_put_autosuspend(&gpsPVRLDMDev->dev);
 #if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
 	{
 		struct gpu_platform_data *pdata;
@@ -342,7 +336,6 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 #else	/* !defined(NO_HARDWARE) */
 	PVR_UNREFERENCED_PARAMETER(psSysData);
 #endif	/* !defined(NO_HARDWARE) */
-#endif
 }
 
 #if (defined(DEBUG) || defined(TIMING)) && !defined(PVR_NO_OMAP_TIMER)
