@@ -91,10 +91,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define DEVICE_MSVDX_INTERRUPT		(1<<1)
 #define DEVICE_DISP_INTERRUPT		(1<<2)
 
-#if defined(__linux__)
-#define	SYS_SGX_DEV_NAME	"omapdrm_pvr"
-#endif	
-
 /*****************************************************************************
  * system specific data structures
  *****************************************************************************/
