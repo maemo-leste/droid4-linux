@@ -1754,7 +1754,7 @@ FreeSubLinuxMemArea(LinuxMemArea *psLinuxMemArea)
     LinuxMemAreaStructFree(psLinuxMemArea);
 }
 
-
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
 static LinuxMemArea *
 LinuxMemAreaStructAlloc(IMG_VOID)
 {
@@ -1766,15 +1766,18 @@ LinuxMemAreaStructAlloc(IMG_VOID)
     dump_stack();
     return psLinuxMemArea;
 #else
-    return KMemCacheAllocWrapper(g_PsLinuxMemAreaCache, GFP_KERNEL);
+    LinuxMemArea *psLinuxMemArea = KMemCacheAllocWrapper(g_PsLinuxMemAreaCache, GFP_KERNEL);
+
+    INIT_LIST_HEAD(&psLinuxMemArea->sHandles);
+    return psLinuxMemArea;
 #endif
 }
 
-#if defined(SUPPORT_DRI_DRM_EXTERNAL)
 #  include <drm/omap_drm.h>
 static IMG_VOID
 LinuxMemAreaStructFree(LinuxMemArea *psLinuxMemArea)
 {
+	LinuxDrmHandle *psDrmHandle, *temp;
 	struct page **pages = NULL;
 
 	if (psLinuxMemArea->buf){
@@ -1788,11 +1791,60 @@ LinuxMemAreaStructFree(LinuxMemArea *psLinuxMemArea)
 		if(pages)
 			kfree(pages);
 	}
+
+	if(!list_empty(&psLinuxMemArea->sHandles)) {
+
+		/*
+		 * Ideally, I should put a WARN_ON here.
+		 * reaching this function without a empty list of
+		 * handles means that the userspace application has
+		 * not cleaned up the EGL context as it is supposed to.
+		 * As an example, GLSDK kmscube is one such application.
+		 * Having a WARN_ON flags such errors in userspace early.
+		 *
+		 * But I will be considerate. I will clean the list here.
+		 * But steps should also be taken to clean up EGL stack
+		 * properly in userspace.
+		 */
+#if 0
+		WARN_ON(true));
+#endif
+
+		/*
+		 * This cleanup is necessary to free the memory
+		 * associated with the list.
+		 * The GEM handles are already deleted by drm core.
+		 */
+		list_for_each_entry_safe(psDrmHandle, temp, &psLinuxMemArea->sHandles, sNode) {
+		    list_del(&psDrmHandle->sNode);
+		    kfree(psDrmHandle);
+		}
+	    }
+
     KMemCacheFreeWrapper(g_PsLinuxMemAreaCache, psLinuxMemArea);
     /* debug */
     //printk(KERN_ERR "%s(%p)\n", __FUNCTION__, psLinuxMemArea);
 }
+
 #else
+
+static LinuxMemArea *
+LinuxMemAreaStructAlloc(IMG_VOID)
+{
+/* debug */
+#if 0
+    LinuxMemArea *psLinuxMemArea;
+    psLinuxMemArea = kmem_cache_alloc(g_PsLinuxMemAreaCache, GFP_KERNEL);
+    printk(KERN_ERR "%s: psLinuxMemArea=%p\n", __FUNCTION__, psLinuxMemArea);
+    dump_stack();
+    return psLinuxMemArea;
+#else
+    LinuxMemArea *psLinuxMemArea = KMemCacheAllocWrapper(g_PsLinuxMemAreaCache, GFP_KERNEL);
+
+    return psLinuxMemArea;
+#endif
+}
+
 static IMG_VOID
 LinuxMemAreaStructFree(LinuxMemArea *psLinuxMemArea)
 {
