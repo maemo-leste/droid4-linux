@@ -1062,8 +1062,6 @@ MMapVOpen(struct vm_area_struct* ps_vma)
 static IMG_VOID
 MMapVCloseNoLock(struct vm_area_struct* ps_vma, PKV_OFFSET_STRUCT psOffsetStruct)
 {
-    struct drm_gem_object *obj;
-
     WARN_ON(!psOffsetStruct);
     if (!psOffsetStruct) {
         return;
@@ -1090,11 +1088,6 @@ MMapVCloseNoLock(struct vm_area_struct* ps_vma, PKV_OFFSET_STRUCT psOffsetStruct
 
 	DestroyOffsetStruct(psOffsetStruct);
     }
-
-    obj = ps_vma->vm_private_data;
-    drm_gem_object_put_unlocked(obj);
-
-    ps_vma->vm_private_data = NULL;
 }
 
 /*
@@ -1397,6 +1390,10 @@ MMapVCloseExt(struct vm_area_struct* ps_vma)
 		return;
 	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 	MMapVCloseNoLock(ps_vma, psOffsetStruct);
+
+	drm_gem_vm_close(ps_vma);
+	ps_vma->vm_private_data = NULL;
+
 	LinuxUnLockMutex(&g_sMMapMutex);
 }
 
