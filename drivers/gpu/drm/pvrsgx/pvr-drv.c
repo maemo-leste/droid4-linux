@@ -345,12 +345,15 @@ static int pvr_probe(struct platform_device *pdev)
 
 	error = pvr_quirk_omap4_init(ddata->dev, ddev);
 	if (error)
-		return error;
+		goto out_err_unregister;
 
 	pm_runtime_mark_last_busy(ddata->dev);
 	pm_runtime_put_autosuspend(ddata->dev);
 
 	return 0;
+
+out_err_unregister:
+	drm_dev_unregister(ddev);
 
 out_err_unload:
 	pvr_drm_unload(gpsPVRDRMDev);
