@@ -70,7 +70,13 @@ static int pvr_drm_unload(struct drm_device *dev)
 
 static int pvr_open(struct drm_device *dev, struct drm_file *file)
 {
+	struct pvr *ddata = dev->dev_private;
+
 	dev_dbg(dev->dev, "%s\n", __func__);
+
+	/* Just fail open for /dev/dri as all traffic is proxied via omapdrm */
+	if (ddata->quirks & PVR_QUIRK_OMAP4)
+		return -ENODEV;
 
 	return PVRSRVOpen(dev, file);
 }
@@ -337,6 +343,10 @@ static int pvr_probe(struct platform_device *pdev)
 
 	gpsPVRLDMDev = pdev;
 
+	error = pvr_quirk_omap4_init(ddata->dev, ddev);
+	if (error)
+		return error;
+
 	pm_runtime_mark_last_busy(ddata->dev);
 	pm_runtime_put_autosuspend(ddata->dev);
 
@@ -364,6 +374,7 @@ static int pvr_remove(struct platform_device *pdev)
 	if (active < 0)
 		pm_runtime_put_noidle(&pdev->dev);
 
+	pvr_quirk_omap4_cleanup();
 	drm_put_dev(gpsPVRDRMDev);
 	pvr_drm_unload(gpsPVRDRMDev);
 	gpsPVRDRMDev = NULL;
