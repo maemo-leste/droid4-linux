@@ -13,7 +13,7 @@ dtc-objs	+= dtc-lexer.lex.o dtc-parser.tab.o
 HOST_EXTRACFLAGS := -I $(srctree)/$(src)/libfdt
 
 ifeq ($(shell sh -c 'echo "\#include <yaml.h>" | ${HOSTCC} -E - 2>/dev/null >&2 && echo yes'),)
-ifneq ($(CHECK_DTBS),)
+ifneq ($(CHECK_DT_BINDING)$(CHECK_DTBS),)
 $(error dtc needs libyaml for DT schema validation support. \
 	Install the necessary libyaml development package.)
 endif
