@@ -53,6 +53,8 @@ extern void serdev_ngsm_unregister_dlci(struct device *dev,
 					struct gsm_serdev_dlci *dlci);
 extern int serdev_ngsm_write(struct device *dev, struct gsm_serdev_dlci *ops,
 			     const u8 *buf, int len);
+extern struct gsm_serdev_dlci *
+serdev_ngsm_get_dlci(struct device *dev, int line);
 #endif
 
 /* Interface for_gsm serdev support */
@@ -60,6 +62,8 @@ extern int gsm_serdev_register_device(struct gsm_serdev *gsd);
 extern void gsm_serdev_unregister_device(struct gsm_serdev *gsd);
 extern int gsm_serdev_register_tty_port(struct gsm_serdev *gsd, int line);
 extern void gsm_serdev_unregister_tty_port(struct gsm_serdev *gsd, int line);
+extern struct gsm_serdev_dlci *
+gsm_serdev_tty_port_get_dlci(struct gsm_serdev *gsd, int line);
 
 static inline void *gsm_serdev_get_drvdata(struct device *dev)
 {
@@ -112,6 +116,12 @@ gsm_serdev_register_tty_port(struct gsm_serdev *gsd, int line)
 static inline
 void gsm_serdev_unregister_tty_port(struct gsm_serdev *gsd, int line)
 {
+}
+
+static inline struct gsm_serdev_dlci *
+gsm_serdev_tty_port_get_dlci(struct gsm_serdev *gsd, int line)
+{
+	return NULL;
 }
 
 static inline void *gsm_serdev_get_drvdata(struct device *dev)
