@@ -78,7 +78,7 @@ struct omap4_keypad {
 	u32 irqreg_offset;
 	unsigned int row_shift;
 	bool no_autorepeat;
-	unsigned char key_state[8];
+	u64 keys;
 	unsigned short *keymap;
 };
 
@@ -107,6 +107,41 @@ static void kbd_write_irqreg(struct omap4_keypad *keypad_data,
 		     keypad_data->base + keypad_data->irqreg_offset + offset);
 }
 
+static int omap4_keypad_scan_state(struct omap4_keypad *keypad_data, u64 keys,
+				   bool down)
+{
+	struct input_dev *input_dev = keypad_data->input;
+	unsigned int col, row, code;
+	DECLARE_BITMAP(mask, 64);
+	unsigned long bit;
+	int events = 0;
+	bool key_down;
+	u64 changed;
+
+	changed = keys ^ keypad_data->keys;
+	bitmap_from_u64(mask, changed);
+
+	for_each_set_bit(bit, mask, keypad_data->rows * BITS_PER_BYTE) {
+		row = bit / BITS_PER_BYTE;
+		col = bit % BITS_PER_BYTE;
+		code = MATRIX_SCAN_CODE(row, col, keypad_data->row_shift);
+
+		if (BIT_ULL(bit) & keys)
+			key_down = true;
+		else
+			key_down = false;
+
+		if (key_down != down)
+			continue;
+
+		input_event(input_dev, EV_MSC, MSC_SCAN, code);
+		input_report_key(input_dev, keypad_data->keymap[code],
+				 key_down);
+		events++;
+	}
+
+	return events;
+}
 
 /* Interrupt handlers */
 static irqreturn_t omap4_keypad_irq_handler(int irq, void *dev_id)
@@ -123,34 +158,23 @@ static irqreturn_t omap4_keypad_irq_thread_fn(int irq, void *dev_id)
 {
 	struct omap4_keypad *keypad_data = dev_id;
 	struct input_dev *input_dev = keypad_data->input;
-	unsigned char key_state[ARRAY_SIZE(keypad_data->key_state)];
-	unsigned int col, row, code, changed;
-	u32 *new_state = (u32 *) key_state;
+	int keys_up, keys_down;
+	u32 low, high;
+	u64 keys;
 
-	*new_state = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE31_0);
-	*(new_state + 1) = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE63_32);
+	low = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE31_0);
+	high = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE63_32);
+	keys = low | (u64)high << 32;
 
-	for (row = 0; row < keypad_data->rows; row++) {
-		changed = key_state[row] ^ keypad_data->key_state[row];
-		if (!changed)
-			continue;
+	/* Scan for key up events for lost key-up interrupts */
+	keys_up = omap4_keypad_scan_state(keypad_data, keys, false);
 
-		for (col = 0; col < keypad_data->cols; col++) {
-			if (changed & (1 << col)) {
-				code = MATRIX_SCAN_CODE(row, col,
-						keypad_data->row_shift);
-				input_event(input_dev, EV_MSC, MSC_SCAN, code);
-				input_report_key(input_dev,
-						 keypad_data->keymap[code],
-						 key_state[row] & (1 << col));
-			}
-		}
-	}
+	/* Scan for key down events */
+	keys_down = omap4_keypad_scan_state(keypad_data, keys, true);
 
 	input_sync(input_dev);
 
-	memcpy(keypad_data->key_state, key_state,
-		sizeof(keypad_data->key_state));
+	keypad_data->keys = keys;
 
 	/* clear pending interrupts */
 	kbd_write_irqreg(keypad_data, OMAP4_KBD_IRQSTATUS,
