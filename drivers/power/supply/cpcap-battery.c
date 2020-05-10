@@ -504,6 +504,15 @@ static int cpcap_battery_get_rough_capacity(struct cpcap_battery_ddata *ddata)
 	return capacity;
 }
 
+static int cpcap_battery_get_rough_percentage(struct cpcap_battery_ddata *ddata)
+{
+	int percentage = 0;
+
+	cpcap_battery_get_rough(ddata, NULL, &percentage);
+
+	return percentage;
+}
+
 static enum power_supply_property cpcap_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -518,6 +527,7 @@ static enum power_supply_property cpcap_battery_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_COUNTER,
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_POWER_AVG,
+	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 	POWER_SUPPLY_PROP_SCOPE,
 	POWER_SUPPLY_PROP_TEMP,
@@ -528,10 +538,10 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 				      union power_supply_propval *val)
 {
 	struct cpcap_battery_ddata *ddata = power_supply_get_drvdata(psy);
-	struct cpcap_battery_state_data *latest, *previous;
+	struct cpcap_battery_state_data *latest, *previous, *low, *high;
 	u32 sample;
 	s32 accumulator;
-	int cached;
+	int cached, delta, est;
 	s64 tmp;
 
 	cached = cpcap_battery_update_status(ddata);
@@ -607,6 +617,27 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 					     latest->cc.offset);
 		tmp *= ((latest->voltage + previous->voltage) / 20000);
 		val->intval = div64_s64(tmp, 100);
+		break;
+	case POWER_SUPPLY_PROP_CAPACITY:
+		est = cpcap_battery_get_rough_percentage(ddata);
+		high = cpcap_battery_get_highest(ddata);
+		if (high->voltage) {
+			delta = latest->counter_uah - high->counter_uah;
+			val->intval = (ddata->config.info.charge_full_design -
+				       delta) * 100;
+			val->intval /= ddata->config.info.charge_full_design;
+			delta = abs(val->intval - est);
+			break;
+		}
+		low = cpcap_battery_get_lowest(ddata);
+		if (low->voltage) {
+			delta = low->counter_uah - latest->counter_uah;
+			val->intval = (delta * 100) /
+				ddata->config.info.charge_full_design;
+			delta = abs(val->intval - est);
+			break;
+		}
+		val->intval = est;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		val->intval = cpcap_battery_get_rough_capacity(ddata);
