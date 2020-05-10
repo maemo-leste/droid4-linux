@@ -411,10 +411,10 @@ static bool cpcap_battery_full(struct cpcap_battery_ddata *ddata)
 	    (ddata->config.bat.constant_charge_voltage_max_uv - 18000)) {
 		is_full = false;
 	} else if (is_full) {
-		if (state->current_ua < -150000)
+		if (state->current_ua < -170000)
 			is_full = false;
-	} else if (state->current_ua >= -150000 &&
-		   cpcap_battery_cc_get_avg_current(ddata) >= -100000) {
+	} else if (state->current_ua >= -170000 &&
+		   cpcap_battery_cc_get_avg_current(ddata) >= -112000) {
 		is_full = true;
 	}
 
