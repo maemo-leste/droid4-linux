@@ -110,8 +110,8 @@ struct cpcap_coulomb_counter_data {
 enum cpcap_battery_state {
 	CPCAP_BATTERY_STATE_PREVIOUS,
 	CPCAP_BATTERY_STATE_LATEST,
-	CPCAP_BATTERY_STATE_LOW,
-	CPCAP_BATTERY_STATE_HIGH,
+	CPCAP_BATTERY_STATE_EMPTY,
+	CPCAP_BATTERY_STATE_FULL,
 	CPCAP_BATTERY_STATE_NR,
 };
 
@@ -185,15 +185,15 @@ cpcap_battery_previous(struct cpcap_battery_ddata *ddata)
 }
 
 static struct cpcap_battery_state_data *
-cpcap_battery_get_lowest(struct cpcap_battery_ddata *ddata)
+cpcap_battery_get_empty(struct cpcap_battery_ddata *ddata)
 {
-	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_LOW);
+	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_EMPTY);
 }
 
 static struct cpcap_battery_state_data *
-cpcap_battery_get_highest(struct cpcap_battery_ddata *ddata)
+cpcap_battery_get_full(struct cpcap_battery_ddata *ddata)
 {
-	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_HIGH);
+	return cpcap_battery_get_state(ddata, CPCAP_BATTERY_STATE_FULL);
 }
 
 static int cpcap_charger_battery_temperature(struct cpcap_battery_ddata *ddata,
@@ -436,7 +436,8 @@ static bool cpcap_battery_low(struct cpcap_battery_ddata *ddata)
 
 static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 {
-	struct cpcap_battery_state_data state, *latest, *previous, *low, *high;
+	struct cpcap_battery_state_data state, *latest, *previous,
+					*empty, *full;
 	ktime_t now;
 	int error;
 
@@ -466,39 +467,39 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 	memcpy(latest, &state, sizeof(*latest));
 
 	if (cpcap_battery_full(ddata)) {
-		high = cpcap_battery_get_highest(ddata);
-		/* Update highest charge seen? */
-		if (latest->counter_uah <= high->counter_uah ||
-		    !high->voltage) {
-			memcpy(high, latest, sizeof(*high));
+		full = cpcap_battery_get_full(ddata);
+		/* Update full state value? */
+		if (latest->counter_uah <= full->counter_uah ||
+		    !full->voltage) {
+			memcpy(full, latest, sizeof(*full));
 
-			low = cpcap_battery_get_lowest(ddata);
-			if (low->voltage && low->voltage != -1)
+			empty = cpcap_battery_get_empty(ddata);
+			if (empty->voltage && empty->voltage != -1)
 				ddata->charge_full =
-					low->counter_uah - high->counter_uah;
+					empty->counter_uah - full->counter_uah;
 			else if (ddata->charge_full) {
 				/* Initialize with user provided data */
-				low->counter_uah =
-					high->counter_uah + ddata->charge_full;
+				empty->counter_uah =
+					full->counter_uah + ddata->charge_full;
 				/* Mark it as initialized */
-				low->voltage = -1;
+				empty->voltage = -1;
 			}
 		}
 	} else if (cpcap_battery_low(ddata)) {
-		low = cpcap_battery_get_lowest(ddata);
-		/* Update lowest charge seen? */
-		if (latest->counter_uah >= low->counter_uah ||
-		    !low->voltage) {
-			memcpy(low, latest, sizeof(*low));
+		empty = cpcap_battery_get_empty(ddata);
+		/* Update empty state value? */
+		if (latest->counter_uah >= empty->counter_uah ||
+		    !empty->voltage) {
+			memcpy(empty, latest, sizeof(*empty));
 
-			high = cpcap_battery_get_highest(ddata);
-			if (high->voltage)
+			full = cpcap_battery_get_full(ddata);
+			if (full->voltage)
 				ddata->charge_full =
-					low->counter_uah - high->counter_uah;
+					empty->counter_uah - full->counter_uah;
 			else if (ddata->charge_full)
 				/* Initialize with user provided data */
-				high->counter_uah =
-					low->counter_uah - ddata->charge_full;
+				full->counter_uah =
+					empty->counter_uah - ddata->charge_full;
 		}
 	}
 
@@ -553,7 +554,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 				      union power_supply_propval *val)
 {
 	struct cpcap_battery_ddata *ddata = power_supply_get_drvdata(psy);
-	struct cpcap_battery_state_data *latest, *previous, *low;
+	struct cpcap_battery_state_data *latest, *previous, *empty;
 	u32 sample;
 	s32 accumulator;
 	int cached;
@@ -634,10 +635,10 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		val->intval = div64_s64(tmp, 100);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		low = cpcap_battery_get_lowest(ddata);
-		if (!low->voltage || !ddata->charge_full)
+		empty = cpcap_battery_get_empty(ddata);
+		if (!empty->voltage || !ddata->charge_full)
 			return -ENODATA;
-		val->intval = (low->counter_uah -
+		val->intval = (empty->counter_uah -
 			       latest->counter_uah) * 100;
 		val->intval /= ddata->charge_full;
 		break;
@@ -645,10 +646,10 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 		val->intval = cpcap_battery_get_capacity_level(ddata);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		low = cpcap_battery_get_lowest(ddata);
-		if (!low->voltage)
+		empty = cpcap_battery_get_empty(ddata);
+		if (!empty->voltage)
 			return -ENODATA;
-		val->intval = low->counter_uah - latest->counter_uah;
+		val->intval = empty->counter_uah - latest->counter_uah;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 		if (!ddata->charge_full)
