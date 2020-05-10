@@ -468,35 +468,27 @@ static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
 
 	if (cpcap_battery_full(ddata)) {
 		full = cpcap_battery_get_full(ddata);
-		/* Update full state value? */
-		if (!full->voltage) {
-			memcpy(full, latest, sizeof(*full));
+		memcpy(full, latest, sizeof(*full));
 
-			empty = cpcap_battery_get_empty(ddata);
-			if (empty->voltage) {
-				ddata->charge_full =
-					empty->counter_uah - full->counter_uah;
-				empty->voltage = -1;
-			} else if (ddata->charge_full) {
-				/* Initialize with user provided data */
-				empty->counter_uah =
-					full->counter_uah + ddata->charge_full;
-				/* Mark it as initialized */
-				empty->voltage = -1;
-			}
+		empty = cpcap_battery_get_empty(ddata);
+		if (empty->voltage && empty->voltage != -1) {
+			empty->voltage = -1;
+			ddata->charge_full =
+				empty->counter_uah - full->counter_uah;
+		} else if (ddata->charge_full) {
+			empty->voltage = -1;
+			empty->counter_uah =
+				full->counter_uah + ddata->charge_full;
 		}
 	} else if (cpcap_battery_low(ddata)) {
 		empty = cpcap_battery_get_empty(ddata);
-		/* Update empty state value? */
-		if (!empty->voltage || empty->voltage == -1) {
-			memcpy(empty, latest, sizeof(*empty));
+		memcpy(empty, latest, sizeof(*empty));
 
-			full = cpcap_battery_get_full(ddata);
-			if (full->voltage) {
-				ddata->charge_full =
-					empty->counter_uah - full->counter_uah;
-				full->voltage = 0;
-			}
+		full = cpcap_battery_get_full(ddata);
+		if (full->voltage) {
+			full->voltage = 0;
+			ddata->charge_full =
+				empty->counter_uah - full->counter_uah;
 		}
 	}
 
