@@ -22,4 +22,14 @@ config SERIAL_DEV_CTRL_TTYPORT
 	depends on SERIAL_DEV_BUS != m
 	default y
 
+config SERIAL_DEV_N_GSM
+	tristate "Serial device TS 27.010 support"
+	depends on N_GSM
+	depends on SERIAL_DEV_CTRL_TTYPORT
+	help
+	  Select this if you want to use the TS 27.010 with a serial port with
+	  devices such as modems and GNSS devices.
+
+	  If unsure, say N.
+
 endif
