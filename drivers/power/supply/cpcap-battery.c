@@ -422,7 +422,7 @@ static bool cpcap_battery_low(struct cpcap_battery_ddata *ddata)
 	struct cpcap_battery_state_data *state = cpcap_battery_latest(ddata);
 	static bool is_low;
 
-	if (state->current_ua > 0 && (state->voltage <= 3300000 || is_low))
+	if (state->current_ua > 0 && (state->voltage <= 3350000 || is_low))
 		is_low = true;
 	else
 		is_low = false;
