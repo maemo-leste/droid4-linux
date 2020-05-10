@@ -1140,21 +1140,26 @@ update_count:
 static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 {
 	struct mxt_data *data = dev_id;
+	irqreturn_t ret = IRQ_HANDLED;
 
 	if (data->in_bootloader) {
 		/* bootloader state transition completion */
 		complete(&data->bl_completion);
-		return IRQ_HANDLED;
+		goto out_done;
 	}
 
 	if (!data->object_table)
-		return IRQ_HANDLED;
+		goto out_done;
 
-	if (data->T44_address) {
-		return mxt_process_messages_t44(data);
-	} else {
-		return mxt_process_messages(data);
-	}
+	if (data->T44_address)
+		ret = mxt_process_messages_t44(data);
+	else
+		ret = mxt_process_messages(data);
+
+out_done:
+	pm_runtime_mark_last_busy(&data->client->dev);
+
+	return ret;
 }
 
 static int mxt_t6_command(struct mxt_data *data, u16 cmd_offset,
@@ -2957,6 +2962,17 @@ static int mxt_input_open(struct input_dev *input_dev)
 		return error;
 	}
 
+	/*
+	 * Prevent autoidle if MXT_SUSPEND_T9_CTRL is the default as it will
+	 * power off the controller. Balanced inmxt_input_close().
+	 */
+	if (data->suspend_mode == MXT_SUSPEND_T9_CTRL)
+		pm_runtime_get(dev);
+
+	pm_runtime_use_autosuspend(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
 	return 0;
 }
 
@@ -2964,7 +2980,20 @@ static void mxt_input_close(struct input_dev *input_dev)
 {
 	struct mxt_data *data = input_get_drvdata(input_dev);
 	struct device *dev = &data->client->dev;
+	int error;
 
+	/* Release extra usage count for MXT_SUSPEND_T9_CTRL done in open */
+	if (data->suspend_mode == MXT_SUSPEND_T9_CTRL)
+		pm_runtime_put(dev);
+
+	/* Wake the device so autosuspend sees correct input_dev->users */
+	error = pm_runtime_get_sync(dev);
+	if (error < 0) {
+		pm_runtime_put_noidle(dev);
+		return;
+	}
+
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 }
 
@@ -3099,6 +3128,14 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	pm_runtime_enable(dev);
+	/* Autosuspend won't be enabled until in open */
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_set_autosuspend_delay(dev, -1);
+	error = pm_runtime_get_sync(dev);
+	if (error < 0) {
+		pm_runtime_put_noidle(dev);
+		return error;
+	}
 
 	error = mxt_initialize(data);
 	if (error)
@@ -3111,9 +3148,12 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto err_disable;
 	}
 
+	pm_runtime_put_sync(dev);
+
 	return 0;
 
 err_disable:
+	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
@@ -3124,12 +3164,24 @@ static int mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 	struct device *dev = &data->client->dev;
+	int active;
+
+	/* Attempt to change controller suspend mode to disable on remove */
+	active = pm_runtime_get_sync(dev);
+	if (active < 0)
+		pm_runtime_put_noidle(dev);
+	else
+		data->suspend_mode = MXT_SUSPEND_T9_CTRL;
+
+	pm_runtime_dont_use_autosuspend(dev);
+	if (active >= 0)
+		pm_runtime_put_sync(dev);
+	pm_runtime_disable(dev);
 
 	disable_irq(data->irq);
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
-	pm_runtime_disable(dev);
 
 	return 0;
 }
@@ -3152,7 +3204,10 @@ static int __maybe_unused mxt_runtime_suspend(struct device *dev)
 
 	case MXT_SUSPEND_DEEP_SLEEP:
 	default:
-		mxt_set_t7_power_cfg(data, MXT_POWER_CFG_DEEPSLEEP);
+		if (input_dev->users)
+			mxt_set_t7_power_cfg(data, MXT_POWER_CFG_IDLE);
+		else
+			mxt_set_t7_power_cfg(data, MXT_POWER_CFG_DEEPSLEEP);
 		break;
 	}
 
