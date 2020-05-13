@@ -1,8 +1,8 @@
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index b3911e2d5a61..e376ae46be08 100755
+index ef5b29a77e1d..66620610d7f8 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -205,10 +205,10 @@ sed -e "s,^\(exit 0\)$,\nln -snf /boot /boot/boot\n\1," -i "$tmpdir/DEBIAN/posti
+@@ -203,10 +203,10 @@ done
  
  if [ "$ARCH" != "um" ]; then
  	deploy_kernel_headers debian/linux-headers

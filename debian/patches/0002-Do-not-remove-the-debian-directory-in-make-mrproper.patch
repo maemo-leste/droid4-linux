@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index e25db579ce74..a4a6c673d083 100644
+index 3512f7b243dc..251ec27cd0fc 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1352,7 +1352,7 @@ CLEAN_FILES += modules.builtin modules.builtin.modinfo modules.nsdeps
+@@ -1388,7 +1388,7 @@ CLEAN_FILES += modules.builtin modules.builtin.modinfo modules.nsdeps
  # Directories & files removed with 'make mrproper'
  MRPROPER_DIRS  += include/config include/generated          \
  		  arch/$(SRCARCH)/include/generated .tmp_objdiff \

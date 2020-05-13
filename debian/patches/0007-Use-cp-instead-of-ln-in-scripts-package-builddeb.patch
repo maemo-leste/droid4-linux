@@ -1,10 +1,10 @@
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
 old mode 100755
 new mode 100644
-index 38cb095d352a..3d3f8d1effee
+index c33a73a9c228..705402a7c18d
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -201,13 +201,13 @@ test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_i
+@@ -200,13 +200,13 @@ test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_i
  case "$script" in
  postinst)
  	depmod $version
