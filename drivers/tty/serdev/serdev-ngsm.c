@@ -255,14 +255,16 @@ static int serdev_ngsm_phy_init(struct device *dev)
 }
 
 /*
- * Configure SoC 8250 device for 700 ms autosuspend delay, Values around 600 ms
- * and shorter cause spurious wake-up events at least on Droid 4. Also keep the
- * SoC 8250 device active during use because of the OOB GPIO wake-up signaling
- * shared with USB PHY.
+ * Configure SoC 8250 device for 1500 ms autosuspend delay. Values around 600 ms
+ * and shorter cause spurious wake-up events at least on Droid 4. Values below
+ * 1100 ms or so will cause the 8250 device to not always idle, probably because
+ * we need to wait for the shared OOB GPIO wake-up signal to down first. Also
+ * see the OOB GPIO wake-up signaling shared with USB PHY above managed using
+ * phy_pm_runtime_get and put calls.
  */
 static int motmdm_init(struct serdev_device *serdev)
 {
-	pm_runtime_set_autosuspend_delay(serdev->ctrl->dev.parent, 700);
+	pm_runtime_set_autosuspend_delay(serdev->ctrl->dev.parent, 1500);
 	pm_suspend_ignore_children(&serdev->ctrl->dev, false);
 
 	return 0;
