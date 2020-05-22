@@ -1,3 +1,9 @@
+droid4-linux (5.7.1-1) unstable; urgency=medium
+
+  * Merge latest droid4-pending-v5.7 from tmlind
+
+ -- Ivan J. <parazyd@dyne.org>  Fri, 22 May 2020 14:59:24 +0200
+
 droid4-linux (5.7.0-1) unstable; urgency=medium
 
   * Update to latest droid4-pending-v5.7 from tmlind
