@@ -954,7 +954,8 @@ fallback:
 
 		pr_debug("block timeout %ld", timeo);
 		mptcp_wait_data(sk, &timeo);
-		if (unlikely(__mptcp_tcp_fallback(msk)))
+		ssock = __mptcp_tcp_fallback(msk);
+		if (unlikely(ssock))
 			goto fallback;
 	}
 
@@ -1262,11 +1263,14 @@ static void mptcp_close(struct sock *sk, long timeout)
 
 	lock_sock(sk);
 
-	mptcp_token_destroy(msk->token);
 	inet_sk_state_store(sk, TCP_CLOSE);
 
-	__mptcp_flush_join_list(msk);
-
+	/* be sure to always acquire the join list lock, to sync vs
+	 * mptcp_finish_join().
+	 */
+	spin_lock_bh(&msk->join_list_lock);
+	list_splice_tail_init(&msk->join_list, &msk->conn_list);
+	spin_unlock_bh(&msk->join_list_lock);
 	list_splice_init(&msk->conn_list, &conn_list);
 
 	data_fin_tx_seq = msk->write_seq;
@@ -1316,11 +1320,12 @@ static void mptcp_copy_inaddrs(struct sock *msk, const struct sock *ssk)
 
 static int mptcp_disconnect(struct sock *sk, int flags)
 {
-	lock_sock(sk);
-	__mptcp_clear_xmit(sk);
-	release_sock(sk);
-	mptcp_cancel_work(sk);
-	return tcp_disconnect(sk, flags);
+	/* Should never be called.
+	 * inet_stream_connect() calls ->disconnect, but that
+	 * refers to the subflow socket, not the mptcp one.
+	 */
+	WARN_ON_ONCE(1);
+	return 0;
 }
 
 #if IS_ENABLED(CONFIG_MPTCP_IPV6)
@@ -1333,7 +1338,7 @@ static struct ipv6_pinfo *mptcp_inet6_sk(const struct sock *sk)
 #endif
 
 struct sock *mptcp_sk_clone(const struct sock *sk,
-			    const struct tcp_options_received *opt_rx,
+			    const struct mptcp_options_received *mp_opt,
 			    struct request_sock *req)
 {
 	struct mptcp_subflow_request_sock *subflow_req = mptcp_subflow_rsk(req);
@@ -1372,9 +1377,9 @@ struct sock *mptcp_sk_clone(const struct sock *sk,
 
 	msk->write_seq = subflow_req->idsn + 1;
 	atomic64_set(&msk->snd_una, msk->write_seq);
-	if (opt_rx->mptcp.mp_capable) {
+	if (mp_opt->mp_capable) {
 		msk->can_ack = true;
-		msk->remote_key = opt_rx->mptcp.sndr_key;
+		msk->remote_key = mp_opt->sndr_key;
 		mptcp_crypto_key_sha(msk->remote_key, NULL, &ack_seq);
 		ack_seq++;
 		msk->ack_seq = ack_seq;
@@ -1455,6 +1460,7 @@ static void mptcp_destroy(struct sock *sk)
 {
 	struct mptcp_sock *msk = mptcp_sk(sk);
 
+	mptcp_token_destroy(msk->token);
 	if (msk->cached_ext)
 		__skb_ext_put(msk->cached_ext);
 
@@ -1621,20 +1627,30 @@ bool mptcp_finish_join(struct sock *sk)
 	if (!msk->pm.server_side)
 		return true;
 
-	/* passive connection, attach to msk socket */
+	if (!mptcp_pm_allow_new_subflow(msk))
+		return false;
+
+	/* active connections are already on conn_list, and we can't acquire
+	 * msk lock here.
+	 * use the join list lock as synchronization point and double-check
+	 * msk status to avoid racing with mptcp_close()
+	 */
+	spin_lock_bh(&msk->join_list_lock);
+	ret = inet_sk_state_load(parent) == TCP_ESTABLISHED;
+	if (ret && !WARN_ON_ONCE(!list_empty(&subflow->node)))
+		list_add_tail(&subflow->node, &msk->join_list);
+	spin_unlock_bh(&msk->join_list_lock);
+	if (!ret)
+		return false;
+
+	/* attach to msk socket only after we are sure he will deal with us
+	 * at close time
+	 */
 	parent_sock = READ_ONCE(parent->sk_socket);
 	if (parent_sock && !sk->sk_socket)
 		mptcp_sock_graft(sk, parent_sock);
-
-	ret = mptcp_pm_allow_new_subflow(msk);
-	if (ret) {
-		/* active connections are already on conn_list */
-		spin_lock_bh(&msk->join_list_lock);
-		if (!WARN_ON_ONCE(!list_empty(&subflow->node)))
-			list_add_tail(&subflow->node, &msk->join_list);
-		spin_unlock_bh(&msk->join_list_lock);
-	}
-	return ret;
+	subflow->map_seq = msk->ack_seq;
+	return true;
 }
 
 bool mptcp_sk_is_subflow(const struct sock *sk)
@@ -1708,6 +1724,14 @@ static int mptcp_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 	int err;
 
 	lock_sock(sock->sk);
+	if (sock->state != SS_UNCONNECTED && msk->subflow) {
+		/* pending connection or invalid state, let existing subflow
+		 * cope with that
+		 */
+		ssock = msk->subflow;
+		goto do_connect;
+	}
+
 	ssock = __mptcp_socket_create(msk, TCP_SYN_SENT);
 	if (IS_ERR(ssock)) {
 		err = PTR_ERR(ssock);
@@ -1722,9 +1746,17 @@ static int mptcp_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		mptcp_subflow_ctx(ssock->sk)->request_mptcp = 0;
 #endif
 
+do_connect:
 	err = ssock->ops->connect(ssock, uaddr, addr_len, flags);
-	inet_sk_state_store(sock->sk, inet_sk_state_load(ssock->sk));
-	mptcp_copy_inaddrs(sock->sk, ssock->sk);
+	sock->state = ssock->state;
+
+	/* on successful connect, the msk state will be moved to established by
+	 * subflow_finish_connect()
+	 */
+	if (!err || err == EINPROGRESS)
+		mptcp_copy_inaddrs(sock->sk, ssock->sk);
+	else
+		inet_sk_state_store(sock->sk, inet_sk_state_load(ssock->sk));
 
 unlock:
 	release_sock(sock->sk);

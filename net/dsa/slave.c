@@ -856,19 +856,17 @@ dsa_slave_add_cls_matchall_mirred(struct net_device *dev,
 	struct dsa_port *to_dp;
 	int err;
 
-	act = &cls->rule->action.entries[0];
-
 	if (!ds->ops->port_mirror_add)
 		return -EOPNOTSUPP;
-
-	if (!act->dev)
-		return -EINVAL;
 
 	if (!flow_action_basic_hw_stats_check(&cls->rule->action,
 					      cls->common.extack))
 		return -EOPNOTSUPP;
 
 	act = &cls->rule->action.entries[0];
+
+	if (!act->dev)
+		return -EINVAL;
 
 	if (!dsa_slave_dev_check(act->dev))
 		return -EOPNOTSUPP;
@@ -1738,6 +1736,7 @@ int dsa_slave_create(struct dsa_port *port)
 	if (ds->ops->port_vlan_add && ds->ops->port_vlan_del)
 		slave_dev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 	slave_dev->hw_features |= NETIF_F_HW_TC;
+	slave_dev->features |= NETIF_F_LLTX;
 	slave_dev->ethtool_ops = &dsa_slave_ethtool_ops;
 	if (!IS_ERR_OR_NULL(port->mac))
 		ether_addr_copy(slave_dev->dev_addr, port->mac);
