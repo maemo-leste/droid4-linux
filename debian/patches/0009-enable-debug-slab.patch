@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index d397ad4006f2..c04a52a4c7d6 100644
+index 818caf3257aa..5cbcdeb084c4 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -585,6 +585,7 @@ CONFIG_MAGIC_SYSRQ=y
+@@ -586,6 +586,7 @@ CONFIG_MAGIC_SYSRQ=y
  CONFIG_DEBUG_FS=y
  CONFIG_SCHEDSTATS=y
  # CONFIG_DEBUG_BUGVERBOSE is not set

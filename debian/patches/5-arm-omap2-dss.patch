@@ -1,5 +1,5 @@
-
 diff --git a/arch/arm/mach-omap2/omap_hwmod.c b/arch/arm/mach-omap2/omap_hwmod.c
+index 82706af307de..c630457bb228 100644
 --- a/arch/arm/mach-omap2/omap_hwmod.c
 +++ b/arch/arm/mach-omap2/omap_hwmod.c
 @@ -3489,7 +3489,7 @@ static const struct omap_hwmod_reset dra7_reset_quirks[] = {

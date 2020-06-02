@@ -1,5 +1,5 @@
-
 diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
+index f77bf820b7a3..279c86029109 100644
 --- a/drivers/tty/serial/8250/8250_port.c
 +++ b/drivers/tty/serial/8250/8250_port.c
 @@ -2001,11 +2001,20 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
@@ -33,5 +33,3 @@ diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_
  }
  EXPORT_SYMBOL_GPL(serial8250_do_set_mctrl);
  
--- 
-2.26.2

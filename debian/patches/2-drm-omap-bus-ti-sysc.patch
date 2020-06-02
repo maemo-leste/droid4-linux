@@ -1,5 +1,5 @@
-
 diff --git a/drivers/bus/ti-sysc.c b/drivers/bus/ti-sysc.c
+index 32a01f7180af..647d3a1574b2 100644
 --- a/drivers/bus/ti-sysc.c
 +++ b/drivers/bus/ti-sysc.c
 @@ -221,6 +221,36 @@ static u32 sysc_read_sysstatus(struct sysc *ddata)
@@ -74,7 +74,7 @@ diff --git a/drivers/bus/ti-sysc.c b/drivers/bus/ti-sysc.c
  	if (ddata->offsets[SYSC_SYSCONFIG] == -ENODEV)
  		return 0;
  
-@@ -1828,11 +1884,10 @@ static int sysc_legacy_init(struct sysc *ddata)
+@@ -1832,11 +1888,10 @@ static int sysc_legacy_init(struct sysc *ddata)
   */
  static int sysc_reset(struct sysc *ddata)
  {
@@ -88,7 +88,7 @@ diff --git a/drivers/bus/ti-sysc.c b/drivers/bus/ti-sysc.c
  
  	if (ddata->legacy_mode ||
  	    ddata->cap->regbits->srst_shift < 0 ||
-@@ -1841,11 +1896,6 @@ static int sysc_reset(struct sysc *ddata)
+@@ -1845,11 +1900,6 @@ static int sysc_reset(struct sysc *ddata)
  
  	sysc_mask = BIT(ddata->cap->regbits->srst_shift);
  
@@ -100,7 +100,7 @@ diff --git a/drivers/bus/ti-sysc.c b/drivers/bus/ti-sysc.c
  	if (ddata->pre_reset_quirk)
  		ddata->pre_reset_quirk(ddata);
  
-@@ -1862,18 +1912,9 @@ static int sysc_reset(struct sysc *ddata)
+@@ -1866,18 +1916,9 @@ static int sysc_reset(struct sysc *ddata)
  	if (ddata->post_reset_quirk)
  		ddata->post_reset_quirk(ddata);
  

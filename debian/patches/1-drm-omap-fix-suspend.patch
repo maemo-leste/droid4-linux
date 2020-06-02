@@ -1,5 +1,5 @@
-
 diff --git a/drivers/gpu/drm/omapdrm/dss/dispc.c b/drivers/gpu/drm/omapdrm/dss/dispc.c
+index dbb90f2d2ccd..6ef220516027 100644
 --- a/drivers/gpu/drm/omapdrm/dss/dispc.c
 +++ b/drivers/gpu/drm/omapdrm/dss/dispc.c
 @@ -4933,10 +4933,8 @@ static int dispc_runtime_resume(struct device *dev)
@@ -16,6 +16,7 @@ diff --git a/drivers/gpu/drm/omapdrm/dss/dispc.c b/drivers/gpu/drm/omapdrm/dss/d
  struct platform_driver omap_dispchw_driver = {
  	.probe		= dispc_probe,
 diff --git a/drivers/gpu/drm/omapdrm/dss/dsi.c b/drivers/gpu/drm/omapdrm/dss/dsi.c
+index 79ddfbfd1b58..3d0e1c907254 100644
 --- a/drivers/gpu/drm/omapdrm/dss/dsi.c
 +++ b/drivers/gpu/drm/omapdrm/dss/dsi.c
 @@ -5464,10 +5464,8 @@ static int dsi_runtime_resume(struct device *dev)
@@ -28,10 +29,11 @@ diff --git a/drivers/gpu/drm/omapdrm/dss/dsi.c b/drivers/gpu/drm/omapdrm/dss/dsi
 -};
 +static UNIVERSAL_DEV_PM_OPS(dsi_pm_ops, dsi_runtime_suspend,
 +			    dsi_runtime_resume, NULL);
-
+ 
  struct platform_driver omap_dsihw_driver = {
  	.probe		= dsi_probe,
 diff --git a/drivers/gpu/drm/omapdrm/dss/dss.c b/drivers/gpu/drm/omapdrm/dss/dss.c
+index 4d5739fa4a5d..599d7b573a7c 100644
 --- a/drivers/gpu/drm/omapdrm/dss/dss.c
 +++ b/drivers/gpu/drm/omapdrm/dss/dss.c
 @@ -1611,10 +1611,8 @@ static int dss_runtime_resume(struct device *dev)
@@ -48,6 +50,7 @@ diff --git a/drivers/gpu/drm/omapdrm/dss/dss.c b/drivers/gpu/drm/omapdrm/dss/dss
  struct platform_driver omap_dsshw_driver = {
  	.probe		= dss_probe,
 diff --git a/drivers/gpu/drm/omapdrm/dss/venc.c b/drivers/gpu/drm/omapdrm/dss/venc.c
+index 766553bb2f87..4f6a47f48057 100644
 --- a/drivers/gpu/drm/omapdrm/dss/venc.c
 +++ b/drivers/gpu/drm/omapdrm/dss/venc.c
 @@ -942,10 +942,8 @@ static int venc_runtime_resume(struct device *dev)
@@ -64,6 +67,7 @@ diff --git a/drivers/gpu/drm/omapdrm/dss/venc.c b/drivers/gpu/drm/omapdrm/dss/ve
  static const struct of_device_id venc_of_match[] = {
  	{ .compatible = "ti,omap2-venc", },
 diff --git a/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c b/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c
+index 42ec51bb7b1b..05c026f68013 100644
 --- a/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c
 +++ b/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c
 @@ -1169,7 +1169,6 @@ int tiler_map_show(struct seq_file *s, void *arg)
@@ -85,5 +89,3 @@ diff --git a/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c b/drivers/gpu/drm/omapdrm/
  
  #if defined(CONFIG_OF)
  static const struct dmm_platform_data dmm_omap4_platform_data = {
--- 
-2.26.2

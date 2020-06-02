@@ -1,5 +1,5 @@
 diff --git a/drivers/bus/ti-sysc.c b/drivers/bus/ti-sysc.c
-index e5f5f48d69d2..39a6457a3094 100644
+index 369c97c3e0c0..32a01f7180af 100644
 --- a/drivers/bus/ti-sysc.c
 +++ b/drivers/bus/ti-sysc.c
 @@ -990,6 +990,8 @@ static int sysc_enable_module(struct device *dev)
@@ -9,14 +9,14 @@ index e5f5f48d69d2..39a6457a3094 100644
 +	/* Flush posted write */
 +	sysc_read(ddata, ddata->offsets[SYSC_SYSCONFIG]);
  
- 	if (ddata->module_enable_quirk)
- 		ddata->module_enable_quirk(ddata);
-@@ -1070,6 +1072,8 @@ static int sysc_disable_module(struct device *dev)
+ 	/* Flush posted write */
+ 	sysc_read(ddata, ddata->offsets[SYSC_SYSCONFIG]);
+@@ -1073,6 +1075,8 @@ static int sysc_disable_module(struct device *dev)
  	    ddata->cfg.sysc_val & BIT(regbits->autoidle_shift))
  		reg |= 1 << regbits->autoidle_shift;
  	sysc_write_sysconfig(ddata, reg);
 +	/* Flush posted write */
 +	sysc_read(ddata, ddata->offsets[SYSC_SYSCONFIG]);
  
- 	return 0;
- }
+ 	/* Flush posted write */
+ 	sysc_read(ddata, ddata->offsets[SYSC_SYSCONFIG]);

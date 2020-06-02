@@ -1,5 +1,5 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index d397ad4006f2..db917fc976da 100644
+index 5cbcdeb084c4..6201134ce29e 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
 @@ -125,6 +125,7 @@ CONFIG_BT_MRVL_SDIO=m

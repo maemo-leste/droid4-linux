@@ -1,11 +1,10 @@
-
 diff --git a/drivers/thermal/ti-soc-thermal/ti-bandgap.c b/drivers/thermal/ti-soc-thermal/ti-bandgap.c
-index 2fa78f738568..35edac688843 100644
+index 263b0420fbe4..4c56134f7b63 100644
 --- a/drivers/thermal/ti-soc-thermal/ti-bandgap.c
 +++ b/drivers/thermal/ti-soc-thermal/ti-bandgap.c
-@@ -26,10 +26,18 @@
+@@ -25,10 +25,18 @@
+ #include <linux/of_platform.h>
  #include <linux/of_irq.h>
- #include <linux/of_gpio.h>
  #include <linux/io.h>
 +#include <linux/cpu_pm.h>
 +#include <linux/device.h>
@@ -22,7 +21,7 @@ index 2fa78f738568..35edac688843 100644
  
  /***   Helper functions to access registers and their bitfields   ***/
  
-@@ -1025,6 +1033,9 @@ int ti_bandgap_probe(struct platform_device *pdev)
+@@ -1009,6 +1017,9 @@ int ti_bandgap_probe(struct platform_device *pdev)
  		}
  	}
  
@@ -32,7 +31,7 @@ index 2fa78f738568..35edac688843 100644
  	return 0;
  
  remove_last_cooling:
-@@ -1060,7 +1071,9 @@ int ti_bandgap_remove(struct platform_device *pdev)
+@@ -1042,7 +1053,9 @@ int ti_bandgap_remove(struct platform_device *pdev)
  	struct ti_bandgap *bgp = platform_get_drvdata(pdev);
  	int i;
  
@@ -43,7 +42,7 @@ index 2fa78f738568..35edac688843 100644
  	for (i = 0; i < bgp->conf->sensor_count; i++) {
  		if (bgp->conf->sensors[i].unregister_cooling)
  			bgp->conf->sensors[i].unregister_cooling(bgp, i);
-@@ -1174,6 +1187,38 @@ static int ti_bandgap_suspend(struct device *dev)
+@@ -1154,6 +1167,38 @@ static int ti_bandgap_suspend(struct device *dev)
  	return err;
  }
  
@@ -83,7 +82,7 @@ index 2fa78f738568..35edac688843 100644
  {
  	struct ti_bandgap *bgp = dev_get_drvdata(dev);
 diff --git a/drivers/thermal/ti-soc-thermal/ti-bandgap.h b/drivers/thermal/ti-soc-thermal/ti-bandgap.h
-index bb9b0f7faf99..a21d07a1a23a 100644
+index fce4657e9486..ed0ea4b17b25 100644
 --- a/drivers/thermal/ti-soc-thermal/ti-bandgap.h
 +++ b/drivers/thermal/ti-soc-thermal/ti-bandgap.h
 @@ -12,6 +12,10 @@
@@ -95,16 +94,14 @@ index bb9b0f7faf99..a21d07a1a23a 100644
 +#include <linux/pm_runtime.h>
 +#include <linux/pm.h>
  
- /**
-  * DOC: bandgap driver data structure
-@@ -201,6 +205,8 @@ struct ti_bandgap {
+ struct gpio_desc;
+ 
+@@ -203,6 +207,8 @@ struct ti_bandgap {
  	int				irq;
- 	int				tshut_gpio;
+ 	struct gpio_desc		*tshut_gpiod;
  	u32				clk_rate;
 +	struct notifier_block		nb;
 +	unsigned int is_suspended:1;
  };
  
  /**
--- 
-2.20.1

@@ -1,5 +1,5 @@
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index 8a23c3a3c3cd..b3911e2d5a61 100755
+index 09a2c558fcf6..ef5b29a77e1d 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
 @@ -102,7 +102,7 @@ deploy_libc_headers () {
