@@ -6,3 +6,10 @@
 0007-Use-cp-instead-of-ln-in-scripts-package-builddeb.patch
 0008-enable-droid4-magnetometer.patch
 randomreboots.patch
+1-drm-omap-fix-suspend.patch
+2-drm-omap-bus-ti-sysc.patch
+3-drm-omap-bus-ti-sysc.patch
+4-drm-omap-bus-ti-sysc.patch
+5-arm-omap2-dss.patch
+serial-fix-imprecise-external-abort.patch
+thermal-notifier.patch
