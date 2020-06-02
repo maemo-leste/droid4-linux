@@ -1,0 +1,89 @@
+
+diff --git a/drivers/gpu/drm/omapdrm/dss/dispc.c b/drivers/gpu/drm/omapdrm/dss/dispc.c
+--- a/drivers/gpu/drm/omapdrm/dss/dispc.c
++++ b/drivers/gpu/drm/omapdrm/dss/dispc.c
+@@ -4933,10 +4933,8 @@ static int dispc_runtime_resume(struct device *dev)
+ 	return 0;
+ }
+ 
+-static const struct dev_pm_ops dispc_pm_ops = {
+-	.runtime_suspend = dispc_runtime_suspend,
+-	.runtime_resume = dispc_runtime_resume,
+-};
++static UNIVERSAL_DEV_PM_OPS(dispc_pm_ops, dispc_runtime_suspend,
++			    dispc_runtime_resume, NULL);
+ 
+ struct platform_driver omap_dispchw_driver = {
+ 	.probe		= dispc_probe,
+diff --git a/drivers/gpu/drm/omapdrm/dss/dsi.c b/drivers/gpu/drm/omapdrm/dss/dsi.c
+--- a/drivers/gpu/drm/omapdrm/dss/dsi.c
++++ b/drivers/gpu/drm/omapdrm/dss/dsi.c
+@@ -5464,10 +5464,8 @@ static int dsi_runtime_resume(struct device *dev)
+ 	return 0;
+ }
+ 
+-static const struct dev_pm_ops dsi_pm_ops = {
+-	.runtime_suspend = dsi_runtime_suspend,
+-	.runtime_resume = dsi_runtime_resume,
+-};
++static UNIVERSAL_DEV_PM_OPS(dsi_pm_ops, dsi_runtime_suspend,
++			    dsi_runtime_resume, NULL);
+
+ struct platform_driver omap_dsihw_driver = {
+ 	.probe		= dsi_probe,
+diff --git a/drivers/gpu/drm/omapdrm/dss/dss.c b/drivers/gpu/drm/omapdrm/dss/dss.c
+--- a/drivers/gpu/drm/omapdrm/dss/dss.c
++++ b/drivers/gpu/drm/omapdrm/dss/dss.c
+@@ -1611,10 +1611,8 @@ static int dss_runtime_resume(struct device *dev)
+ 	return 0;
+ }
+ 
+-static const struct dev_pm_ops dss_pm_ops = {
+-	.runtime_suspend = dss_runtime_suspend,
+-	.runtime_resume = dss_runtime_resume,
+-};
++static UNIVERSAL_DEV_PM_OPS(dss_pm_ops, dss_runtime_suspend,
++			    dss_runtime_resume, NULL);
+ 
+ struct platform_driver omap_dsshw_driver = {
+ 	.probe		= dss_probe,
+diff --git a/drivers/gpu/drm/omapdrm/dss/venc.c b/drivers/gpu/drm/omapdrm/dss/venc.c
+--- a/drivers/gpu/drm/omapdrm/dss/venc.c
++++ b/drivers/gpu/drm/omapdrm/dss/venc.c
+@@ -942,10 +942,8 @@ static int venc_runtime_resume(struct device *dev)
+ 	return 0;
+ }
+ 
+-static const struct dev_pm_ops venc_pm_ops = {
+-	.runtime_suspend = venc_runtime_suspend,
+-	.runtime_resume = venc_runtime_resume,
+-};
++static UNIVERSAL_DEV_PM_OPS(venc_pm_ops, venc_runtime_suspend,
++			    venc_runtime_resume, NULL);
+ 
+ static const struct of_device_id venc_of_match[] = {
+ 	{ .compatible = "ti,omap2-venc", },
+diff --git a/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c b/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c
+--- a/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c
++++ b/drivers/gpu/drm/omapdrm/omap_dmm_tiler.c
+@@ -1169,7 +1169,6 @@ int tiler_map_show(struct seq_file *s, void *arg)
+ }
+ #endif
+ 
+-#ifdef CONFIG_PM_SLEEP
+ static int omap_dmm_resume(struct device *dev)
+ {
+ 	struct tcm_area area;
+@@ -1193,9 +1192,8 @@ static int omap_dmm_resume(struct device *dev)
+ 
+ 	return 0;
+ }
+-#endif
+ 
+-static SIMPLE_DEV_PM_OPS(omap_dmm_pm_ops, NULL, omap_dmm_resume);
++static UNIVERSAL_DEV_PM_OPS(omap_dmm_pm_ops, NULL, omap_dmm_resume, NULL);
+ 
+ #if defined(CONFIG_OF)
+ static const struct dmm_platform_data dmm_omap4_platform_data = {
+-- 
+2.26.2

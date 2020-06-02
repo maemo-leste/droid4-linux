@@ -1,0 +1,37 @@
+
+diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
+--- a/drivers/tty/serial/8250/8250_port.c
++++ b/drivers/tty/serial/8250/8250_port.c
+@@ -2001,11 +2001,20 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
+ 	return serial8250_do_get_mctrl(port);
+ }
+ 
++/*
++ * Called from uart_update_mctrl() with spinlock held, so we don't want
++ * add PM runtime calls here beyond checking the usage count. If the
++ * UART is not active, we can just bail out early.
++ */
+ void serial8250_do_set_mctrl(struct uart_port *port, unsigned int mctrl)
+ {
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 	unsigned char mcr;
+ 
++	if (up->capabilities & UART_CAP_RPM &&
++	    !pm_runtime_get_if_in_use(up->port.dev))
++		return;
++
+ 	if (port->rs485.flags & SER_RS485_ENABLED) {
+ 		if (serial8250_in_MCR(up) & UART_MCR_RTS)
+ 			mctrl |= TIOCM_RTS;
+@@ -2018,6 +2027,9 @@ void serial8250_do_set_mctrl(struct uart_port *port, unsigned int mctrl)
+ 	mcr = (mcr & up->mcr_mask) | up->mcr_force | up->mcr;
+ 
+ 	serial8250_out_MCR(up, mcr);
++
++	if (up->capabilities & UART_CAP_RPM)
++		pm_runtime_put(up->port.dev);
+ }
+ EXPORT_SYMBOL_GPL(serial8250_do_set_mctrl);
+ 
+-- 
+2.26.2
