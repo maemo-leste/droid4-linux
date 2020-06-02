@@ -1168,14 +1168,14 @@ static void __reg_assign_32_into_64(struct bpf_reg_state *reg)
 	 * but must be positive otherwise set to worse case bounds
 	 * and refine later from tnum.
 	 */
-	if (reg->s32_min_value > 0)
-		reg->smin_value = reg->s32_min_value;
-	else
-		reg->smin_value = 0;
-	if (reg->s32_max_value > 0)
+	if (reg->s32_min_value >= 0 && reg->s32_max_value >= 0)
 		reg->smax_value = reg->s32_max_value;
 	else
 		reg->smax_value = U32_MAX;
+	if (reg->s32_min_value >= 0)
+		reg->smin_value = reg->s32_min_value;
+	else
+		reg->smin_value = 0;
 }
 
 static void __reg_combine_32_into_64(struct bpf_reg_state *reg)
@@ -4340,7 +4340,9 @@ static void do_refine_retval_range(struct bpf_reg_state *regs, int ret_type,
 
 	if (ret_type != RET_INTEGER ||
 	    (func_id != BPF_FUNC_get_stack &&
-	     func_id != BPF_FUNC_probe_read_str))
+	     func_id != BPF_FUNC_probe_read_str &&
+	     func_id != BPF_FUNC_probe_read_kernel_str &&
+	     func_id != BPF_FUNC_probe_read_user_str))
 		return;
 
 	ret_reg->smax_value = meta->msize_max_value;
@@ -7059,6 +7061,23 @@ static int check_return_code(struct bpf_verifier_env *env)
 			return 0;
 		range = tnum_const(0);
 		break;
+	case BPF_PROG_TYPE_TRACING:
+		switch (env->prog->expected_attach_type) {
+		case BPF_TRACE_FENTRY:
+		case BPF_TRACE_FEXIT:
+			range = tnum_const(0);
+			break;
+		case BPF_TRACE_RAW_TP:
+		case BPF_MODIFY_RETURN:
+			return 0;
+		default:
+			return -ENOTSUPP;
+		}
+		break;
+	case BPF_PROG_TYPE_EXT:
+		/* freplace program can return anything as its return value
+		 * depends on the to-be-replaced kernel func or bpf program.
+		 */
 	default:
 		return 0;
 	}
@@ -10409,21 +10428,12 @@ static int check_struct_ops_btf_id(struct bpf_verifier_env *env)
 }
 #define SECURITY_PREFIX "security_"
 
-static int check_attach_modify_return(struct bpf_verifier_env *env)
+static int check_attach_modify_return(struct bpf_prog *prog, unsigned long addr)
 {
-	struct bpf_prog *prog = env->prog;
-	unsigned long addr = (unsigned long) prog->aux->trampoline->func.addr;
-
-	/* This is expected to be cleaned up in the future with the KRSI effort
-	 * introducing the LSM_HOOK macro for cleaning up lsm_hooks.h.
-	 */
 	if (within_error_injection_list(addr) ||
 	    !strncmp(SECURITY_PREFIX, prog->aux->attach_func_name,
 		     sizeof(SECURITY_PREFIX) - 1))
 		return 0;
-
-	verbose(env, "fmod_ret attach_btf_id %u (%s) is not modifiable\n",
-		prog->aux->attach_btf_id, prog->aux->attach_func_name);
 
 	return -EINVAL;
 }
@@ -10635,11 +10645,18 @@ static int check_attach_btf_id(struct bpf_verifier_env *env)
 				goto out;
 			}
 		}
+
+		if (prog->expected_attach_type == BPF_MODIFY_RETURN) {
+			ret = check_attach_modify_return(prog, addr);
+			if (ret)
+				verbose(env, "%s() is not modifiable\n",
+					prog->aux->attach_func_name);
+		}
+
+		if (ret)
+			goto out;
 		tr->func.addr = (void *)addr;
 		prog->aux->trampoline = tr;
-
-		if (prog->expected_attach_type == BPF_MODIFY_RETURN)
-			ret = check_attach_modify_return(env);
 out:
 		mutex_unlock(&tr->mutex);
 		if (ret)
