@@ -13,3 +13,4 @@ randomreboots.patch
 5-arm-omap2-dss.patch
 serial-fix-imprecise-external-abort.patch
 thermal-notifier.patch
+0009-enable-debug-slab.patch
