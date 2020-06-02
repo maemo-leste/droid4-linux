@@ -1,3 +1,12 @@
+droid4-linux (5.7.2-1) unstable; urgency=medium
+
+  * Merge latest droid4-pending-v5.7 from tmlind
+  * Apply extra patches
+  * Enable CONFIG_DEBUG_SLAB
+  * Enable CONFIG_NL80211_TESTMODE
+
+ -- Ivan J. <parazyd@dyne.org>  Tue, 02 Jun 2020 21:51:59 +0200
+
 droid4-linux (5.7.1-1) unstable; urgency=medium
 
   * Merge latest droid4-pending-v5.7 from tmlind
