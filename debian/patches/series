@@ -16,3 +16,4 @@ thermal-notifier.patch
 0009-enable-debug-slab.patch
 0010-enable-nl80211-testmode.patch
 ti-sysc-increase-max-softreset.patch
+rtc-cpcap-fix-range.patch
