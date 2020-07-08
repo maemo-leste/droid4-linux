@@ -12,7 +12,6 @@ randomreboots.patch
 4-drm-omap-bus-ti-sysc.patch
 5-arm-omap2-dss.patch
 serial-fix-imprecise-external-abort.patch
-thermal-notifier.patch
 0009-enable-debug-slab.patch
 0010-enable-nl80211-testmode.patch
 ti-sysc-increase-max-softreset.patch
