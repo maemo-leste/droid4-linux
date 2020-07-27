@@ -1,3 +1,9 @@
+droid4-linux (5.7.2-2) unstable; urgency=medium
+
+  * Enable netfilter masquerading in defconfig.
+
+ -- Ivan J. <parazyd@dyne.org>  Mon, 27 Jul 2020 20:16:28 +0200
+
 droid4-linux (5.7.2-1) unstable; urgency=medium
 
   * Merge latest droid4-pending-v5.7 from tmlind

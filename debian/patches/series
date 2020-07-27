@@ -17,3 +17,4 @@ serial-fix-imprecise-external-abort.patch
 ti-sysc-increase-max-softreset.patch
 rtc-cpcap-fix-range.patch
 ti-soc-thermal.patch
+defconfig_enable_netfilter_masquerading.patch
