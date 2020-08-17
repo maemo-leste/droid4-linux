@@ -32,6 +32,7 @@ ifeq ($(CONFIG_PVRSGX_1_9_2188537),y)
 SUBPATH=1.9.2188537/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_9_2253347),y)
 SUBPATH=1.9.2253347
+pvr_drv=yes
 else ifeq ($(CONFIG_PVRSGX_1_10_2359475),y)
 # this is partially working
 SUBPATH=1.10.2359475
@@ -66,6 +67,15 @@ ifneq ($(CONFIG_SGX_CEDARVIEW),)
 endif # CONFIG_SGX_CEDARVIEW
 ifneq ($(CONFIG_SGX_OMAP),)
 ifeq ($(pvr_drv),yes)
+# CONFIG_PVRSGX_1_9_2253347 works for omap4430/4460 with sgx540, 4470 with
+# sgx544 should be able to use CONFIG_PVRSGX_1_14_3699939
+ifneq ($(CONFIG_PVRSGX_1_9_2253347),)
+ifneq ($(CONFIG_ARCH_OMAP4),)
+	@$(kecho) "  MAKE    $(obj): omap4430/60"
+	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
+endif # CONFIG_ARCH_OMAP4
+else ifneq ($(CONFIG_PVRSGX_1_14_3699939),)
 ifneq ($(CONFIG_ARCH_OMAP3),)
 	@$(kecho) "  MAKE    $(obj): omap3430"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap3 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
@@ -112,6 +122,7 @@ ifneq ($(CONFIG_SOC_DRA7XX),)
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=dra7 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif	# CONFIG_SOC_DRA7XX
+endif	# CONFIG_PVRSGX_1_9_2253347
 else # pvr_drv
 # kept here for compatibility with omap-pvr tree
 	@$(kecho) "  MAKE    $(obj): omap3"
