@@ -138,7 +138,8 @@ ccflags-y += \
 	-DSUPPORT_DRI_DRM_EXTERNAL \
 	-DSUPPORT_LINUX_USING_SHARED_WORKQUEUES \
 	-DSUPPORT_MEMINFO_IDS \
-	-DSYS_USING_INTERRUPTS
+	-DSYS_USING_INTERRUPTS \
+	-DPVR_LINUX_MEM_AREA_USE_VMAP
 
 # Must not be set for omap5-sgx-ddk-um-linux.git glsdk_7.03.00.03 userspace
 ccflags-n += \

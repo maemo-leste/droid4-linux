@@ -439,7 +439,7 @@ DebugMemAllocRecordTypeToString(DEBUG_MEM_ALLOC_TYPE eAllocType)
 }
 #endif
 
-
+#if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
 static IMG_BOOL
 AllocFlagsToPGProt(pgprot_t *pPGProtFlags, IMG_UINT32 ui32AllocFlags)
 {
@@ -468,6 +468,7 @@ AllocFlagsToPGProt(pgprot_t *pPGProtFlags, IMG_UINT32 ui32AllocFlags)
 
     return IMG_TRUE;
 }
+#endif
 
 IMG_VOID *
 _VMallocWrapper(IMG_UINT32 ui32Bytes,
@@ -475,16 +476,10 @@ _VMallocWrapper(IMG_UINT32 ui32Bytes,
                 IMG_CHAR *pszFileName,
                 IMG_UINT32 ui32Line)
 {
-    pgprot_t PGProtFlags;
     IMG_VOID *pvRet;
-    
-    if (!AllocFlagsToPGProt(&PGProtFlags, ui32AllocFlags))
-    {
-            return NULL;
-    }
 
 	/* Allocate virtually contiguous pages */
-    pvRet = __vmalloc(ui32Bytes, GFP_KERNEL | __GFP_HIGHMEM, PGProtFlags);
+    pvRet = __vmalloc(ui32Bytes, GFP_KERNEL | __GFP_HIGHMEM);
     
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
     if (pvRet)
