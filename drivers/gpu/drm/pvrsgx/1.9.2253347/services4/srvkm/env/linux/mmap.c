@@ -543,6 +543,8 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     }
 
     psLinuxMemArea = (LinuxMemArea *)hOSMemHandle;
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
     puiHandle = &psLinuxMemArea->uiHandle;
 
         /* Sparse mappings have to ask the BM for the virtual size */
@@ -558,7 +560,6 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 										pui32ByteOffset);
 	}
 
-#if defined(SUPPORT_DRI_DRM_EXTERNAL)
     /* if we are using DRM/GEM, then let GEM generate the buffer offset..
      * this is done by creating a wrapper object.
      */
