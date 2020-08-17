@@ -111,6 +111,18 @@ typedef enum {
 typedef struct _LinuxMemArea LinuxMemArea;
 
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+
+struct _LinuxDrmHandle {
+	IMG_UINT32 uiHandle;
+	struct drm_file *psFile;
+	struct list_head sNode;
+};
+
+typedef struct _LinuxDrmHandle LinuxDrmHandle;
+
+#endif
+
 /* FIXME - describe this structure. */
 struct _LinuxMemArea {
     LINUX_MEM_AREA_TYPE eAreaType;
@@ -198,7 +210,7 @@ struct _LinuxMemArea {
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
     IMG_HANDLE		buf;	/* external buffer handle, like a GEM or ION buffer */
-    IMG_UINT32		uiHandle; /* GEM handle */
+    struct list_head	sHandles;
 #endif /* SUPPORT_DRI_DRM_EXTERNAL */
 };
 
