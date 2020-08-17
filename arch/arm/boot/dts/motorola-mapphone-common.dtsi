@@ -175,7 +175,41 @@
 		ti,timers = <&timer9>;
 		ti,clock-source = <0x01>;
 	};
-
+	
+	mapphone_touchscreen {
+			/* keycodes must be >255 or the kernel vt will hold the device open wasteing power */
+			compatible = "touchscreen-buttons";
+			touchscreen_phandle = <&touchscreen>;
+			menu {
+				x-position = <0>;
+				y-position = <950>;
+				x-size = <256>;
+				y-size = <74>;
+				keycode = <KEY_KBD_LCD_MENU1>;
+			};
+			home {
+				x-position = <256>;
+				y-position = <950>;
+				x-size = <256>;
+				y-size = <74>;
+				keycode = <KEY_KBD_LCD_MENU2>;
+			};
+			back {
+				x-position = <512>;
+				y-position = <950>;
+				x-size = <256>;
+				y-size = <74>;
+				keycode = <KEY_KBD_LCD_MENU3>;
+			};
+			search {
+				x-position = <768>;
+				y-position = <950>;
+				x-size = <256>;
+				y-size = <74>;
+				keycode = <KEY_KBD_LCD_MENU4>;
+			};
+	};
+	
 	vibrator {
 		compatible = "pwm-vibrator";
 		pwms = <&pwm9 0 10000000 0>, <&pwm8 0 10000000 0>;
@@ -422,7 +456,7 @@
 };
 
 &i2c2 {
-	touchscreen@4a {
+	touchscreen: touchscreen@4a {
 		compatible = "atmel,maxtouch";
 		reg = <0x4a>;
 		pinctrl-names = "default";
