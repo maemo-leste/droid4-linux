@@ -98,14 +98,13 @@ PVRSRV_FILE_PRIVATE_DATA;
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
 #include <drm/omap_drm.h>
-extern int pvr_mapper_id;
 static inline PVRSRV_FILE_PRIVATE_DATA * get_private(struct drm_file *file)
 {
-	return omap_drm_file_priv(file, pvr_mapper_id);
+	return omap_drm_file_priv(file);
 }
 static inline void set_private(struct drm_file *file, PVRSRV_FILE_PRIVATE_DATA *priv)
 {
-	omap_drm_file_set_priv(file, pvr_mapper_id, priv);
+	omap_drm_file_set_priv(file, priv);
 }
 #elif defined(SUPPORT_DRI_DRM)
 static inline PVRSRV_FILE_PRIVATE_DATA * get_private(struct drm_file *file)
