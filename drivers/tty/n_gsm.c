@@ -2540,7 +2540,7 @@ void gsm_serdev_data_kick(struct gsm_serdev *gsd)
 	gsm = gsd->gsm;
 
 	spin_lock_irqsave(&gsm->tx_lock, flags);
-	gsm_data_kick(gsm);
+	gsm_data_kick(gsm, NULL);
 	spin_unlock_irqrestore(&gsm->tx_lock, flags);
 }
 EXPORT_SYMBOL_GPL(gsm_serdev_data_kick);
