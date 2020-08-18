@@ -54,6 +54,7 @@ struct motmdm_gnss_data {
 	size_t len;
 	wait_queue_head_t read_queue;
 	unsigned int parsed:1;
+	unsigned int active:1;
 };
 
 static unsigned int rate_ms = MOTMDM_GNSS_RATE;
@@ -125,6 +126,9 @@ static void motmdm_gnss_restart(struct work_struct *work)
 	const unsigned char *cmd = "AT+MPDSTART=0,1,100,0";
 	int error;
 
+	if (!ddata->active)
+		return;
+
 	ddata->last_update = ktime_get();
 
 	error = motmdm_gnss_send_command(ddata, cmd, strlen(cmd));
@@ -157,6 +161,7 @@ static void motmdm_gnss_start(struct gnss_device *gdev, int delay_ms)
 	if (next_ms > delay_ms)
 		next_ms = delay_ms;
 
+	ddata->active = 1;
 	schedule_delayed_work(&ddata->restart_work, msecs_to_jiffies(next_ms));
 }
 
@@ -164,10 +169,16 @@ static int motmdm_gnss_stop(struct gnss_device *gdev)
 {
 	struct motmdm_gnss_data *ddata = gnss_get_drvdata(gdev);
 	const unsigned char *cmd = "AT+MPDSTOP";
+	int error;
 
+	ddata->active = 0;
 	cancel_delayed_work_sync(&ddata->restart_work);
 
-	return motmdm_gnss_send_command(ddata, cmd, strlen(cmd));
+	error = motmdm_gnss_send_command(ddata, cmd, strlen(cmd));
+	if (error < 0)
+		return error;
+
+	return 0;
 }
 
 static int motmdm_gnss_init(struct gnss_device *gdev)
@@ -180,6 +191,7 @@ static int motmdm_gnss_init(struct gnss_device *gdev)
 	if (error < 0)
 		return error;
 
+	ddata->active = 1;
 	motmdm_gnss_start(gdev, 0);
 
 	return 0;
@@ -191,11 +203,16 @@ static int motmdm_gnss_finish(struct gnss_device *gdev)
 	const unsigned char *cmd = "AT+MPDINIT=0";
 	int error;
 
+	ddata->active = 0;
 	error = motmdm_gnss_stop(gdev);
 	if (error < 0)
 		return error;
 
-	return motmdm_gnss_send_command(ddata, cmd, strlen(cmd));
+	error = motmdm_gnss_send_command(ddata, cmd, strlen(cmd));
+	if (error < 0)
+		return error;
+
+	return 0;
 }
 
 static int motmdm_gnss_receive_data(struct gsm_serdev_dlci *dlci,
@@ -254,6 +271,8 @@ static int motmdm_gnss_receive_data(struct gsm_serdev_dlci *dlci,
 			ddata->status = MOTMDM_GNSS_INITIALIZED;
 			break;
 		case '2':
+			if (!ddata->active)
+				break;
 			ddata->status = MOTMDM_GNSS_DATA_OR_TIMEOUT;
 			if (rate_ms < MOTMDM_GNSS_RATE)
 				rate_ms = MOTMDM_GNSS_RATE;
@@ -309,12 +328,12 @@ static void motmdm_gnss_close(struct gnss_device *gdev)
 	struct gsm_serdev_dlci *dlci = &ddata->dlci;
 	int error;
 
-	dlci->receive_buf = NULL;
 	error = motmdm_gnss_finish(gdev);
 	if (error < 0)
 		dev_warn(&gdev->dev, "%s: close failed: %i\n",
 			 __func__, error);
 
+	dlci->receive_buf = NULL;
 	serdev_ngsm_unregister_dlci(ddata->modem, dlci);
 }
 
