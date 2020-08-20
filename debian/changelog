@@ -1,3 +1,11 @@
+droid4-linux (5.8.0-1) unstable; urgency=medium
+
+  * Update to latest droid4-pending-v5.8 from tmlind
+  * Merge latest droid4-pending-pvr-omapdrm-v5.8
+  * Rebase patches for 5.8
+
+ -- Ivan J. <parazyd@dyne.org>  Thu, 20 Aug 2020 18:43:10 +0200
+
 droid4-linux (5.7.2-2) unstable; urgency=medium
 
   * Enable netfilter masquerading in defconfig.
