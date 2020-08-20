@@ -47,6 +47,15 @@ struct drm_omap_param {
 #define OMAP_BO_UNCACHED	0x00000004
 #define OMAP_BO_CACHE_MASK	0x00000006
 
+/* Force allocation from contiguous DMA memory */
+#define OMAP_BO_MEM_CONTIG	0x00000008
+
+/* Force allocation via DMM */
+#define OMAP_BO_MEM_DMM		0x00000010
+
+/* Pin the buffer when allocating and keep pinned */
+#define OMAP_BO_MEM_PIN		0x00000020
+
 /* Use TILER for the buffer. The TILER container unit can be 8, 16 or 32 bits. */
 #define OMAP_BO_TILED_8		0x00000100
 #define OMAP_BO_TILED_16	0x00000200
@@ -107,8 +116,8 @@ struct drm_omap_gem_info {
 #define DRM_OMAP_GET_PARAM		0x00
 #define DRM_OMAP_SET_PARAM		0x01
 #define DRM_OMAP_GEM_NEW		0x03
-#define DRM_OMAP_GEM_CPU_PREP		0x04	/* Deprecated, to be removed */
-#define DRM_OMAP_GEM_CPU_FINI		0x05	/* Deprecated, to be removed */
+#define DRM_OMAP_GEM_CPU_PREP		0x04
+#define DRM_OMAP_GEM_CPU_FINI		0x05
 #define DRM_OMAP_GEM_INFO		0x06
 #define DRM_OMAP_NUM_IOCTLS		0x07
 
@@ -118,6 +127,81 @@ struct drm_omap_gem_info {
 #define DRM_IOCTL_OMAP_GEM_CPU_PREP	DRM_IOW (DRM_COMMAND_BASE + DRM_OMAP_GEM_CPU_PREP, struct drm_omap_gem_cpu_prep)
 #define DRM_IOCTL_OMAP_GEM_CPU_FINI	DRM_IOW (DRM_COMMAND_BASE + DRM_OMAP_GEM_CPU_FINI, struct drm_omap_gem_cpu_fini)
 #define DRM_IOCTL_OMAP_GEM_INFO		DRM_IOWR(DRM_COMMAND_BASE + DRM_OMAP_GEM_INFO, struct drm_omap_gem_info)
+
+/* interface that plug-in drivers (for now just PVR) can implement */
+struct omap_drm_plugin {
+	struct drm_device *dev;
+	const char *name;
+
+	/* drm functions */
+	int (*load)(struct drm_device *dev, unsigned long flags);
+	int (*unload)(struct drm_device *dev);
+	int (*open)(struct drm_device *dev, struct drm_file *file);
+	void (*release)(struct drm_device *dev, struct drm_file *file);
+
+	const struct drm_ioctl_desc *ioctls;
+	int num_ioctls;
+	int ioctl_base;
+};
+
+int omap_drm_register_plugin(struct omap_drm_plugin *plugin);
+int omap_drm_unregister_plugin(struct omap_drm_plugin *plugin);
+
+void *omap_drm_file_priv(struct drm_file *file);
+void omap_drm_file_set_priv(struct drm_file *file, void *priv);
+
+void *omap_gem_priv(struct drm_gem_object *obj);
+void omap_gem_set_priv(struct drm_gem_object *obj, void *priv);
+void omap_gem_vm_open(struct vm_area_struct *vma);
+void omap_gem_vm_close(struct vm_area_struct *vma);
+u64 omap_gem_mmap_offset(struct drm_gem_object *obj);
+u32 omap_gem_flags(struct drm_gem_object *obj);
+int omap_gem_pin(struct drm_gem_object *obj, dma_addr_t *dma_addr, bool remap);
+void omap_gem_unpin(struct drm_gem_object *obj);
+int omap_gem_get_pages(struct drm_gem_object *obj, struct page ***pages,
+		bool remap);
+int omap_gem_put_pages(struct drm_gem_object *obj);
+int omap_gem_op_start(struct drm_gem_object *obj, enum omap_gem_op op);
+int omap_gem_op_finish(struct drm_gem_object *obj, enum omap_gem_op op);
+int omap_gem_op_sync(struct drm_gem_object *obj, enum omap_gem_op op);
+int omap_gem_op_async(struct drm_gem_object *obj, enum omap_gem_op op,
+		      void (*fxn)(void *arg), void *arg);
+int omap_gem_tiled_size(struct drm_gem_object *obj, uint16_t *w, uint16_t *h);
+int omap_gem_tiled_stride(struct drm_gem_object *obj, u32 orient);
+
+/* for external plugin buffers wrapped as GEM object (via. omap_gem_new_ext())
+ * a vm_ops struct can be provided to get callback notification of various
+ * events..
+ */
+struct omap_gem_vm_ops {
+	void (*open)(struct vm_area_struct *area);
+	void (*close)(struct vm_area_struct *area);
+	/*maybe: int (*fault)(struct vm_area_struct *vma,
+	  struct vm_fault *vmf)*/
+
+	/* note: mmap isn't expected to do anything. it is just to allow buffer
+	 * allocate to update it's own internal state
+	 */
+	void (*mmap)(struct file *, struct vm_area_struct *);
+};
+
+struct drm_gem_object *omap_gem_new_ext(struct drm_device *dev,
+		struct drm_file *file, u32 *handle,
+		union omap_gem_size gsize, uint32_t flags,
+		dma_addr_t paddr, struct page **pages,
+		struct omap_gem_vm_ops *ops);
+
+void omap_gem_op_update(void);
+int omap_gem_set_sync_object(struct drm_gem_object *obj, void *syncobj);
+
+struct drm_omap_get_base {
+	char plugin_name[64];	/* in */
+	uint32_t ioctl_base;	/* out */
+	uint32_t __pad;
+};
+
+#define DRM_IOCTL_OMAP_GET_BASE		DRM_IOWR(DRM_COMMAND_BASE + DRM_OMAP_GET_BASE, struct drm_omap_get_base)
+#define DRM_OMAP_GET_BASE		0x02
 
 #if defined(__cplusplus)
 }
