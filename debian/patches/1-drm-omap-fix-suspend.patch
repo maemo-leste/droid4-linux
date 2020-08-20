@@ -1,8 +1,8 @@
 diff --git a/drivers/gpu/drm/omapdrm/dss/dispc.c b/drivers/gpu/drm/omapdrm/dss/dispc.c
-index dbb90f2d2ccd..6ef220516027 100644
+index 6639ee9b05d3..7a18c76f36cc 100644
 --- a/drivers/gpu/drm/omapdrm/dss/dispc.c
 +++ b/drivers/gpu/drm/omapdrm/dss/dispc.c
-@@ -4933,10 +4933,8 @@ static int dispc_runtime_resume(struct device *dev)
+@@ -4912,10 +4912,8 @@ static int dispc_runtime_resume(struct device *dev)
  	return 0;
  }
  
@@ -50,10 +50,10 @@ index 4d5739fa4a5d..599d7b573a7c 100644
  struct platform_driver omap_dsshw_driver = {
  	.probe		= dss_probe,
 diff --git a/drivers/gpu/drm/omapdrm/dss/venc.c b/drivers/gpu/drm/omapdrm/dss/venc.c
-index 766553bb2f87..4f6a47f48057 100644
+index 9701843ccf09..fbb32ecb8837 100644
 --- a/drivers/gpu/drm/omapdrm/dss/venc.c
 +++ b/drivers/gpu/drm/omapdrm/dss/venc.c
-@@ -942,10 +942,8 @@ static int venc_runtime_resume(struct device *dev)
+@@ -899,10 +899,8 @@ static int venc_runtime_resume(struct device *dev)
  	return 0;
  }
  

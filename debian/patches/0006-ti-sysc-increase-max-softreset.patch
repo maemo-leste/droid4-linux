@@ -1,5 +1,5 @@
 diff --git a/drivers/bus/ti-sysc.c b/drivers/bus/ti-sysc.c
-index 8564d089b8b3..986baf2bd87c 100644
+index 191c97b84715..67fba92812b7 100644
 --- a/drivers/bus/ti-sysc.c
 +++ b/drivers/bus/ti-sysc.c
 @@ -29,7 +29,7 @@

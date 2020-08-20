@@ -1,12 +1,12 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 818caf3257aa..5cbcdeb084c4 100644
+index d9db4e7cb156..a643414b9129 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -586,6 +586,7 @@ CONFIG_MAGIC_SYSRQ=y
- CONFIG_DEBUG_FS=y
- CONFIG_SCHEDSTATS=y
- # CONFIG_DEBUG_BUGVERBOSE is not set
+@@ -4,6 +4,7 @@ CONFIG_POSIX_MQUEUE=y
+ CONFIG_AUDIT=y
+ CONFIG_NO_HZ=y
+ CONFIG_HIGH_RES_TIMERS=y
 +CONFIG_DEBUG_SLAB=y
  CONFIG_PREEMPT=y
- CONFIG_SGX=y
- CONFIG_SGX_OMAP=m
+ CONFIG_BSD_PROCESS_ACCT=y
+ CONFIG_IKCONFIG=y

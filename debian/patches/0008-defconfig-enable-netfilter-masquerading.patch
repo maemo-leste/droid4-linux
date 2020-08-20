@@ -1,11 +1,11 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 6201134ce29e..c4fa24aa7c17 100644
+index 8c6cc7f5f1fb..e2422962fefa 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -593,3 +593,21 @@ CONFIG_SGX=y
- CONFIG_SGX_OMAP=m
- CONFIG_SGX_DRM=y
- CONFIG_PVRSGX_1_9_2253347=y
+@@ -585,3 +585,21 @@ CONFIG_DEBUG_INFO_DWARF4=y
+ CONFIG_MAGIC_SYSRQ=y
+ CONFIG_DEBUG_FS=y
+ CONFIG_SCHEDSTATS=y
 +CONFIG_NF_CONNTRACK=y
 +CONFIG_NF_CONNTRACK_SIP=y
 +CONFIG_NF_CONNTRACK_FTP=y

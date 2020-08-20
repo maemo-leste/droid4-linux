@@ -1,5 +1,5 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index d397ad4006f2..818caf3257aa 100644
+index 3b63e5a6f795..d9db4e7cb156 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
 @@ -340,6 +340,7 @@ CONFIG_REGULATOR_TPS65217=y
