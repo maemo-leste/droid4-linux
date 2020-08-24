@@ -557,6 +557,21 @@ static int cpcap_charger_get_ints_state(struct cpcap_charger_ddata *ddata,
 	return 0;
 }
 
+/* Query battery so it can update it's battery full status */
+static int cpcap_charger_update_battery(struct cpcap_charger_ddata *ddata,
+					int state)
+{
+	union power_supply_propval prop;
+	struct power_supply *battery;
+
+	battery = power_supply_get_by_name("battery");
+	if (!battery)
+		return -ENODEV;
+
+	return power_supply_get_property(battery, POWER_SUPPLY_PROP_STATUS,
+					 &prop);
+}
+
 static void cpcap_charger_update_state(struct cpcap_charger_ddata *ddata,
 				       int state)
 {
@@ -620,6 +635,10 @@ static void cpcap_charger_disconnect(struct cpcap_charger_ddata *ddata,
 				     int state, unsigned long delay)
 {
 	int error;
+
+	/* Update battery with full state before disconnecting */
+	if (state == POWER_SUPPLY_STATUS_FULL)
+		cpcap_charger_update_battery(ddata, state);
 
 	error = cpcap_charger_set_state(ddata, 0, 0, 0);
 	if (error)
