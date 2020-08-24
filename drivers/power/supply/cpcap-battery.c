@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2017 Tony Lindgren <tony@atomide.com>
  *
- * Some parts of the code based on earlie Motorola mapphone Linux kernel
+ * Some parts of the code based on earlier Motorola mapphone Linux kernel
  * drivers:
  *
  * Copyright (C) 2009-2010 Motorola, Inc.
@@ -504,7 +504,7 @@ static int cpcap_battery_get_capacity_level(struct cpcap_battery_ddata *ddata)
 	latest = cpcap_battery_latest(ddata);
 	voltage = latest->voltage;
 
-	for (i = ARRAY_SIZE(cpcap_battery_cap) - 1; i >=0; i--) {
+	for (i = ARRAY_SIZE(cpcap_battery_cap) - 1; i >= 0; i--) {
 		cap = &cpcap_battery_cap[i];
 		if (voltage >= cap->voltage)
 			break;
