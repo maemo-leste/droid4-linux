@@ -140,6 +140,8 @@ struct cpcap_charger_ddata {
 	int status;
 	int state;
 	int voltage;
+	int last_current;
+	int last_current_retries;
 };
 
 struct cpcap_interrupt_desc {
@@ -610,6 +612,7 @@ static void cpcap_usb_detect(struct work_struct *work)
 	if (!s.chrg_det && s.chrgcurr1 && s.vbusvld) {
 		cpcap_charger_update_state(ddata,
 					   POWER_SUPPLY_STATUS_NOT_CHARGING);
+		ddata->last_current = 0;
 
 		return;
 	}
@@ -659,6 +662,30 @@ static void cpcap_usb_detect(struct work_struct *work)
 		else
 			max_current = CPCAP_REG_CRM_ICHRG_0A532;
 
+		switch (ddata->state) {
+		case POWER_SUPPLY_STATUS_NOT_CHARGING:
+			ddata->last_current_retries = 0;
+			break;
+		case POWER_SUPPLY_STATUS_DISCHARGING:
+			if (ddata->last_current > CPCAP_REG_CRM_ICHRG_0A532) {
+				/* Attempt current 3 times before lowering */
+				if (ddata->last_current_retries++ >= 3) {
+					ddata->last_current--;
+					ddata->last_current_retries = 0;
+					/* Wait a bit for voltage to ramp up */
+					usleep_range(40000, 50000);
+				}
+				max_current = ddata->last_current;
+			}
+			dev_info(ddata->dev, "enabling charger with current %i\n",
+				 max_current);
+			break;
+		default:
+			ddata->last_current_retries = 0;
+			break;
+		}
+
+		ddata->last_current = max_current;
 		vchrg = cpcap_charger_voltage_to_regval(ddata->voltage);
 		error = cpcap_charger_set_state(ddata,
 						CPCAP_REG_CRM_VCHRG(vchrg),
