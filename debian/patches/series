@@ -7,3 +7,4 @@
 0006-ti-sysc-increase-max-softreset.patch
 0007-rtc-cpcap-fix-range.patch
 0008-defconfig-enable-netfilter-masquerading.patch
+0010-omap2-restore-mpu-power-domain.patch
