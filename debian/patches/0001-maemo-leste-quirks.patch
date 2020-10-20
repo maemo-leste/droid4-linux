@@ -12,7 +12,7 @@ index 24a4c1b97bb0..76c75ac5ebc4 100644
  		  Module.symvers \
  		  signing_key.pem signing_key.priv signing_key.x509	\
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index 6df3c9f8b2da..705402a7c18d 100755
+index 6df3c9f8b2da..ce9550b5c27e 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
 @@ -94,15 +94,15 @@ deploy_libc_headers () {
@@ -48,12 +48,12 @@ index 6df3c9f8b2da..705402a7c18d 100755
 +postinst)
 +	depmod $version
 +	mkdir -p /boot/boot
-+	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb
++	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb
 +	cp -f /boot/vmlinuz-$version /boot/boot/zImage
-+	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /boot/boot/omap4-droid4-xt894.dtb
++	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /boot/boot/
 +	;;
 +postrm)
-+	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb
++	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb
 +	;;
 +esac
 +

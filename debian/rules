@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 CONFIG = omap2plus_defconfig
-DTB    = omap4-droid4-xt894.dtb
+DTB    = omap4-droid4-xt894.dtb omap4-droid-bionic-xt875.dtb
 DEV    = droid4
 ARCH   = arm
 
