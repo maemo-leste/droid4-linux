@@ -1,21 +1,8 @@
-From 50ad3581e5c0885a1012b8a148b951669395f621 Mon Sep 17 00:00:00 2001
-From: uvos <devnull@uvos.xyz>
-Date: Thu, 22 Oct 2020 18:54:47 +0200
-Subject: [PATCH] ARM: dts: mapphone: remove xt894 specific things from
- motorola-mapphone-common.dtsi and add them to omap4-droid4-xt894.dts and
- omap4-droid-bionic-xt875.dts as applicable.
-
----
- .../boot/dts/motorola-mapphone-common.dtsi    | 141 +----------------
- .../arm/boot/dts/omap4-droid-bionic-xt875.dts |  30 ++++
- arch/arm/boot/dts/omap4-droid4-xt894.dts      | 143 ++++++++++++++++++
- 3 files changed, 174 insertions(+), 140 deletions(-)
-
 diff --git a/arch/arm/boot/dts/motorola-mapphone-common.dtsi b/arch/arm/boot/dts/motorola-mapphone-common.dtsi
-index 64ba1ae69c39..f63a898ab5be 100644
+index cef4d8abdaa1..13d140ea3b7b 100644
 --- a/arch/arm/boot/dts/motorola-mapphone-common.dtsi
 +++ b/arch/arm/boot/dts/motorola-mapphone-common.dtsi
-@@ -113,32 +113,9 @@
+@@ -113,32 +113,9 @@ wl12xx_vmmc: regulator-wl12xx {
  		enable-active-high;
  	};
  
@@ -49,7 +36,7 @@ index 64ba1ae69c39..f63a898ab5be 100644
  
  		simple-graph-card,widgets =
  			"Speaker", "Earpiece",
-@@ -314,80 +291,6 @@
+@@ -280,80 +257,6 @@ tmp105@48 {
  	};
  };
  
@@ -130,7 +117,7 @@ index 64ba1ae69c39..f63a898ab5be 100644
  &mmc1 {
  	vmmc-supply = <&vwlan2>;
  	bus-width = <4>;
-@@ -427,34 +330,6 @@
+@@ -393,34 +296,6 @@ wlcore: wlcore@2 {
  	};
  };
  
@@ -163,9 +150,9 @@ index 64ba1ae69c39..f63a898ab5be 100644
 -};
 -
  &i2c2 {
- 	touchscreen: touchscreen@4a {
+ 	touchscreen@4a {
  		compatible = "atmel,maxtouch";
-@@ -856,20 +731,6 @@
+@@ -822,20 +697,6 @@ ak8975: magnetometer@c {
  				  "0", "0", "-1";
  
  	};
@@ -190,7 +177,7 @@ diff --git a/arch/arm/boot/dts/omap4-droid-bionic-xt875.dts b/arch/arm/boot/dts/
 index ba5c35b7027d..49b2a8d55356 100644
 --- a/arch/arm/boot/dts/omap4-droid-bionic-xt875.dts
 +++ b/arch/arm/boot/dts/omap4-droid-bionic-xt875.dts
-@@ -7,3 +7,33 @@
+@@ -7,3 +7,33 @@ / {
  	model = "Motorola Droid Bionic XT875";
  	compatible = "motorola,droid-bionic", "ti,omap4430", "ti,omap4";
  };
