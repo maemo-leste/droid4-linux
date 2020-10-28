@@ -120,7 +120,7 @@ static IMG_UINT32 g_ui32TotalByteSize = 0;
 static inline PKV_OFFSET_STRUCT FindOffsetStructByPID(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32PID);
 
 #if defined(DEBUG_LINUX_MMAP_AREAS)
-static struct proc_dir_entry *g_ProcMMap;
+static struct pvr_proc_dir_entry *g_ProcMMap;
 #endif /* defined(DEBUG_LINUX_MMAP_AREAS) */
 
 #if !defined(PVR_MAKE_ALL_PFNS_SPECIAL)
