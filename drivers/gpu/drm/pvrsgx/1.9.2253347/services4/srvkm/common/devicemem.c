@@ -63,7 +63,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #  include <drm/omap_drm.h>
 #  include "perproc.h"
 #  include "env_perproc.h"
-extern int pvr_mapper_id;
 #endif
 
 /* local function prototypes */
@@ -916,7 +915,7 @@ PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 								BM_GetGEM(psMemInfo->sMemBlk.hBuffer);
 						if (buf)
 						{
-							omap_gem_set_priv(buf, pvr_mapper_id, NULL);
+							omap_gem_set_priv(buf, NULL);
 							omap_gem_set_sync_object(buf, NULL);
 						}
 #endif
@@ -2459,7 +2458,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVImportGEMKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	psMemInfo->pvSysBackupBuffer = IMG_NULL;
 
 
-	psMemInfo->psKernelSyncInfo = omap_gem_priv(buf, pvr_mapper_id);
+	psMemInfo->psKernelSyncInfo = omap_gem_priv(buf);
 	if (!psMemInfo->psKernelSyncInfo)
 	{
 		/* allocate sync-object on the first time we import a GEM buffer,
@@ -2476,7 +2475,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVImportGEMKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 			goto ErrorExitPhase4;
 		}
 
-		omap_gem_set_priv(buf, pvr_mapper_id, psMemInfo->psKernelSyncInfo);
+		omap_gem_set_priv(buf, psMemInfo->psKernelSyncInfo);
 
 		omap_gem_set_sync_object(buf, psMemInfo->psKernelSyncInfo->psSyncData);
 	}
