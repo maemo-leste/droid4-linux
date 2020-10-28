@@ -1781,7 +1781,7 @@ LinuxMemAreaStructFree(LinuxMemArea *psLinuxMemArea)
 #undef OMAP_BO_EXT_MEM
 			omap_gem_get_pages(psLinuxMemArea->buf, &pages, 0);
 		}
-		drm_gem_object_put_unlocked(psLinuxMemArea->buf);
+		drm_gem_object_put(psLinuxMemArea->buf);
 
 		if(pages)
 			kfree(pages);

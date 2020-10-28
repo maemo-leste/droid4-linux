@@ -535,7 +535,7 @@ static int ioctl_gem_cpu_prep(struct drm_device *dev, void *data,
 	ret = omap_gem_op_start(obj, args->op);
 
 put_unlocked:
-	drm_gem_object_put_unlocked(obj);
+	drm_gem_object_put(obj);
 
 	return ret;
 }
@@ -555,7 +555,7 @@ static int ioctl_gem_cpu_fini(struct drm_device *dev, void *data,
 
 	ret = omap_gem_op_finish(obj, args->op);
 
-	drm_gem_object_put_unlocked(obj);
+	drm_gem_object_put(obj);
 
 	return ret;
 }
