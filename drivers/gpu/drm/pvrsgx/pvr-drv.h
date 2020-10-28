@@ -29,7 +29,21 @@ struct pvr_unpriv {
 #define	DRM_IOCTL_PVR_IS_MASTER	DRM_IOW(DRM_COMMAND_BASE + DRM_PVR_IS_MASTER, struct pvr_dummy)
 #define	DRM_IOCTL_PVR_UNPRIV	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_UNPRIV, struct pvr_unpriv)
 #define	DRM_IOCTL_PVR_DBGDRV	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DBGDRV, struct pvr_ioctl)
-#define	DRM_IOCTL_PVR_DISP	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DISP, drm_pvr_display_cmd)
+#define	DRM_IOCTL_PVR_DISP	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DISP, struct pvr_dummy)
+
+#ifdef CONFIG_ARCH_OMAP2PLUS
+int pvr_quirk_omap4_init(struct device *dev, struct drm_device *ddev);
+void pvr_quirk_omap4_cleanup(void);
+#else
+static inline int pvr_quirk_omap4_init(struct device *dev, struct drm_device *ddev)
+{
+	return 0;
+}
+
+static inline void pvr_quirk_omap4_cleanup(void)
+{
+}
+#endif
 
 /* We are currently calling these from the Imagination SDK */
 int PVRCore_Init(void);

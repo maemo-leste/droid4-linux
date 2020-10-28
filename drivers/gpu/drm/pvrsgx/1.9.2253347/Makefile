@@ -159,7 +159,8 @@ endif
 
 # Add rewritten driver components here for now
 $(TARGET) += \
-	../pvr-drv.o
+	../pvr-drv.o \
+	../pvr-omap.o
 
 # Keep Imagination SDK components here
 $(TARGET) += \
