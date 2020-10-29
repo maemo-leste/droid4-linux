@@ -619,6 +619,10 @@ static void cpcap_charger_disconnect(struct cpcap_charger_ddata *ddata,
 {
 	int error;
 
+	/* Update battery with full state before disconnecting */
+	if (state == POWER_SUPPLY_STATUS_FULL)
+		power_supply_changed(ddata->usb);
+
 	error = cpcap_charger_set_state(ddata, 0, 0, 0);
 	if (error)
 		return;
@@ -835,6 +839,10 @@ out_err:
 	return error;
 }
 
+static char *cpcap_charger_supplied_to[] = {
+	"battery",
+};
+
 static const struct power_supply_desc cpcap_charger_usb_desc = {
 	.name		= "usb",
 	.type		= POWER_SUPPLY_TYPE_USB,
@@ -892,6 +900,8 @@ static int cpcap_charger_probe(struct platform_device *pdev)
 
 	psy_cfg.of_node = pdev->dev.of_node;
 	psy_cfg.drv_data = ddata;
+	psy_cfg.supplied_to = cpcap_charger_supplied_to;
+	psy_cfg.num_supplicants = ARRAY_SIZE(cpcap_charger_supplied_to),
 
 	ddata->usb = devm_power_supply_register(ddata->dev,
 						&cpcap_charger_usb_desc,
