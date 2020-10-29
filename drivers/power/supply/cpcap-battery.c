@@ -369,12 +369,20 @@ static int cpcap_battery_cc_get_avg_current(struct cpcap_battery_ddata *ddata)
 static bool cpcap_battery_full(struct cpcap_battery_ddata *ddata)
 {
 	struct cpcap_battery_state_data *state = cpcap_battery_latest(ddata);
+	static bool is_full;
 
-	if (state->voltage >=
-	    (ddata->config.bat.constant_charge_voltage_max_uv - 18000))
-		return true;
+	if (state->voltage <
+	    (ddata->config.bat.constant_charge_voltage_max_uv - 18000)) {
+		is_full = false;
+	} else if (is_full) {
+		if (state->current_ua < -170000)
+			is_full = false;
+	} else if (state->current_ua >= -170000 &&
+		   cpcap_battery_cc_get_avg_current(ddata) >= -112000) {
+		is_full = true;
+	}
 
-	return false;
+	return is_full;
 }
 
 static int cpcap_battery_update_status(struct cpcap_battery_ddata *ddata)
