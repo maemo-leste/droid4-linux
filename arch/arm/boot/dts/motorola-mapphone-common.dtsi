@@ -153,6 +153,39 @@
 		ti,clock-source = <0x01>;
 	};
 
+	mapphone_touchscreen {
+			compatible = "touchscreen-buttons";
+			touchscreen_phandle = <&touchscreen>;
+			menu {
+				x-position = <0>;
+				y-position = <959>;
+				x-size = <256>;
+				y-size = <65>;
+				keycode = <KEY_F9>;
+			};
+			home {
+				x-position = <256>;
+				y-position = <959>;
+				x-size = <256>;
+				y-size = <65>;
+				keycode = <KEY_F10>;
+			};
+			back {
+				x-position = <512>;
+				y-position = <959>;
+				x-size = <256>;
+				y-size = <65>;
+				keycode = <KEY_F11>;
+			};
+			search {
+				x-position = <768>;
+				y-position = <959>;
+				x-size = <256>;
+				y-size = <65>;
+				keycode = <KEY_SEARCH>;
+			};
+	};
+
 	vibrator {
 		compatible = "pwm-vibrator";
 		pwms = <&pwm9 0 10000000 0>, <&pwm8 0 10000000 0>;
@@ -322,7 +355,7 @@
 };
 
 &i2c2 {
-	touchscreen@4a {
+	touchscreen: touchscreen@4a {
 		compatible = "atmel,maxtouch";
 		reg = <0x4a>;
 		pinctrl-names = "default";
