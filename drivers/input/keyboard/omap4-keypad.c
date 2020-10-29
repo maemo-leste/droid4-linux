@@ -71,6 +71,8 @@ struct omap4_keypad {
 	void __iomem *base;
 	bool irq_wake_enabled;
 	unsigned int irq;
+	struct delayed_work key_work;
+	struct mutex lock;		/* for key scan */
 
 	unsigned int rows;
 	unsigned int cols;
@@ -154,17 +156,19 @@ static irqreturn_t omap4_keypad_irq_handler(int irq, void *dev_id)
 	return IRQ_NONE;
 }
 
-static irqreturn_t omap4_keypad_irq_thread_fn(int irq, void *dev_id)
+static bool omap4_keypad_scan_keys(struct omap4_keypad *keypad_data, bool clear)
 {
-	struct omap4_keypad *keypad_data = dev_id;
 	struct input_dev *input_dev = keypad_data->input;
 	int keys_up, keys_down;
 	u32 low, high;
-	u64 keys;
+	u64 keys = 0;
 
-	low = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE31_0);
-	high = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE63_32);
-	keys = low | (u64)high << 32;
+	mutex_lock(&keypad_data->lock);
+	if (!clear) {
+		low = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE31_0);
+		high = kbd_readl(keypad_data, OMAP4_KBD_FULLCODE63_32);
+		keys = low | (u64)high << 32;
+	}
 
 	/* Scan for key up events for lost key-up interrupts */
 	keys_up = omap4_keypad_scan_state(keypad_data, keys, false);
@@ -176,11 +180,47 @@ static irqreturn_t omap4_keypad_irq_thread_fn(int irq, void *dev_id)
 
 	keypad_data->keys = keys;
 
+	mutex_unlock(&keypad_data->lock);
+
+	return keys_down;
+}
+
+static irqreturn_t omap4_keypad_irq_thread_fn(int irq, void *dev_id)
+{
+	struct omap4_keypad *keypad_data = dev_id;
+	bool down_events;
+
+	down_events = omap4_keypad_scan_keys(keypad_data, false);
+	if (down_events)
+		mod_delayed_work(system_wq, &keypad_data->key_work,
+				 msecs_to_jiffies(50));
+	else
+		cancel_delayed_work_sync(&keypad_data->key_work);
+
 	/* clear pending interrupts */
 	kbd_write_irqreg(keypad_data, OMAP4_KBD_IRQSTATUS,
 			 kbd_read_irqreg(keypad_data, OMAP4_KBD_IRQSTATUS));
 
 	return IRQ_HANDLED;
+}
+
+/*
+ * Errata ID i689 "1.32 Keyboard Key Up Event Can Be Missed".
+ * Interrupt may not happen for key-up events.
+ */
+static void omap4_keypad_work(struct work_struct *work)
+{
+	struct omap4_keypad *keypad_data =
+		container_of(work, struct omap4_keypad, key_work.work);
+	bool events;
+	u32 active;
+
+	active = kbd_readl(keypad_data, OMAP4_KBD_STATEMACHINE);
+	if (active)
+		return;
+
+	dev_dbg(keypad_data->input->dev.parent, "idle with events\n");
+	events = omap4_keypad_scan_keys(keypad_data, true);
 }
 
 static int omap4_keypad_open(struct input_dev *input)
@@ -275,6 +315,8 @@ static int omap4_keypad_probe(struct platform_device *pdev)
 	}
 
 	keypad_data->irq = irq;
+	mutex_init(&keypad_data->lock);
+	INIT_DELAYED_WORK(&keypad_data->key_work, omap4_keypad_work);
 
 	error = omap4_keypad_parse_dt(&pdev->dev, keypad_data);
 	if (error)
@@ -410,6 +452,7 @@ static int omap4_keypad_remove(struct platform_device *pdev)
 	struct resource *res;
 
 	free_irq(keypad_data->irq, keypad_data);
+	cancel_delayed_work_sync(&keypad_data->key_work);
 
 	pm_runtime_disable(&pdev->dev);
 
