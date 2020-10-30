@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 8c6cc7f5f1fb..e2422962fefa 100644
+index a643414b9129..cb96a6425ddc 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -585,3 +585,21 @@ CONFIG_DEBUG_INFO_DWARF4=y
+@@ -584,3 +584,21 @@ CONFIG_DEBUG_INFO_DWARF4=y
  CONFIG_MAGIC_SYSRQ=y
  CONFIG_DEBUG_FS=y
  CONFIG_SCHEDSTATS=y
@@ -24,3 +24,34 @@ index 8c6cc7f5f1fb..e2422962fefa 100644
 +CONFIG_NETFILTER_XTABLES=y
 +CONFIG_NF_NAT=y
 +CONFIG_NETFILTER=y
+diff --git a/debian/patches/0008-defconfig-enable-netfilter-masquerading.patch b/debian/patches/0008-defconfig-enable-netfilter-masquerading.patch
+index 466713a7016e..e69de29bb2d1 100644
+--- a/debian/patches/0008-defconfig-enable-netfilter-masquerading.patch
++++ b/debian/patches/0008-defconfig-enable-netfilter-masquerading.patch
+@@ -1,26 +0,0 @@
+-diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
+-index 8c6cc7f5f1fb..e2422962fefa 100644
+---- a/arch/arm/configs/omap2plus_defconfig
+-+++ b/arch/arm/configs/omap2plus_defconfig
+-@@ -585,3 +585,21 @@ CONFIG_DEBUG_INFO_DWARF4=y
+- CONFIG_MAGIC_SYSRQ=y
+- CONFIG_DEBUG_FS=y
+- CONFIG_SCHEDSTATS=y
+-+CONFIG_NF_CONNTRACK=y
+-+CONFIG_NF_CONNTRACK_SIP=y
+-+CONFIG_NF_CONNTRACK_FTP=y
+-+CONFIG_NF_CONNTRACK_IPV4=y
+-+CONFIG_NF_NAT_IPV4=y
+-+CONFIG_NF_NAT_MASQUERADE_IPV4=y
+-+CONFIG_NETFILTER_XT_NAT=y
+-+CONFIG_IP_NF_NAT=y
+-+CONFIG_NETFILTER_XTABLES=y
+-+CONFIG_NETFILTER_XT_NAT=y
+-+CONFIG_CONFIG_IP_NF_IPTABLES=y
+-+CONFIG_IP_NF_FILTER=y
+-+CONFIG_IP_NF_TARGET_REJECT=y
+-+CONFIG_IP_NF_TARGET_MASQUERADE=y
+-+CONFIG_IP_NF_IPTABLES=y
+-+CONFIG_NETFILTER_XTABLES=y
+-+CONFIG_NF_NAT=y
+-+CONFIG_NETFILTER=y

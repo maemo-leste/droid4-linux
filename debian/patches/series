@@ -1,11 +1,7 @@
 0001-maemo-leste-quirks.patch
 0002-enable-droid4-magnetometer.patch
-1-drm-omap-fix-suspend.patch
 0003-serial-fix-imprecise-external-abort.patch
 0004-enable-debug-slab.patch
 0005-enable-nl80211-testmode.patch
 0006-ti-sysc-increase-max-softreset.patch
-0007-rtc-cpcap-fix-range.patch
 0008-defconfig-enable-netfilter-masquerading.patch
-0010-omap2-restore-mpu-power-domain.patch
-split-mapphone-dts.patch
