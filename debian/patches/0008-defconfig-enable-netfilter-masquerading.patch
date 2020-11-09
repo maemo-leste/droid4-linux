@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 79ecf6dc85a1..0518df4c57d6 100644
+index bbfa11448744..83bee75cc010 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -581,3 +581,21 @@ CONFIG_DEBUG_INFO_DWARF4=y
+@@ -586,3 +586,21 @@ CONFIG_DEBUG_INFO_DWARF4=y
  CONFIG_MAGIC_SYSRQ=y
  CONFIG_DEBUG_FS=y
  CONFIG_SCHEDSTATS=y

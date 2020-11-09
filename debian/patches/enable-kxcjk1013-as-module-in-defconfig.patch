@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 0518df4c57d6..65c2a54449b7 100644
+index 83bee75cc010..2ead96468ec2 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -599,3 +599,4 @@ CONFIG_IP_NF_IPTABLES=y
+@@ -604,3 +604,4 @@ CONFIG_IP_NF_IPTABLES=y
  CONFIG_NETFILTER_XTABLES=y
  CONFIG_NF_NAT=y
  CONFIG_NETFILTER=y
