@@ -60,6 +60,7 @@ SOURCE=$(obj)/$(SUBPATH)
 # FIXME: should somehow keep the compiled .o separate...
 
 $(obj)/pvr:
+	@rm -f $(obj)/modules.order
 ifneq ($(CONFIG_SGX_CEDARVIEW),)
 	@$(kecho) "  MAKE    $(obj): cedarview"
 # Fix versions
