@@ -31,7 +31,7 @@ struct pvr_unpriv {
 #define	DRM_IOCTL_PVR_DBGDRV	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DBGDRV, struct pvr_ioctl)
 #define	DRM_IOCTL_PVR_DISP	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DISP, struct pvr_dummy)
 
-#ifdef CONFIG_ARCH_OMAP2PLUS
+#if defined(CONFIG_ARCH_OMAP2PLUS) && defined(CONFIG_PVRSGX_1_9_2253347)
 int pvr_quirk_omap4_init(struct device *dev, struct drm_device *ddev);
 void pvr_quirk_omap4_cleanup(void);
 #else
