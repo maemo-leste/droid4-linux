@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index d426b4e011c8..bbfa11448744 100644
+index 190616fde763..71bec30b65a0 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -126,6 +126,7 @@ CONFIG_BT_MRVL_SDIO=m
+@@ -125,6 +125,7 @@ CONFIG_BT_MRVL_SDIO=m
  CONFIG_AF_RXRPC=m
  CONFIG_RXKAD=y
  CONFIG_CFG80211=m

@@ -1,6 +1,4 @@
 0001-maemo-leste-quirks.patch
-0002-enable-droid4-magnetometer.patch
-0004-enable-debug-slab.patch
-0005-enable-nl80211-testmode.patch
-0008-defconfig-enable-netfilter-masquerading.patch
-enable-kxcjk1013-as-module-in-defconfig.patch
+0002-enable-nl80211-testmode.patch
+0003-defconfig-enable-netfilter-masquerading.patch
+0004-remove-omap2-from-defconfig.patch
