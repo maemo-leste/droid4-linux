@@ -128,7 +128,8 @@ ccflags-y += \
 	-DPVR_NO_FULL_CACHE_OPS \
 	-DSGX_CLK_CORE_DIV5 \
 	-DSUPPORT_SGX_NEW_STATUS_VALS \
-	-DSYS_USING_INTERRUPTS
+	-DSYS_USING_INTERRUPTS \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT
 
 # new for ddk 1.14 tree
 ccflags-y += \
@@ -217,7 +218,6 @@ ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
 ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE	# assumed by client libs
 ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 # may be broken...
-ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB			:= 0
 endif
