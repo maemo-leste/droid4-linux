@@ -117,6 +117,7 @@ ccflags-y += \
 	-DLDM_PLATFORM \
 	-DSUPPORT_SGX_EVENT_OBJECT \
 	-DPVR2D_ALT_2DHW \
+	-DPVR_LINUX_MEM_AREA_USE_VMAP \
 	-DSUPPORT_SGX_HWPERF \
 	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING \
 	-DSUPPORT_LINUX_X86_PAT \
@@ -126,7 +127,9 @@ ccflags-y += \
 	-DSYS_CUSTOM_POWERLOCK_WRAP \
 	-DPVR_NO_FULL_CACHE_OPS \
 	-DSGX_CLK_CORE_DIV5 \
-	-DSUPPORT_SGX_NEW_STATUS_VALS
+	-DSUPPORT_SGX_NEW_STATUS_VALS \
+	-DSYS_USING_INTERRUPTS \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT
 
 # new for ddk 1.14 tree
 ccflags-y += \
@@ -215,7 +218,6 @@ ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
 ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE	# assumed by client libs
 ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 # may be broken...
-#ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB			:= 0
 endif
@@ -235,7 +237,6 @@ ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_li
 ccflags-y += -DSUPPORT_DMABUF
 
 # these must not be set or we can't compile successfully for omap
-ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors, asynchronous external abort
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL

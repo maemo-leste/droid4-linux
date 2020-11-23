@@ -60,6 +60,7 @@ SOURCE=$(obj)/$(SUBPATH)
 # FIXME: should somehow keep the compiled .o separate...
 
 $(obj)/pvr:
+	@rm -f $(obj)/modules.order
 ifneq ($(CONFIG_SGX_CEDARVIEW),)
 	@$(kecho) "  MAKE    $(obj): cedarview"
 # Fix versions
@@ -75,7 +76,7 @@ ifneq ($(CONFIG_ARCH_OMAP4),)
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_ARCH_OMAP4
-else ifneq ($(CONFIG_PVRSGX_1_14_3699939),)
+else
 ifneq ($(CONFIG_ARCH_OMAP3),)
 	@$(kecho) "  MAKE    $(obj): omap3430"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap3 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
