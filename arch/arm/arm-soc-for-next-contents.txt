@@ -31,6 +31,52 @@ arm/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-arm-dt
 	tegra/dt64
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-arm64-dt
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-dt-5.11
+	sunxi/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt-for-5.11
+	broadcom/dt
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/devicetree
+	broadcom/dt64
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/devicetree-arm64
+	mediatek/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.10-next-dts64
+	nuvoton/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/bmc tags/nuvoton-5.11-devicetree
+	mvebu/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-dt-5.11-1
+	mvebu/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-dt64-5.11-1
+	k3/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nmenon/linux tags/ti-k3-dt-for-v5.11
+	qcom/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-for-5.11
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-dts-for-5.11
+	keystone/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_dts_for_5.11
+	samsung/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11-2
+	<no branch> (f74e93032df229a8358617e586ba89f744d5dbcd)
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-5.11
+	amlogic/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
+	imx/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-bindings-5.11
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-5.11
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-5.11
+	at91/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-dt-5.11-2
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-dts64-1
+	rockchip/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-dts32-1
+	samsung/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11-3
+	amlogic/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2
 
 arm/drivers
 	optee/uuid
@@ -55,10 +101,18 @@ arm/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-soc
 	tegra/firmware
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-firmware
-	<no branch> (3cea11cd5e3b00d91caf0b4730194039b45c5891)
+	backmerge/v5.10-rc2
 		Backmerge tag 'v5.10-rc2' into arm/drivers
-	<no branch> (f83eb664cdb45169338b9633f22eaafc23764f05)
+	drivers/scmi
 		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scmi-updates-5.11
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-drivers-5.11
+	broadcom/drivers
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/drivers
+	mediatek/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.10-next-soc
+	aspeed/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.11-soc
 
 arm/defconfig
 	renesas/defconfig
@@ -72,26 +126,43 @@ arm/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-config-for-v5.11-1
 	tegra/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-arm64-defconfig
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-defconfig-5.11
+	sunxi/config
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-config-for-5.11
+	sunxi/config64
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-config64-for-5.11
+	broadcom/defconfig
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/defconfig
+	broadcom/defconfig64
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/defconfig-arm64
+	k3/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nmenon/linux tags/ti-k3-config-for-v5.11
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-defconfig-for-5.11
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-5.11
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-5.11
+	rockchip/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-defconfig64-1
+	patch
+		ARM: configs: drop unused BACKLIGHT_GENERIC option
+		arm64: defconfig: drop unused BACKLIGHT_GENERIC option
+		parisc: configs: drop unused BACKLIGHT_GENERIC option
+		powerpc/configs: drop unused BACKLIGHT_GENERIC option
 
 arm/newsoc
 
 arm/late
 
 arm/fixes
+	<no branch> (a7361b9c4615951f52ffd2b1afa09a1384c7b4e4)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-fixes-for-5.10-2
+	<no branch> (19ba8fb810c60b46869acc9f455613de454e0fca)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-5.10-5
 	patch
-		arm64: dts: broadcom: clear the warnings caused by empty dma-ranges
-		arm64: dts: qcom: clear the warnings caused by empty dma-ranges
-		MAINTAINERS: Remove myself as LPC32xx maintainers
-	<no branch> (7327c8b98e2e14c47021eea14d1ab268086a6408)
-		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.10-rockchip-dtsfixes1
-	<no branch> (acfdd18591eaac25446e976a0c0d190f8b3dbfb1)
-		https://github.com/Xilinx/linux-xlnx tags/zynqmp-soc-fixes-for-v5.10-rc6
-	<no branch> (2663b3388551230cbc4606a40fabf3331ceb59e4)
-		git://git.kernel.org/pub/scm/linux/kernel/git/leo/linux tags/soc-fsl-fix-v5.10
-	<no branch> (d98bccf10dd0f36cabee71a425381fce0908de3b)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.10-arm64-dt-fixes
-	<no branch> (05d5de6ba7dbe490dd413b5ca11d0875bd2bc006)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.10/fixes-rc5-signed
-	<no branch> (853735e404244f5496cdb6188c5ed9a0f9627ee6)
-		git://git.linaro.org/people/jens.wiklander/linux-tee tags/optee-valid-memory-type-for-v5.11
+		ARM: keystone: remove SECTION_SIZE_BITS/MAX_PHYSMEM_BITS
+		MAINTAINERS: correct SoC Git address (formerly: arm-soc)
+		MAINTAINERS: add a limited ARM and ARM64 SoC entry
 
