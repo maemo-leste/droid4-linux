@@ -57,7 +57,7 @@ arm/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_dts_for_5.11
 	samsung/dt-2
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11-2
-	<no branch> (f74e93032df229a8358617e586ba89f744d5dbcd)
+	samsung/dt64
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-5.11
 	amlogic/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
@@ -113,6 +113,24 @@ arm/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.10-next-soc
 	aspeed/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.11-soc
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-drivers-for-5.11
+	omap/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-drivers-signed
+	keystone/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/drivers_soc_for_5.11
+	amlogic/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-drivers
+	imx/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-drivers-5.11
+	drivers/reset
+		git://git.pengutronix.de/pza/linux tags/reset-for-v5.11
+	rockchip/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-drivers-1
+	drivers/memory-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-5.11-2
+	drivers/memory-tegra-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-tegra-5.11-3
 
 arm/defconfig
 	renesas/defconfig
@@ -165,4 +183,6 @@ arm/fixes
 		ARM: keystone: remove SECTION_SIZE_BITS/MAX_PHYSMEM_BITS
 		MAINTAINERS: correct SoC Git address (formerly: arm-soc)
 		MAINTAINERS: add a limited ARM and ARM64 SoC entry
+	<no branch> (d0c6707ca4235b78d06bcd62f0e24fbeac3e6d10)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-fixes-for-5.10-3
 
