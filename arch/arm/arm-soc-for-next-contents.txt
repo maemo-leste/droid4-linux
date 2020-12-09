@@ -161,6 +161,10 @@ arm/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-5.11-2
 	drivers/memory-tegra-2
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-tegra-5.11-3
+	zynq/soc
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-soc-for-v5.11-v2
+	samsung/soc-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-5.11-2
 
 arm/defconfig
 	renesas/defconfig
@@ -215,4 +219,17 @@ arm/fixes
 		MAINTAINERS: add a limited ARM and ARM64 SoC entry
 	<no branch> (d0c6707ca4235b78d06bcd62f0e24fbeac3e6d10)
 		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-fixes-for-5.10-3
+	patch
+		firmware: xilinx: Mark pm_api_features_map with static keyword
+		ARM: dts: mmp2-olpc-xo-1-75: clear the warnings when make dtbs
+
+arm/omap-genpd
+	omap/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-drivers-signed
+	omap/genpd-335x
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-am335x-signed
+	omap/genpd-am437x
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-am437x-signed
+	omap/genpd-rest
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-rest-signed
 
