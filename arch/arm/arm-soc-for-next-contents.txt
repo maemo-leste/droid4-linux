@@ -88,6 +88,25 @@ arm/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11-3
 	amlogic/dt-3
 		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2
+	patch
+		ARM: mstar: Add gpio controller to MStar base dtsi
+		ARM: mstar: Fill in GPIO controller properties for infinity
+		dt-bindings: mstar: Add binding details for mstar,smpctrl
+		dt-bindings: vendor-prefixes: Add honestar vendor prefix
+		dt-bindings: mstar: Add Honestar SSD201_HT_V2 to mstar boards
+		ARM: mstar: Add infinity2m support
+		ARM: mstar: Add common dtsi for SSD201/SSD202D
+		ARM: mstar: Add chip level dtsi for SSD202D
+		ARM: mstar: Add dts for Honestar ssd201htv2
+		ARM: mstar: Add smp ctrl registers to infinity2m dtsi
+		ARM: mstar: Wire up smpctrl for SSD201/SSD202D
+		ARM: mstar: SMP support
+	aspeed/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.11-devicetree
+	zynq/dt64
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-v5.11
+	zynq/dt
+		https://github.com/Xilinx/linux-xlnx tags/zynq-dt-for-v5.10
 
 arm/drivers
 	optee/uuid
