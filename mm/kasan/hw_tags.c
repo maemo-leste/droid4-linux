@@ -43,11 +43,11 @@ static enum kasan_arg_stacktrace kasan_arg_stacktrace __ro_after_init;
 static enum kasan_arg_fault kasan_arg_fault __ro_after_init;
 
 /* Whether KASAN is enabled at all. */
-DEFINE_STATIC_KEY_FALSE_RO(kasan_flag_enabled);
+DEFINE_STATIC_KEY_FALSE(kasan_flag_enabled);
 EXPORT_SYMBOL(kasan_flag_enabled);
 
 /* Whether to collect alloc/free stack traces. */
-DEFINE_STATIC_KEY_FALSE_RO(kasan_flag_stacktrace);
+DEFINE_STATIC_KEY_FALSE(kasan_flag_stacktrace);
 
 /* Whether panic or disable tag checking on fault. */
 bool kasan_flag_panic __ro_after_init;
