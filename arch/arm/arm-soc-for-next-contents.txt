@@ -1,0 +1,235 @@
+arm/soc
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/soc-signed
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-soc-for-v5.11-tag1
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-5.11
+	mvebu/maintainers
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-arm-5.11-1
+	amlogic/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-soc
+	amlogic/soc-2
+imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-5.11
+	patch
+		arm64: Kconfig: meson: drop pinctrl
+
+arm/dt
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-dt-for-v5.11-tag1
+	renesas/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-dt-bindings-for-v5.11-tag1
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11
+	patch
+		ARM: dts: add Nuvoton NPCM730 device tree
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-dts-for-v5.11-1
+	hisi/dt
+		git://github.com/hisilicon/linux-hisi tags/hisi-arm32-dt-for-5.11
+	hisi/dt64
+		git://github.com/hisilicon/linux-hisi tags/hisi-arm64-dt-for-5.11
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/dt-signed
+	stm32/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-dt-for-v5.11-1
+	renesas/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-dt-for-v5.11-tag2
+	tegra/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-dt-bindings
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-arm-dt
+	tegra/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-arm64-dt
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-dt-5.11
+	sunxi/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt-for-5.11
+	broadcom/dt
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/devicetree
+	broadcom/dt64
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/devicetree-arm64
+	mediatek/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.10-next-dts64
+	nuvoton/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/bmc tags/nuvoton-5.11-devicetree
+	mvebu/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-dt-5.11-1
+	mvebu/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/gclement/mvebu tags/mvebu-dt64-5.11-1
+	k3/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nmenon/linux tags/ti-k3-dt-for-v5.11
+	qcom/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-for-5.11
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-dts-for-5.11
+	keystone/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_dts_for_5.11
+	samsung/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11-2
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-5.11
+	amlogic/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
+	imx/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-bindings-5.11
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-5.11
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-5.11
+	at91/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-dt-5.11-2
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-dts64-1
+	rockchip/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-dts32-1
+	samsung/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.11-3
+	amlogic/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2
+	patch
+		ARM: mstar: Add gpio controller to MStar base dtsi
+		ARM: mstar: Fill in GPIO controller properties for infinity
+		dt-bindings: mstar: Add binding details for mstar,smpctrl
+		dt-bindings: vendor-prefixes: Add honestar vendor prefix
+		dt-bindings: mstar: Add Honestar SSD201_HT_V2 to mstar boards
+		ARM: mstar: Add infinity2m support
+		ARM: mstar: Add common dtsi for SSD201/SSD202D
+		ARM: mstar: Add chip level dtsi for SSD202D
+		ARM: mstar: Add dts for Honestar ssd201htv2
+		ARM: mstar: Add smp ctrl registers to infinity2m dtsi
+		ARM: mstar: Wire up smpctrl for SSD201/SSD202D
+		ARM: mstar: SMP support
+	aspeed/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.11-devicetree
+	zynq/dt64
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-v5.11
+	zynq/dt
+		https://github.com/Xilinx/linux-xlnx tags/zynq-dt-for-v5.10
+
+arm/drivers
+	optee/uuid
+		git://git.linaro.org:/people/jens.wiklander/linux-tee tags/optee-use-uuid-api-for-v5.10
+	renesas/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-drivers-for-v5.11-tag1
+	sunxi/rework-mbus
+		ssh://gitolite.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-rework-mbus
+	samsung/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-5.11
+	patch
+		soc: sunxi: Fix compilation of sunxi_mbus
+	fsl/driver
+		git://git.kernel.org/pub/scm/linux/kernel/git/leo/linux tags/soc-fsl-next-v5.11
+	drivers/memory
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-5.11
+	drivers/memory-tegra
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-tegra-5.11-2
+	renesas/drivers-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-drivers-for-v5.11-tag2
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-soc
+	tegra/firmware
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-firmware
+	backmerge/v5.10-rc2
+		Backmerge tag 'v5.10-rc2' into arm/drivers
+	drivers/scmi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scmi-updates-5.11
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-drivers-5.11
+	broadcom/drivers
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/drivers
+	mediatek/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/matthias.bgg/linux tags/v5.10-next-soc
+	aspeed/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/joel/aspeed tags/aspeed-5.11-soc
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-drivers-for-5.11
+	omap/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-drivers-signed
+	keystone/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/drivers_soc_for_5.11
+	amlogic/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-drivers
+	imx/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-drivers-5.11
+	drivers/reset
+		git://git.pengutronix.de/pza/linux tags/reset-for-v5.11
+	rockchip/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-drivers-1
+	drivers/memory-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-5.11-2
+	drivers/memory-tegra-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux-mem-ctrl tags/memory-controller-drv-tegra-5.11-3
+	zynq/soc
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-soc-for-v5.11-v2
+	samsung/soc-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-5.11-2
+
+arm/defconfig
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-devel tags/renesas-arm-defconfig-for-v5.11-tag1
+	patch
+		ARM: config: ux500: Update U8500 defconfig
+		ARM: multi_v7_defconfig: ti: Enable networking options for nfs boot
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/defconfig-signed
+	stm32/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-config-for-v5.11-1
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.11-arm64-defconfig
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-defconfig-5.11
+	sunxi/config
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-config-for-5.11
+	sunxi/config64
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-config64-for-5.11
+	broadcom/defconfig
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/defconfig
+	broadcom/defconfig64
+		https://github.com/Broadcom/stblinux tags/arm-soc/for-5.11/defconfig-arm64
+	k3/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nmenon/linux tags/ti-k3-config-for-v5.11
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-defconfig-for-5.11
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-5.11
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-5.11
+	rockchip/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v5.11-rockchip-defconfig64-1
+	patch
+		ARM: configs: drop unused BACKLIGHT_GENERIC option
+		arm64: defconfig: drop unused BACKLIGHT_GENERIC option
+		parisc: configs: drop unused BACKLIGHT_GENERIC option
+		powerpc/configs: drop unused BACKLIGHT_GENERIC option
+
+arm/newsoc
+
+arm/late
+
+arm/fixes
+	<no branch> (a7361b9c4615951f52ffd2b1afa09a1384c7b4e4)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-fixes-for-5.10-2
+	<no branch> (19ba8fb810c60b46869acc9f455613de454e0fca)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-5.10-5
+	patch
+		ARM: keystone: remove SECTION_SIZE_BITS/MAX_PHYSMEM_BITS
+		MAINTAINERS: correct SoC Git address (formerly: arm-soc)
+		MAINTAINERS: add a limited ARM and ARM64 SoC entry
+	<no branch> (d0c6707ca4235b78d06bcd62f0e24fbeac3e6d10)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-fixes-for-5.10-3
+	patch
+		firmware: xilinx: Mark pm_api_features_map with static keyword
+		ARM: dts: mmp2-olpc-xo-1-75: clear the warnings when make dtbs
+
+arm/omap-genpd
+	omap/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-drivers-signed
+	omap/genpd-335x
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-am335x-signed
+	omap/genpd-am437x
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-am437x-signed
+	omap/genpd-rest
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/genpd-rest-signed
+
