@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index 51540b291738..e9f4679df960 100644
+index e30cf02da8b8..47bc4400def2 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1464,7 +1464,7 @@ CLEAN_FILES += include/ksym vmlinux.symvers \
+@@ -1474,7 +1474,7 @@ CLEAN_FILES += include/ksym vmlinux.symvers \
  # Directories & files removed with 'make mrproper'
  MRPROPER_FILES += include/config include/generated          \
  		  arch/$(SRCARCH)/include/generated .tmp_objdiff \
@@ -12,10 +12,10 @@ index 51540b291738..e9f4679df960 100644
  		  Module.symvers \
  		  signing_key.pem signing_key.priv signing_key.x509	\
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
-index 6df3c9f8b2da..ce9550b5c27e 100755
+index 91a502bb97e8..aba68a686269 100755
 --- a/scripts/package/builddeb
 +++ b/scripts/package/builddeb
-@@ -94,15 +94,15 @@ deploy_libc_headers () {
+@@ -101,15 +101,15 @@ deploy_libc_headers () {
  
  	# move asm headers to /usr/include/<libc-machine>/asm to match the structure
  	# used by Debian-based distros (to support multi-arch)
@@ -35,7 +35,7 @@ index 6df3c9f8b2da..ce9550b5c27e 100755
  dbg_packagename=$packagename-dbg
  
  if [ "$ARCH" = "um" ] ; then
-@@ -193,9 +193,23 @@ set -e
+@@ -200,9 +200,23 @@ set -e
  export DEB_MAINT_PARAMS="\$*"
  
  # Tell initramfs builder whether it's wanted
@@ -50,7 +50,7 @@ index 6df3c9f8b2da..ce9550b5c27e 100755
 +	mkdir -p /boot/boot
 +	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb
 +	cp -f /boot/vmlinuz-$version /boot/boot/zImage
-+	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /boot/boot/
++	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /boot/boot
 +	;;
 +postrm)
 +	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb
@@ -60,12 +60,13 @@ index 6df3c9f8b2da..ce9550b5c27e 100755
  exit 0
  EOF
  	chmod 755 "$tmpdir/DEBIAN/$script"
-@@ -203,10 +217,10 @@ done
- 
+@@ -211,11 +225,11 @@ done
  if [ "$ARCH" != "um" ]; then
- 	deploy_kernel_headers debian/linux-headers
--	create_package linux-headers-$version debian/linux-headers
-+	create_package linux-headers-droid4 debian/linux-headers
+ 	if is_enabled CONFIG_MODULES; then
+ 		deploy_kernel_headers debian/linux-headers
+-		create_package linux-headers-$version debian/linux-headers
++		create_package linux-headers-droid4 debian/linux-headers
+ 	fi
  
 -	deploy_libc_headers debian/linux-libc-dev
 -	create_package linux-libc-dev debian/linux-libc-dev
