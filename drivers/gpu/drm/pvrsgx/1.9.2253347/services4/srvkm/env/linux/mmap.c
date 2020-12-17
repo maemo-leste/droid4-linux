@@ -522,7 +522,8 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
 			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
 	struct drm_gem_object *buf = NULL;
-        IMG_UINT32 *puiHandle;
+	LinuxDrmHandle *psDrmHandle;
+	IMG_UINT32 uiHandle;
 	IMG_UINT32 ret;
 #endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
@@ -545,8 +546,6 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     psLinuxMemArea = (LinuxMemArea *)hOSMemHandle;
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
-    puiHandle = &psLinuxMemArea->uiHandle;
-
         /* Sparse mappings have to ask the BM for the virtual size */
 	if (psLinuxMemArea->hBMHandle)
 	{
@@ -571,29 +570,49 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
             buf = create_gem_wrapper(psEnvPerProc->dev, psEnvPerProc->file, hMHandle,
                     psLinuxMemArea, 0, *pui32RealByteSize);
 	    if(buf){
-		ret = drm_gem_handle_create(psEnvPerProc->file, (struct drm_gem_object *)buf, puiHandle);
+		ret = drm_gem_handle_create(psEnvPerProc->file, (struct drm_gem_object *)buf, &uiHandle);
 		if(ret) {
 			/*This means we are royaly screwed up. Go home. */
 			/*Please don't worry about not freeing the GEM. */
 			/*DRM core will take care of it, eventually.    */
-			buf = NULL;
+			eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+			goto exit_unlock;
 		}
+		psDrmHandle = kmalloc(sizeof(*psDrmHandle), GFP_KERNEL);
+		if(!psDrmHandle) {
+			drm_gem_handle_delete (psEnvPerProc->file, uiHandle);
+			eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+	                goto exit_unlock;
+		}
+		psDrmHandle->uiHandle = uiHandle;
+		psDrmHandle->psFile = psEnvPerProc->file;
+		list_add_tail(&psDrmHandle->sNode, &psLinuxMemArea->sHandles);
 	    }
             if (!buf)
             {
-                PVR_DPF((PVR_DBG_ERROR, "%s: Screw you guys, I'm going home..", __FUNCTION__));
+                PVR_DPF((PVR_DBG_ERROR, "%s: A Drm GEM could not be created ..", __FUNCTION__));
                 eError = PVRSRV_ERROR_OUT_OF_MEMORY;
                 goto exit_unlock;
             }
 
             psLinuxMemArea->buf = buf;
         } else {
-		ret = drm_gem_handle_create(psEnvPerProc->file, (struct drm_gem_object *)buf, puiHandle);
+		ret = drm_gem_handle_create(psEnvPerProc->file, (struct drm_gem_object *)buf, &uiHandle);
 		if(ret) {
-			PVR_DPF((PVR_DBG_ERROR, "%s: Screw you guys, I'm going home..", __FUNCTION__));
+			PVR_DPF((PVR_DBG_ERROR, "%s: A Drm GEM handle could not be created ..", __FUNCTION__));
 			eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 			goto exit_unlock;
 		}
+
+		psDrmHandle = kmalloc(sizeof(*psDrmHandle), GFP_KERNEL);
+		if(!psDrmHandle) {
+			drm_gem_handle_delete (psEnvPerProc->file, uiHandle);
+			eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+	                goto exit_unlock;
+		}
+		psDrmHandle->uiHandle = uiHandle;
+		psDrmHandle->psFile = psEnvPerProc->file;
+		list_add_tail(&psDrmHandle->sNode, &psLinuxMemArea->sHandles);
 	}
     }
 #endif /* SUPPORT_DRI_DRM_EXTERNAL */
@@ -722,6 +741,7 @@ PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     PVRSRV_ERROR eError;
     IMG_UINT32 ui32PID = OSGetCurrentProcessIDKM();
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	LinuxDrmHandle *psDrmHandle, *temp;
 	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
 			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
 #endif /* SUPPORT_DRI_DRM_EXTERNAL */
@@ -745,9 +765,13 @@ PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     psLinuxMemArea = (LinuxMemArea *)hOSMemHandle;
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
-    if (psLinuxMemArea->uiHandle) {
-	drm_gem_handle_delete(psEnvPerProc->file, psLinuxMemArea->uiHandle);
-	psLinuxMemArea->uiHandle = 0;
+    list_for_each_entry_safe(psDrmHandle, temp, &psLinuxMemArea->sHandles, sNode) {
+	    if(psDrmHandle->psFile == psEnvPerProc->file) {
+		    list_del(&psDrmHandle->sNode);
+		    drm_gem_handle_delete(psDrmHandle->psFile, psDrmHandle->uiHandle);
+		    kfree(psDrmHandle);
+		    break;
+	    }
     }
 #endif
 
