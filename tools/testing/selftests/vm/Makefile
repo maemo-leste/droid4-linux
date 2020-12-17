@@ -65,7 +65,7 @@ TEST_GEN_FILES += $(BINARIES_64)
 endif
 else
 
-ifneq (,$(findstring $(ARCH),powerpc))
+ifneq (,$(filter $(MACHINE),ppc64 ppc64le))
 TEST_GEN_FILES += protection_keys
 endif
 
