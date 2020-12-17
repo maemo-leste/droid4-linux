@@ -2529,7 +2529,7 @@ ErrorExitPhase2:
 
 	if (buf)
 	{
-		drm_gem_object_put_unlocked(buf);
+		drm_gem_object_put(buf);
 	}
 
 	return eError;
