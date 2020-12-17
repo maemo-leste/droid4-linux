@@ -209,9 +209,14 @@ static const struct dev_pm_ops pvr_pm_ops = {
 static const struct pvr_capabilities __maybe_unused pvr_omap3 = {
 };
 
+#ifdef CONFIG_PVRSGX_1_9_2253347
 static const struct pvr_capabilities __maybe_unused pvr_omap4 = {
 	.quirks = PVR_QUIRK_OMAP4,
 };
+#else
+static const struct pvr_capabilities __maybe_unused pvr_omap4 = {
+};
+#endif
 
 static const struct pvr_capabilities __maybe_unused pvr_omap4470 = {
 	.smp = true,
