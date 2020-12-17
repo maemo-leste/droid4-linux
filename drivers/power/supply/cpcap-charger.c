@@ -683,7 +683,7 @@ static void cpcap_usb_detect(struct work_struct *work)
 		if (!s.chrgcurr2)
 			break;
 		if (s.vbusvld)
-			new_state = POWER_SUPPLY_STATUS_FULL;
+			new_state = POWER_SUPPLY_STATUS_NOT_CHARGING;
 		else
 			new_state = POWER_SUPPLY_STATUS_DISCHARGING;
 
