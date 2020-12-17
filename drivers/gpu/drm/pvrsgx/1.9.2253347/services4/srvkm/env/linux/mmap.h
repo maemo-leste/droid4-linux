@@ -44,6 +44,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/mm.h>
 #include <linux/list.h>
+#include <drm/drm_gem.h>
 
 #if defined(VM_MIXEDMAP)
 /*
