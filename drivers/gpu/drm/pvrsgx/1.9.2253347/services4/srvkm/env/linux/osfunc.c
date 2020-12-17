@@ -51,6 +51,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/page.h>
 #include <asm/cacheflush.h>
 #include <linux/mm.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#else
+#include <linux/dma-map-ops.h>
+#endif
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h> 
 #include <linux/slab.h>
