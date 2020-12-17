@@ -364,7 +364,7 @@ static int omap4_keypad_probe(struct platform_device *pdev)
 	 * revision register.
 	 */
 	pm_runtime_use_autosuspend(&pdev->dev);
-	pm_runtime_set_autosuspend_delay(&pdev->dev, 50);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, 30);
 	pm_runtime_enable(&pdev->dev);
 	error = pm_runtime_get_sync(&pdev->dev);
 	if (error) {
@@ -541,10 +541,17 @@ static int __maybe_unused omap4_keypad_runtime_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct omap4_keypad *keypad_data = platform_get_drvdata(pdev);
 	bool events;
+	u32 active;
 
-	events = omap4_keypad_scan_keys(keypad_data, false);
-	if (events)
+	active = kbd_readl(keypad_data, OMAP4_KBD_STATEMACHINE);
+	if (active) {
+		pm_runtime_mark_last_busy(dev);
 		return -EBUSY;
+	}
+
+	events = omap4_keypad_scan_keys(keypad_data, true);
+	if (events)
+		dev_info(dev, "cleared stuck events on idle\n");
 
 	return 0;
 }
