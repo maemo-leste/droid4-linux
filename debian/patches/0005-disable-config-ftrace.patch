@@ -1,0 +1,10 @@
+diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
+index 76e612dc06d0..c4741da81097 100644
+--- a/arch/arm/configs/omap2plus_defconfig
++++ b/arch/arm/configs/omap2plus_defconfig
+@@ -614,3 +614,5 @@ CONFIG_IP_NF_IPTABLES=y
+ CONFIG_NETFILTER_XTABLES=y
+ CONFIG_NF_NAT=y
+ CONFIG_NETFILTER=y
++CONFIG_STACKTRACE=y
++# CONFIG_FTRACE is not set
