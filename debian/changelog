@@ -1,3 +1,11 @@
+droid4-linux (5.10.2-1) unstable; urgency=medium
+
+  * Merge latest droid4-pending-v5.10 from tmlind
+  * Add pstore and cpuidle fix patches.
+  * Disable CONFIG_FTRACE.
+
+ -- Ivan J. <parazyd@dyne.org>  Wed, 23 Dec 2020 11:59:32 +0100
+
 droid4-linux (5.10.1-1) unstable; urgency=medium
 
   * Merge latest droid4-pending-v5.10 from tmlind
