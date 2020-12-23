@@ -3215,20 +3215,19 @@ static int mxt_remove(struct i2c_client *client)
 	struct device *dev = &data->client->dev;
 	int active;
 
-	/* Attempt to change controller suspend mode to disable on remove */
 	active = pm_runtime_get_sync(dev);
 	if (active < 0)
 		pm_runtime_put_noidle(dev);
-	else
-		data->suspend_mode = MXT_SUSPEND_T9_CTRL;
+
+	disable_irq(data->irq);
+	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 
 	pm_runtime_dont_use_autosuspend(dev);
 	if (active >= 0)
 		pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
 
-	disable_irq(data->irq);
-	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
+	/* Do not assert reset, reset device consumes more power */
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
 
