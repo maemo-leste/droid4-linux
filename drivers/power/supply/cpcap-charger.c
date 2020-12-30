@@ -631,6 +631,8 @@ static void cpcap_usb_detect(struct work_struct *work)
 		return;
 	}
 
+	usleep_range(40000, 60000);
+
 	/* Throttle chrgcurr2 interrupt for charger done and retry */
 	switch (ddata->state) {
 	case CPCAP_CHARGER_CHARGING:
