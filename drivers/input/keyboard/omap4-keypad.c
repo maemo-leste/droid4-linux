@@ -8,7 +8,6 @@
  * Initial Code: Syed Rafiuddin <rafiuddin.syed@ti.com>
  */
 
-#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
@@ -72,7 +71,6 @@ struct omap4_keypad {
 	void __iomem *base;
 	bool irq_wake_enabled;
 	unsigned int irq;
-	struct clk *clk;
 	struct mutex lock;		/* for key scan */
 
 	unsigned int rows;
@@ -344,20 +342,6 @@ static int omap4_keypad_probe(struct platform_device *pdev)
 		goto err_release_mem;
 	}
 
-	/*
-	 * Get and enable parent interconnect target module clock to keep it
-	 * active during runtime suspend. The clock is autogated so it's OK
-	 * to keep it enabled in runtime suspended state.
-	 */
-	keypad_data->clk = devm_clk_get(pdev->dev.parent, "fck");
-	if (IS_ERR(keypad_data->clk)) {
-		error = PTR_ERR(keypad_data->clk);
-		goto err_unmap;
-	}
-
-	error = clk_prepare_enable(keypad_data->clk);
-	if (error)
-		goto err_unmap;
 
 	/*
 	 * Enable clocks for the keypad module so that we can read
@@ -483,7 +467,6 @@ static int omap4_keypad_remove(struct platform_device *pdev)
 
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-	clk_disable_unprepare(keypad_data->clk);
 
 	input_unregister_device(keypad_data->input);
 
