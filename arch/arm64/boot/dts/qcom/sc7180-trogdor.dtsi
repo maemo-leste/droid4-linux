@@ -509,7 +509,7 @@
 		vddpx_2:
 		ppvar_l6c: ldo6 {
 			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <3304000>;
+			regulator-max-microvolt = <2952000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 
@@ -935,6 +935,13 @@ ap_spi_fp: &spi10 {
 };
 
 /* PINCTRL - additions to nodes defined in sc7180.dtsi */
+
+&dp_hot_plug_det {
+	pinconf {
+		pins = "gpio117";
+		bias-disable;
+	};
+};
 
 &qspi_cs0 {
 	pinconf {
