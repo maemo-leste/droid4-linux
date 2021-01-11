@@ -286,11 +286,13 @@
 	};
 
 	soc@0 {
-		compatible = "simple-bus";
+		compatible = "fsl,imx8mq-soc", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x0 0x0 0x0 0x3e000000>;
 		dma-ranges = <0x40000000 0x0 0x40000000 0xc0000000>;
+		nvmem-cells = <&imx8mq_uid>;
+		nvmem-cell-names = "soc_unique_id";
 
 		bus@30000000 { /* AIPS1 */
 			compatible = "fsl,aips-bus", "simple-bus";
@@ -554,6 +556,10 @@
 				clocks = <&clk IMX8MQ_CLK_OCOTP_ROOT>;
 				#address-cells = <1>;
 				#size-cells = <1>;
+
+				imx8mq_uid: soc-uid@410 {
+					reg = <0x4 0x8>;
+				};
 
 				cpu_speed_grade: speed-grade@10 {
 					reg = <0x10 4>;
@@ -1016,9 +1022,14 @@
 				reg = <0x30a00300 0x100>;
 				clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>;
 				clock-names = "phy_ref";
-				assigned-clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>;
-				assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>;
-				assigned-clock-rates = <24000000>;
+				assigned-clocks = <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
+						  <&clk IMX8MQ_VIDEO_PLL1_BYPASS>,
+						  <&clk IMX8MQ_CLK_DSI_PHY_REF>,
+						  <&clk IMX8MQ_VIDEO_PLL1>;
+				assigned-clock-parents = <&clk IMX8MQ_CLK_25M>,
+						  <&clk IMX8MQ_VIDEO_PLL1>,
+						  <&clk IMX8MQ_VIDEO_PLL1_OUT>;
+				assigned-clock-rates = <0>, <0>, <24000000>, <594000000>;
 				#phy-cells = <0>;
 				power-domains = <&pgc_mipi>;
 				status = "disabled";
