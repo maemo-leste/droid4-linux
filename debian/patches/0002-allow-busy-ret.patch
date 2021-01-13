@@ -1,0 +1,22 @@
+From 42aaedd04c314cd49a661c2a49c6ae7687b085f6 Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Fri, 8 Jan 2021 22:48:01 +0100
+Subject: [PATCH] allow busy ret
+
+---
+ arch/arm/mach-omap2/cpuidle44xx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-omap2/cpuidle44xx.c b/arch/arm/mach-omap2/cpuidle44xx.c
+index de37027ad758..9ab368bc9404 100644
+--- a/arch/arm/mach-omap2/cpuidle44xx.c
++++ b/arch/arm/mach-omap2/cpuidle44xx.c
+@@ -175,7 +175,7 @@ static int omap_enter_idle_coupled(struct cpuidle_device *dev,
+ 		if (mpuss_can_lose_context) {
+ 			error = cpu_cluster_pm_enter();
+ 			if (error) {
+-				index = 0;
++				index = 1;
+ 				cx = state_ptr + index;
+ 				pwrdm_set_logic_retst(mpu_pd, cx->mpu_logic_state);
+ 				RCU_NONIDLE(omap_set_pwrdm_state(mpu_pd, cx->mpu_state));

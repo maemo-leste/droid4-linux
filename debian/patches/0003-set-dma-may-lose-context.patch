@@ -1,0 +1,21 @@
+From 4026f7f0f754222ac06fe58e595df041b675a9a5 Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Fri, 8 Jan 2021 22:44:45 +0100
+Subject: [PATCH] set dma may loose context
+
+---
+ drivers/dma/ti/omap-dma.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/dma/ti/omap-dma.c b/drivers/dma/ti/omap-dma.c
+index 268a08058714..0e1112e6b2e4 100644
+--- a/drivers/dma/ti/omap-dma.c
++++ b/drivers/dma/ti/omap-dma.c
+@@ -1898,6 +1898,7 @@ static const struct omap_dma_config omap4_data = {
+ 	.lch_end = CCDN,
+ 	.rw_priority = true,
+ 	.needs_lch_clear = true,
++	.may_lose_context = true,
+ };
+ 
+ static const struct of_device_id omap_dma_match[] = {

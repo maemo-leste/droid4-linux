@@ -1,0 +1,459 @@
+From bec2175a69d7182117db924b996f67f6517cc74e Mon Sep 17 00:00:00 2001
+From: uvos <devnull@uvos.xyz>
+Date: Fri, 16 Oct 2020 00:42:50 +0200
+Subject: [PATCH 1/7] power: cpcap-battery: add a module option to ignore a
+ missing temerature sensor.
+
+---
+ drivers/power/supply/cpcap-battery.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/power/supply/cpcap-battery.c b/drivers/power/supply/cpcap-battery.c
+index c833072843ff..3f4f749255ce 100644
+--- a/drivers/power/supply/cpcap-battery.c
++++ b/drivers/power/supply/cpcap-battery.c
+@@ -28,6 +28,7 @@
+ #include <linux/power_supply.h>
+ #include <linux/reboot.h>
+ #include <linux/regmap.h>
++#include <linux/moduleparam.h>
+ 
+ #include <linux/iio/consumer.h>
+ #include <linux/iio/types.h>
+@@ -142,6 +143,9 @@ struct cpcap_battery_ddata {
+ 
+ #define CPCAP_NO_BATTERY	-400
+ 
++static bool ignore_temperature_probe = false;
++module_param(ignore_temperature_probe, bool, 0660);
++
+ static struct cpcap_battery_state_data *
+ cpcap_battery_get_state(struct cpcap_battery_ddata *ddata,
+ 			enum cpcap_battery_state state)
+@@ -185,7 +189,7 @@ static int cpcap_charger_battery_temperature(struct cpcap_battery_ddata *ddata,
+ 	channel = ddata->channels[CPCAP_BATTERY_IIO_BATTDET];
+ 	error = iio_read_channel_processed(channel, value);
+ 	if (error < 0) {
+-		dev_warn(ddata->dev, "%s failed: %i\n", __func__, error);
++		if (!ignore_temperature_probe) dev_warn(ddata->dev, "%s failed: %i\n", __func__, error);
+ 		*value = CPCAP_NO_BATTERY;
+ 
+ 		return error;
+@@ -568,7 +572,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
+ 
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_PRESENT:
+-		if (latest->temperature > CPCAP_NO_BATTERY)
++		if (latest->temperature > CPCAP_NO_BATTERY || ignore_temperature_probe)
+ 			val->intval = 1;
+ 		else
+ 			val->intval = 0;
+@@ -679,6 +683,8 @@ static int cpcap_battery_get_property(struct power_supply *psy,
+ 		val->intval = POWER_SUPPLY_SCOPE_SYSTEM;
+ 		break;
+ 	case POWER_SUPPLY_PROP_TEMP:
++		if(ignore_temperature_probe) 
++			return -ENODATA;
+ 		val->intval = latest->temperature;
+ 		break;
+ 	default:
+
+From ff31e5b48462e7662fb1b22bd3733712cc553437 Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Fri, 20 Nov 2020 23:47:40 +0100
+Subject: [PATCH 2/7] drivers: power_supply: cpcap-battery: Add battery type
+ auto detection for mapphone devices
+
+---
+ drivers/power/supply/cpcap-battery.c | 77 +++++++++++++++++++++++-----
+ 1 file changed, 64 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/power/supply/cpcap-battery.c b/drivers/power/supply/cpcap-battery.c
+index 3f4f749255ce..44c38a7d6114 100644
+--- a/drivers/power/supply/cpcap-battery.c
++++ b/drivers/power/supply/cpcap-battery.c
+@@ -28,6 +28,7 @@
+ #include <linux/power_supply.h>
+ #include <linux/reboot.h>
+ #include <linux/regmap.h>
++#include <linux/nvmem-consumer.h>
+ #include <linux/moduleparam.h>
+ 
+ #include <linux/iio/consumer.h>
+@@ -73,6 +74,9 @@
+ 
+ #define CPCAP_BATTERY_CC_SAMPLE_PERIOD_MS	250
+ 
++#define CPCAP_BATTERY_EB41_HW4X_ID 0x9E
++#define CPCAP_BATTERY_BW8X_ID 0x98
++
+ enum {
+ 	CPCAP_BATTERY_IIO_BATTDET,
+ 	CPCAP_BATTERY_IIO_VOLTAGE,
+@@ -97,6 +101,7 @@ struct cpcap_interrupt_desc {
+ 
+ struct cpcap_battery_config {
+ 	int cd_factor;
++	char id;
+ 	struct power_supply_info info;
+ 	struct power_supply_battery_info bat;
+ };
+@@ -968,17 +973,27 @@ static int cpcap_battery_calibrate(struct cpcap_battery_ddata *ddata)
+ 	return error;
+ }
+ 
++static int cpcap_battery_match_nvmem(struct device *dev, const void *data)
++{
++	if (strcmp(dev_name(dev), "89-500029ba0f73") == 0)
++		return 1;
++	else 
++		return 0;
++}
++
+ /*
+- * Based on the values from Motorola mapphone Linux kernel. In the
+- * the Motorola mapphone Linux kernel tree the value for pm_cd_factor
+- * is passed to the kernel via device tree. If it turns out to be
+- * something device specific we can consider that too later.
++ * Based on the values from Motorola mapphone Linux kernel for the 
++ * stock Droid 4 battery eb41. In the Motorola mapphone Linux 
++ * kernel tree the value for pm_cd_factor is passed to the kernel 
++ * via device tree. If it turns out to be something device specific 
++ * we can consider that too later. These values are also fine for
++ * Bionic's hw4x.
+  *
+  * And looking at the battery full and shutdown values for the stock
+  * kernel on droid 4, full is 4351000 and software initiates shutdown
+  * at 3078000. The device will die around 2743000.
+  */
+-static const struct cpcap_battery_config cpcap_battery_default_data = {
++static const struct cpcap_battery_config cpcap_battery_eb41_data = {
+ 	.cd_factor = 0x3cc,
+ 	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
+ 	.info.voltage_max_design = 4351000,
+@@ -987,11 +1002,33 @@ static const struct cpcap_battery_config cpcap_battery_default_data = {
+ 	.bat.constant_charge_voltage_max_uv = 4200000,
+ };
+ 
++/* Values for the extended Droid Bionic battery bw8x. */
++static const struct cpcap_battery_config cpcap_battery_bw8x_data = {
++	.cd_factor = 0x3cc,
++	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
++	.info.voltage_max_design = 4200000,
++	.info.voltage_min_design = 3200000,
++	.info.charge_full_design = 2760000,
++	.bat.constant_charge_voltage_max_uv = 4200000,
++};
++
++/*
++ * Safe values for any lipo battery likely to fit into a mapphone
++ * battery bay.
++ */
++static const struct cpcap_battery_config cpcap_battery_unkown_data = {
++	.cd_factor = 0x3cc,
++	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
++	.info.voltage_max_design = 4200000,
++	.info.voltage_min_design = 3200000,
++	.info.charge_full_design = 3000000,
++	.bat.constant_charge_voltage_max_uv = 4200000,
++};
++
+ #ifdef CONFIG_OF
+ static const struct of_device_id cpcap_battery_id_table[] = {
+ 	{
+ 		.compatible = "motorola,cpcap-battery",
+-		.data = &cpcap_battery_default_data,
+ 	},
+ 	{},
+ };
+@@ -1004,6 +1041,8 @@ static int cpcap_battery_probe(struct platform_device *pdev)
+ 	struct cpcap_battery_ddata *ddata;
+ 	const struct of_device_id *match;
+ 	struct power_supply_config psy_cfg = {};
++	struct nvmem_device *nvmem;
++	u8 battery_id = 0;
+ 	int error;
+ 
+ 	match = of_match_device(of_match_ptr(cpcap_battery_id_table),
+@@ -1011,19 +1050,31 @@ static int cpcap_battery_probe(struct platform_device *pdev)
+ 	if (!match)
+ 		return -EINVAL;
+ 
+-	if (!match->data) {
+-		dev_err(&pdev->dev, "no configuration data found\n");
+-
+-		return -ENODEV;
+-	}
+-
+ 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
+ 	if (!ddata)
+ 		return -ENOMEM;
+ 
+ 	INIT_LIST_HEAD(&ddata->irq_list);
+ 	ddata->dev = &pdev->dev;
+-	memcpy(&ddata->config, match->data, sizeof(ddata->config));
++
++	nvmem = nvmem_device_find(NULL, &cpcap_battery_match_nvmem);
++	if (IS_ERR(nvmem) || !nvmem) {
++		dev_info(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
++	} else if (nvmem_device_read(nvmem, 2, 1, &battery_id) < 0) {
++		dev_info(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
++		battery_id = 0;
++	}
++
++	switch (battery_id) {
++		case CPCAP_BATTERY_EB41_HW4X_ID:
++			memcpy(&ddata->config, &cpcap_battery_eb41_data, sizeof(ddata->config));
++			break;
++		case CPCAP_BATTERY_BW8X_ID:
++			memcpy(&ddata->config, &cpcap_battery_bw8x_data, sizeof(ddata->config));
++			break;
++		default:
++			memcpy(&ddata->config, &cpcap_battery_unkown_data, sizeof(ddata->config));
++	}
+ 
+ 	ddata->reg = dev_get_regmap(ddata->dev->parent, NULL);
+ 	if (!ddata->reg)
+
+From cc37e2af65eeb50bf253a022ca6a7639560f802d Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Mon, 30 Nov 2020 15:19:13 +0100
+Subject: [PATCH 3/7] power: supply: cpcap-charger: get the battery inserted
+ infomation from cpcap-battery
+
+---
+ drivers/power/supply/cpcap-charger.c | 41 ++++++++++++++--------------
+ 1 file changed, 21 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/power/supply/cpcap-charger.c b/drivers/power/supply/cpcap-charger.c
+index 823d666f09e0..152090faf5b2 100644
+--- a/drivers/power/supply/cpcap-charger.c
++++ b/drivers/power/supply/cpcap-charger.c
+@@ -26,8 +26,8 @@
+ #include <linux/gpio/consumer.h>
+ #include <linux/usb/phy_companion.h>
+ #include <linux/phy/omap_usb.h>
+-#include <linux/usb/otg.h>
+ #include <linux/iio/consumer.h>
++#include <linux/usb/otg.h>
+ #include <linux/mfd/motorola-cpcap.h>
+ 
+ /*
+@@ -173,23 +173,6 @@ static enum power_supply_property cpcap_charger_props[] = {
+ 	POWER_SUPPLY_PROP_CURRENT_NOW,
+ };
+ 
+-/* No battery always shows temperature of -40000 */
+-static bool cpcap_charger_battery_found(struct cpcap_charger_ddata *ddata)
+-{
+-	struct iio_channel *channel;
+-	int error, temperature;
+-
+-	channel = ddata->channels[CPCAP_CHARGER_IIO_BATTDET];
+-	error = iio_read_channel_processed(channel, &temperature);
+-	if (error < 0) {
+-		dev_warn(ddata->dev, "%s failed: %i\n", __func__, error);
+-
+-		return false;
+-	}
+-
+-	return temperature > -20000 && temperature < 60000;
+-}
+-
+ static int cpcap_charger_get_charge_voltage(struct cpcap_charger_ddata *ddata)
+ {
+ 	struct iio_channel *channel;
+@@ -696,11 +679,29 @@ static void cpcap_usb_detect(struct work_struct *work)
+ 
+ 	if (!ddata->feeding_vbus && cpcap_charger_vbus_valid(ddata) &&
+ 	    s.chrgcurr1) {
+-		int max_current = 532000;
++		int max_current;
+ 		int vchrg, ichrg;
++		union power_supply_propval val;
++		struct power_supply *battery;
+ 
+-		if (cpcap_charger_battery_found(ddata))
++		battery = power_supply_get_by_phandle(ddata->dev->of_node, "battery");
++		if (IS_ERR_OR_NULL(battery)) {
++			dev_err(ddata->dev, "battery described by phandle not availible %li\n",
++					PTR_ERR(battery));
++			return;
++		}
++
++		error = power_supply_get_property(battery, POWER_SUPPLY_PROP_PRESENT, &val);
++		power_supply_put(battery);
++		if (error) 
++			goto out_err;
++
++		if (val.intval) {
+ 			max_current = 1596000;
++		} else {
++			dev_info(ddata->dev, "battery not inserted charging disabled\n");
++			max_current = 0;
++		}
+ 
+ 		if (max_current > ddata->limit_current)
+ 			max_current = ddata->limit_current;
+
+From 8db44e9bb236e0424ee4549582ac536ed24e1c20 Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Mon, 30 Nov 2020 15:30:58 +0100
+Subject: [PATCH 4/7] ARM: dts: add battery phandle to cpcap_charger
+
+---
+ arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi b/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
+index 77eadebdaa1d..4762ddd3ec2d 100644
+--- a/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
++++ b/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
+@@ -61,6 +61,7 @@
+ 			io-channel-names = "battdetb", "battp",
+ 					   "vbus", "chg_isense",
+ 					   "batti";
++			battery = <&cpcap_battery>;
+ 		};
+ 
+ 		cpcap_regulator: regulator {
+
+From 5315a314e893c3f57604edf855262b18b1838cee Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Mon, 30 Nov 2020 15:40:03 +0100
+Subject: [PATCH 5/7] power: supply: cpcap-charger: fix small mistake in
+ current to register conversion
+
+---
+ drivers/power/supply/cpcap-charger.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/power/supply/cpcap-charger.c b/drivers/power/supply/cpcap-charger.c
+index 152090faf5b2..be7d1da7a5a5 100644
+--- a/drivers/power/supply/cpcap-charger.c
++++ b/drivers/power/supply/cpcap-charger.c
+@@ -300,7 +300,7 @@ static int cpcap_charger_current_to_regval(int microamp)
+ 		return CPCAP_REG_CRM_ICHRG(0x0);
+ 	if (miliamp < 177)
+ 		return CPCAP_REG_CRM_ICHRG(0x1);
+-	if (miliamp > 1596)
++	if (miliamp >= 1596)
+ 		return CPCAP_REG_CRM_ICHRG(0xe);
+ 
+ 	res = microamp / 88666;
+
+From d8be6db288b9aff27ad360bc4d609aae6ee01845 Mon Sep 17 00:00:00 2001
+From: uvos <devnull@uvos.xyz>
+Date: Tue, 20 Oct 2020 22:10:36 +0200
+Subject: [PATCH 6/7] power: supply: cpcap-battery: invalidate
+ empty->counter_uah and charge_full when charge_now indicates that they are
+ grossly wrong
+
+---
+ drivers/power/supply/cpcap-battery.c | 25 +++++++++++++++++++------
+ 1 file changed, 19 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/power/supply/cpcap-battery.c b/drivers/power/supply/cpcap-battery.c
+index 44c38a7d6114..be8d8b746f24 100644
+--- a/drivers/power/supply/cpcap-battery.c
++++ b/drivers/power/supply/cpcap-battery.c
+@@ -148,7 +148,7 @@ struct cpcap_battery_ddata {
+ 
+ #define CPCAP_NO_BATTERY	-400
+ 
+-static bool ignore_temperature_probe = false;
++static bool ignore_temperature_probe;
+ module_param(ignore_temperature_probe, bool, 0660);
+ 
+ static struct cpcap_battery_state_data *
+@@ -194,7 +194,8 @@ static int cpcap_charger_battery_temperature(struct cpcap_battery_ddata *ddata,
+ 	channel = ddata->channels[CPCAP_BATTERY_IIO_BATTDET];
+ 	error = iio_read_channel_processed(channel, value);
+ 	if (error < 0) {
+-		if (!ignore_temperature_probe) dev_warn(ddata->dev, "%s failed: %i\n", __func__, error);
++		if (!ignore_temperature_probe) 
++			dev_warn(ddata->dev, "%s failed: %i\n", __func__, error);
+ 		*value = CPCAP_NO_BATTERY;
+ 
+ 		return error;
+@@ -671,10 +672,22 @@ static int cpcap_battery_get_property(struct power_supply *psy,
+ 		if (!empty->voltage)
+ 			return -ENODATA;
+ 		val->intval = empty->counter_uah - latest->counter_uah;
+-		if (val->intval < 0)
++		if (val->intval < 0) {
++			if (ddata->charge_full && abs(val->intval) > ddata->charge_full/5) {
++				empty->voltage = 0;
++				ddata->charge_full = 0;
++				return -ENODATA;
++			}
+ 			val->intval = 0;
+-		else if (ddata->charge_full && ddata->charge_full < val->intval)
++		}
++		else if (ddata->charge_full && ddata->charge_full < val->intval) {
++			if (val->intval > (6*ddata->charge_full)/5) {
++				empty->voltage = 0;
++				ddata->charge_full = 0;
++				return -ENODATA;
++			}
+ 			val->intval = ddata->charge_full;
++		}
+ 		break;
+ 	case POWER_SUPPLY_PROP_CHARGE_FULL:
+ 		if (!ddata->charge_full)
+@@ -688,7 +701,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
+ 		val->intval = POWER_SUPPLY_SCOPE_SYSTEM;
+ 		break;
+ 	case POWER_SUPPLY_PROP_TEMP:
+-		if(ignore_temperature_probe) 
++		if (ignore_temperature_probe) 
+ 			return -ENODATA;
+ 		val->intval = latest->temperature;
+ 		break;
+@@ -751,7 +764,7 @@ static int cpcap_battery_set_property(struct power_supply *psy,
+ 	case POWER_SUPPLY_PROP_CHARGE_FULL:
+ 		if (val->intval < 0)
+ 			return -EINVAL;
+-		if (val->intval > ddata->config.info.charge_full_design)
++		if (val->intval > (6*ddata->config.info.charge_full_design)/5)
+ 			return -EINVAL;
+ 
+ 		ddata->charge_full = val->intval;
+
+From a910e9f8ffeb1a7ccaf7a446e598c476684cdd55 Mon Sep 17 00:00:00 2001
+From: uvos <devnull@uvos.xyz>
+Date: Tue, 20 Oct 2020 22:25:27 +0200
+Subject: [PATCH 7/7] power: supply: cpcap-battery: make charge_full_design
+ writeable, so that different/custom batteries can be used.
+
+Especially usfull on XTT875 where both HW4X and BW8X exsist
+---
+ drivers/power/supply/cpcap-battery.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/power/supply/cpcap-battery.c b/drivers/power/supply/cpcap-battery.c
+index be8d8b746f24..6465cb1b084c 100644
+--- a/drivers/power/supply/cpcap-battery.c
++++ b/drivers/power/supply/cpcap-battery.c
+@@ -769,6 +769,13 @@ static int cpcap_battery_set_property(struct power_supply *psy,
+ 
+ 		ddata->charge_full = val->intval;
+ 
++		return 0;
++			case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
++		if (val->intval < 0)
++			return -EINVAL;
++
++		ddata->config.info.charge_full_design = val->intval;
++
+ 		return 0;
+ 	default:
+ 		return -EINVAL;
+@@ -783,6 +790,7 @@ static int cpcap_battery_property_is_writeable(struct power_supply *psy,
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
+ 	case POWER_SUPPLY_PROP_CHARGE_FULL:
++	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+ 		return 1;
+ 	default:
+ 		return 0;
