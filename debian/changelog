@@ -1,3 +1,9 @@
+droid4-linux (5.10.7-2) unstable; urgency=medium
+
+  * Add uvos' patches that help with random resets.
+
+ -- Ivan J. <parazyd@dyne.org>  Wed, 13 Jan 2021 16:00:31 +0100
+
 droid4-linux (5.10.7-1) unstable; urgency=medium
 
   * Disable "disable-ftrace" and cpuidle patches.
