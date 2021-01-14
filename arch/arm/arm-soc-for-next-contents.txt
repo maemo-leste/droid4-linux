@@ -1,0 +1,21 @@
+arm/soc
+
+arm/dt
+
+arm/drivers
+
+arm/defconfig
+
+arm/newsoc
+
+arm/late
+
+arm/fixes
+	patch
+		arm64: dts: bitmain: Use generic "ngpios" rather than "snps,nr-gpios"
+	omap/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.10/fixes-rc6-signed
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v5.11/defconfig-late-signed
+	patch
+		ARM: dts: ux500/golden: Set display max brightness
