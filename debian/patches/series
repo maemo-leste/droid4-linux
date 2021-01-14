@@ -2,6 +2,7 @@
 0002-enable-nl80211-testmode.patch
 0003-defconfig-enable-netfilter-masquerading.patch
 0004-remove-omap2-from-defconfig.patch
+0005-disable-config-ftrace.patch
 droid4-pstore.patch
 0001-power-cpcap-battery-add-a-module-option.patch
 0002-allow-busy-ret.patch
