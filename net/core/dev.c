@@ -5151,8 +5151,7 @@ another_round:
 		skb_reset_mac_len(skb);
 	}
 
-	if (skb->protocol == cpu_to_be16(ETH_P_8021Q) ||
-	    skb->protocol == cpu_to_be16(ETH_P_8021AD)) {
+	if (eth_type_vlan(skb->protocol)) {
 		skb = skb_vlan_untag(skb);
 		if (unlikely(!skb))
 			goto out;
@@ -5236,8 +5235,7 @@ check_vlan_id:
 			 * find vlan device.
 			 */
 			skb->pkt_type = PACKET_OTHERHOST;
-		} else if (skb->protocol == cpu_to_be16(ETH_P_8021Q) ||
-			   skb->protocol == cpu_to_be16(ETH_P_8021AD)) {
+		} else if (eth_type_vlan(skb->protocol)) {
 			/* Outer header is 802.1P with vlan 0, inner header is
 			 * 802.1Q or 802.1AD and vlan_do_receive() above could
 			 * not find vlan dev for vlan id 0.
@@ -6070,10 +6068,6 @@ static gro_result_t napi_skb_finish(struct napi_struct *napi,
 		gro_normal_one(napi, skb);
 		break;
 
-	case GRO_DROP:
-		kfree_skb(skb);
-		break;
-
 	case GRO_MERGED_FREE:
 		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD)
 			napi_skb_free_stolen_head(skb);
@@ -6158,10 +6152,6 @@ static gro_result_t napi_frags_finish(struct napi_struct *napi,
 			gro_normal_one(napi, skb);
 		break;
 
-	case GRO_DROP:
-		napi_reuse_skb(napi, skb);
-		break;
-
 	case GRO_MERGED_FREE:
 		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD)
 			napi_skb_free_stolen_head(skb);
@@ -6222,9 +6212,6 @@ gro_result_t napi_gro_frags(struct napi_struct *napi)
 {
 	gro_result_t ret;
 	struct sk_buff *skb = napi_frags_skb(napi);
-
-	if (!skb)
-		return GRO_DROP;
 
 	trace_napi_gro_frags_entry(skb);
 
@@ -10008,7 +9995,7 @@ int register_netdevice(struct net_device *dev)
 	dev->hw_features |= (NETIF_F_SOFT_FEATURES | NETIF_F_SOFT_FEATURES_OFF);
 	dev->features |= NETIF_F_SOFT_FEATURES;
 
-	if (dev->netdev_ops->ndo_udp_tunnel_add) {
+	if (dev->udp_tunnel_nic_info) {
 		dev->features |= NETIF_F_RX_UDP_TUNNEL_PORT;
 		dev->hw_features |= NETIF_F_RX_UDP_TUNNEL_PORT;
 	}
