@@ -9,18 +9,19 @@ title: Generic USB Host Controller Device Tree Bindings
 maintainers:
   - Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 
+allOf:
+  - $ref: usb.yaml#
+
 properties:
-  $nodename:
-    pattern: "^usb(@.*)?"
+  companion:
+    description: Phandle of a companion device
+    $ref: /schemas/types.yaml#/definitions/phandle
 
-  phys:
-    $ref: /schemas/types.yaml#/definitions/phandle-array
+  tpl-support:
     description:
-      List of all the USB PHYs on this HCD
-
-  phy-names:
-    description:
-      Name specifier for the USB PHY
+      Indicates if the Targeted Peripheral List is supported for given
+      targeted hosts (non-PC hosts).
+    type: boolean
 
 additionalProperties: true
 
