@@ -245,6 +245,7 @@ source "drivers/gpu/drm/radeon/Kconfig"
 config DRM_AMDGPU
 	tristate "AMD GPU"
 	depends on DRM && PCI && MMU
+	depends on BROKEN
 	select FW_LOADER
 	select DRM_KMS_HELPER
 	select DRM_SCHED
