@@ -1,47 +1,5 @@
-From tony Mon Sep 17 00:00:00 2001
-From: Tony Lindgren <tony@atomide.com>
-Date: Tue, 22 Dec 2020 05:46:59 +0200
-Subject: [PATCH] Enable pstore support for droid4
-
-Enable pstore support that can be used to view kernel oopses in
-/sys/fs/pstore after a watchdog reset, and can be also used for tracing.
-This comes at the cost of the using 384KB of reserved-memory following
-the configuration commonly used in the Linux kernel for pstore.
-
-The reserved-memory is configured to overlap the area configured by the
-Android kernel so we can have the bootloader preserve it. We don't need
-to hog all the 2MB of the memory though that Android uses.
-
-To make pstore work, we need to change the warm reset timings for the warm
-reset to preserve DDR. Otherwise the DDR gets reset during the warm reset.
-We also need to configure the PMIC.
-
-To test pstore crash reporting, ssh to the device, and do the following
-to crash the system:
-
-# echo 1 > /proc/sys/kernel/sysrq
-# echo c > /proc/sysrq-trigger
-
-Wait for the system to reboot, and then ssh to the system again:
-
-# ls /sys/fs/pstore
- ls /sys/fs/pstore/
-console-ramoops-0  dmesg-ramoops-0
-
-Note that the watchdog timeout should probably be configured to 20 seconds
-to avoid having to wait a minute for system to reboot.
-
-Signed-off-by: Tony Lindgren <tony@atomide.com>
----
- .../boot/dts/motorola-mapphone-common.dtsi    | 20 ++++++++
- arch/arm/configs/omap2plus_defconfig          |  5 ++
- arch/arm/mach-omap2/prm44xx.c                 | 11 +++++
- arch/arm/mach-omap2/prminst44xx.c             | 35 ++++++++++++++
- arch/arm/mach-omap2/prminst44xx.h             |  3 ++
- drivers/mfd/motorola-cpcap.c                  | 47 +++++++++++++++++++
- 6 files changed, 121 insertions(+)
-
 diff --git a/arch/arm/boot/dts/motorola-mapphone-common.dtsi b/arch/arm/boot/dts/motorola-mapphone-common.dtsi
+index 604058627cf3..fa6025706180 100644
 --- a/arch/arm/boot/dts/motorola-mapphone-common.dtsi
 +++ b/arch/arm/boot/dts/motorola-mapphone-common.dtsi
 @@ -24,6 +24,26 @@ memory {
@@ -72,9 +30,10 @@ diff --git a/arch/arm/boot/dts/motorola-mapphone-common.dtsi b/arch/arm/boot/dts
  	gpio-poweroff {
  		compatible = "gpio-poweroff";
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
+index 8b50d0e0dacd..81a7fd7f8616 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -567,6 +567,11 @@ CONFIG_JFFS2_LZO=y
+@@ -668,6 +668,11 @@ CONFIG_JFFS2_LZO=y
  CONFIG_JFFS2_RUBIN=y
  CONFIG_UBIFS_FS=y
  CONFIG_CRAMFS=y
@@ -87,6 +46,7 @@ diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_d
  CONFIG_NFS_V3_ACL=y
  CONFIG_NFS_V4=y
 diff --git a/arch/arm/mach-omap2/prm44xx.c b/arch/arm/mach-omap2/prm44xx.c
+index 25093c1e5b9a..05e2f654585a 100644
 --- a/arch/arm/mach-omap2/prm44xx.c
 +++ b/arch/arm/mach-omap2/prm44xx.c
 @@ -831,6 +831,17 @@ int __init omap44xx_prm_init(const struct omap_prcm_init_data *data)
@@ -108,6 +68,7 @@ diff --git a/arch/arm/mach-omap2/prm44xx.c b/arch/arm/mach-omap2/prm44xx.c
  }
  
 diff --git a/arch/arm/mach-omap2/prminst44xx.c b/arch/arm/mach-omap2/prminst44xx.c
+index fc086d8b9a04..640c0f998dcd 100644
 --- a/arch/arm/mach-omap2/prminst44xx.c
 +++ b/arch/arm/mach-omap2/prminst44xx.c
 @@ -174,6 +174,41 @@ int omap4_prminst_deassert_hardreset(u8 shift, u8 st_shift, u8 part, s16 inst,
@@ -153,6 +114,7 @@ diff --git a/arch/arm/mach-omap2/prminst44xx.c b/arch/arm/mach-omap2/prminst44xx
  void omap4_prminst_global_warm_sw_reset(void)
  {
 diff --git a/arch/arm/mach-omap2/prminst44xx.h b/arch/arm/mach-omap2/prminst44xx.h
+index 11365a08e833..75c85a8ebd1c 100644
 --- a/arch/arm/mach-omap2/prminst44xx.h
 +++ b/arch/arm/mach-omap2/prminst44xx.h
 @@ -22,6 +22,9 @@ extern void omap4_prminst_write_inst_reg(u32 val, u8 part, s16 inst, u16 idx);
@@ -166,6 +128,7 @@ diff --git a/arch/arm/mach-omap2/prminst44xx.h b/arch/arm/mach-omap2/prminst44xx
  
  extern int omap4_prminst_is_hardreset_asserted(u8 shift, u8 part, s16 inst,
 diff --git a/drivers/mfd/motorola-cpcap.c b/drivers/mfd/motorola-cpcap.c
+index 30d82bfe5b02..be138ba6e4fb 100644
 --- a/drivers/mfd/motorola-cpcap.c
 +++ b/drivers/mfd/motorola-cpcap.c
 @@ -24,6 +24,23 @@
@@ -236,5 +199,3 @@ diff --git a/drivers/mfd/motorola-cpcap.c b/drivers/mfd/motorola-cpcap.c
  	ret = cpcap_init_irq(cpcap);
  	if (ret)
  		return ret;
--- 
-2.29.2

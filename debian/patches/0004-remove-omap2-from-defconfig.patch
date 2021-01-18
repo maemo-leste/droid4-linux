@@ -1,5 +1,5 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 3db261be977f..76e612dc06d0 100644
+index 14ccbdef01cc..b849f5459294 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
 @@ -30,7 +30,6 @@ CONFIG_ARCH_MULTI_V6=y
