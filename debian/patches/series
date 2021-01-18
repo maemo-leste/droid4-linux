@@ -7,3 +7,4 @@ droid4-pstore.patch
 0001-power-cpcap-battery-add-a-module-option.patch
 0002-allow-busy-ret.patch
 0003-set-dma-may-lose-context.patch
+anbox-support.patch
