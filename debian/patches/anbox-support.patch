@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 81a7fd7f8616..584fbe88b358 100644
+index 81a7fd7f8616..bdb474949f8f 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -95,6 +95,12 @@ CONFIG_IP_PNP_BOOTP=y
+@@ -95,6 +95,15 @@ CONFIG_IP_PNP_BOOTP=y
  CONFIG_IP_PNP_RARP=y
  CONFIG_STACKTRACE=y
  # CONFIG_FTRACE is not set
@@ -12,6 +12,9 @@ index 81a7fd7f8616..584fbe88b358 100644
 +CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder"
 +CONFIG_ANDROID_BINDER_IPC_SELFTEST=y
 +CONFIG_ASHMEM=y
++CONFIG_TUN=y
++CONFIG_VETH=m
++CONFIG_WIREGUARD=m
  CONFIG_NETFILTER=y
  CONFIG_NF_CONNTRACK=y
  CONFIG_NF_LOG_NETDEV=m
