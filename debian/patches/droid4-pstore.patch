@@ -30,10 +30,10 @@ index 604058627cf3..fa6025706180 100644
  	gpio-poweroff {
  		compatible = "gpio-poweroff";
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 760dc0b41c19..e1f0b883b17f 100644
+index c19e4a78cb4f..347101ee4fed 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -669,6 +669,11 @@ CONFIG_JFFS2_LZO=y
+@@ -704,6 +704,11 @@ CONFIG_JFFS2_LZO=y
  CONFIG_JFFS2_RUBIN=y
  CONFIG_UBIFS_FS=y
  CONFIG_CRAMFS=y
