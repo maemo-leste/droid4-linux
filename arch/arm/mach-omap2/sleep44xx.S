@@ -250,10 +250,44 @@ ENTRY(omap4_cpu_resume)
 	ldr	r9, [r8, #OMAP_TYPE_OFFSET]
 	cmp	r9, #0x1			@ Skip if GP device
 	bne	skip_ns_smp_enable
-	mrc     p15, 0, r0, c0, c0, 5
-	ands    r0, r0, #0x0f
+	mrc     p15, 0, r0, c0, c0, 5		@ Read MPIDR
+	ands    r0, r0, #0x0f			@ Skip workarounds for CPU0
 	beq	skip_ns_smp_enable
+
+#ifdef CONFIG_CACHE_L2X0
+	/* CPU1 on HS device. Test if CPU0 is already up based on enabled L2 */
+	ldr	r2, =OMAP44XX_L2CACHE_BASE
+	ldr	r0, [r2, #L2X0_CTRL]
+	and	r0, #0x0f
+	cmp	r0, #1
+	beq	ppa_actrl_retry			@ Skip if cache on, CPU0 is up
+
+	/*
+	 * Workaround to put HS CPU1 back off for PPA versions before v1.7.3.
+	 * When CPU1 is released by the PPA in the case of MPU OSWR and OFF
+	 * mode, PPA below v1.7.3 is not performing all memory coherency and TLB
+	 * operations required causing occasional hangs. The workaround will
+	 * make CPU1 available on HS systems a bit later on the next wake-up.
+	 * If needed, we could add an option to skip the workaround on devices
+	 * with a known good PPA.
+	 */
+	mov	r0, #0x03			@ Target CPU1 to OFF(mpusspd=OSWR/OFF)
+	mov	r1, #0x00			@ Secure L1 is already clean
+	ldr	r12, =OMAP4_MON_SCU_PWR_INDEX
+	dsb
+	smc	#0
+
+	isb					@ Necessary barriers before wfi
+	dsb
+	dmb
+	wfi					@ Wait for interrupt
+	nop
+	nop
+	/* Never returns, CPU1 is off again */
+#endif
+
 ppa_actrl_retry:
+	/* CPU1 on HS device. Configure ACTRL and enable NS SMP bit access */
 	mov     r0, #OMAP4_PPA_CPU_ACTRL_SMP_INDEX
 	adr	r1, ppa_zero_params_offset
 	ldr	r3, [r1]
