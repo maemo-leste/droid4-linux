@@ -1,5 +1,4 @@
 diff --git a/arch/arm/boot/dts/motorola-mapphone-common.dtsi b/arch/arm/boot/dts/motorola-mapphone-common.dtsi
-index 604058627cf3..fa6025706180 100644
 --- a/arch/arm/boot/dts/motorola-mapphone-common.dtsi
 +++ b/arch/arm/boot/dts/motorola-mapphone-common.dtsi
 @@ -24,6 +24,26 @@ memory {
@@ -30,10 +29,9 @@ index 604058627cf3..fa6025706180 100644
  	gpio-poweroff {
  		compatible = "gpio-poweroff";
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index c19e4a78cb4f..347101ee4fed 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -704,6 +704,11 @@ CONFIG_JFFS2_LZO=y
+@@ -726,6 +726,11 @@ CONFIG_JFFS2_LZO=y
  CONFIG_JFFS2_RUBIN=y
  CONFIG_UBIFS_FS=y
  CONFIG_CRAMFS=y
@@ -46,10 +44,29 @@ index c19e4a78cb4f..347101ee4fed 100644
  CONFIG_NFS_V3_ACL=y
  CONFIG_NFS_V4=y
 diff --git a/arch/arm/mach-omap2/prm44xx.c b/arch/arm/mach-omap2/prm44xx.c
-index 25093c1e5b9a..05e2f654585a 100644
 --- a/arch/arm/mach-omap2/prm44xx.c
 +++ b/arch/arm/mach-omap2/prm44xx.c
-@@ -831,6 +831,17 @@ int __init omap44xx_prm_init(const struct omap_prcm_init_data *data)
+@@ -783,6 +783,19 @@ static int cpu_notifier(struct notifier_block *nb, unsigned long cmd, void *v)
+ 	return NOTIFY_OK;
+ }
+ 
++/*
++ * Some device need a longer reset for reboot to work. At least Motorola
++ * Mapphone devices need a 4ms RST_TIME1 value for cpcap PMIC to do a
++ * cold reset. Note that for watchdog reset, we need to use different
++ * RST_TIME1 value configured during init for pstore to to maintain the
++ * DDR.
++ */
++static void __maybe_unused prm_long_reset(void)
++{
++	omap4_prminst_global_reset_time(16, 200);
++	omap4_prminst_global_warm_sw_reset();
++}
++
+ /*
+  * XXX document
+  */
+@@ -831,6 +844,19 @@ int __init omap44xx_prm_init(const struct omap_prcm_init_data *data)
  		cpu_pm_register_notifier(&nb);
  	}
  
@@ -60,18 +77,19 @@ index 25093c1e5b9a..05e2f654585a 100644
 +	 * stock kernel uses custom values of 16 and 200.
 +	 */
 +	if (of_machine_is_compatible("motorola,droid4") ||
-+	    of_machine_is_compatible("motorola,bionic"))
++	    of_machine_is_compatible("motorola,bionic")) {
 +		omap4_prminst_global_reset_time(16, 6);
++		omap44xx_prm_ll_data.reset_system = prm_long_reset;
++	}
 +#endif
 +
  	return prm_register(&omap44xx_prm_ll_data);
  }
  
 diff --git a/arch/arm/mach-omap2/prminst44xx.c b/arch/arm/mach-omap2/prminst44xx.c
-index fc086d8b9a04..640c0f998dcd 100644
 --- a/arch/arm/mach-omap2/prminst44xx.c
 +++ b/arch/arm/mach-omap2/prminst44xx.c
-@@ -174,6 +174,41 @@ int omap4_prminst_deassert_hardreset(u8 shift, u8 st_shift, u8 part, s16 inst,
+@@ -174,6 +174,44 @@ int omap4_prminst_deassert_hardreset(u8 shift, u8 st_shift, u8 part, s16 inst,
  	return (c == MAX_MODULE_HARDRESET_WAIT) ? -EBUSY : 0;
  }
  
@@ -106,15 +124,17 @@ index fc086d8b9a04..640c0f998dcd 100644
 +	omap4_prminst_write_inst_reg(v, OMAP4430_PRM_PARTITION,
 +				     inst, OMAP4_PRM_RSTTIME_OFFSET);
 +
-+	/* OCP barrier */
-+	v = omap4_prminst_read_inst_reg(OMAP4430_PRM_PARTITION,
-+					inst, OMAP4_PRM_RSTTIME_OFFSET);
++	/* Flush posted write */
++	omap4_prminst_read_inst_reg(OMAP4430_PRM_PARTITION,
++				    inst, OMAP4_PRM_RSTTIME_OFFSET);
++
++	/* Wait somewhere above 40us for the new values to take effect */
++	udelay(50);
 +}
  
  void omap4_prminst_global_warm_sw_reset(void)
  {
 diff --git a/arch/arm/mach-omap2/prminst44xx.h b/arch/arm/mach-omap2/prminst44xx.h
-index 11365a08e833..75c85a8ebd1c 100644
 --- a/arch/arm/mach-omap2/prminst44xx.h
 +++ b/arch/arm/mach-omap2/prminst44xx.h
 @@ -22,6 +22,9 @@ extern void omap4_prminst_write_inst_reg(u32 val, u8 part, s16 inst, u16 idx);
@@ -128,7 +148,6 @@ index 11365a08e833..75c85a8ebd1c 100644
  
  extern int omap4_prminst_is_hardreset_asserted(u8 shift, u8 part, s16 inst,
 diff --git a/drivers/mfd/motorola-cpcap.c b/drivers/mfd/motorola-cpcap.c
-index 30d82bfe5b02..be138ba6e4fb 100644
 --- a/drivers/mfd/motorola-cpcap.c
 +++ b/drivers/mfd/motorola-cpcap.c
 @@ -24,6 +24,23 @@
@@ -199,3 +218,5 @@ index 30d82bfe5b02..be138ba6e4fb 100644
  	ret = cpcap_init_irq(cpcap);
  	if (ret)
  		return ret;
+-- 
+2.30.0
