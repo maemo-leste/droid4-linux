@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index b849f5459294..8b50d0e0dacd 100644
+index 2f81783b2fa7..1a7e84b3f28f 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -93,6 +93,8 @@ CONFIG_IP_PNP=y
+@@ -87,6 +87,8 @@ CONFIG_IP_PNP=y
  CONFIG_IP_PNP_DHCP=y
  CONFIG_IP_PNP_BOOTP=y
  CONFIG_IP_PNP_RARP=y
