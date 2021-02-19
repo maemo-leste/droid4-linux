@@ -1,3 +1,19 @@
+droid4-linux (5.11.0-1) unstable; urgency=medium
+
+  * Rebase patches for 5.11 (0001-cpcap needs work)
+  * Apply tmlind's droid4-pstore-v2.patch.
+  * Enable FUSE.
+  * Enable squashfs support.
+  * Add missing CONFIG_STAGING for Anbox.
+  * Enable more netfilter in config.
+  * Rebase patches and remove obsolete cpuidle patch.
+  * Enable TUN and VETH.
+  * Rebase patches for newer defconfig.
+  * Enable necessary config changes for Anbox.
+  * Reapply 0005-disable-config-ftrace.patch
+
+ -- Ivan J. <parazyd@dyne.org>  Fri, 19 Feb 2021 01:28:02 +0100
+
 droid4-linux (5.10.7-2) unstable; urgency=medium
 
   * Add uvos' patches that help with random resets.
