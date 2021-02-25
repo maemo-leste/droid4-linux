@@ -48,6 +48,7 @@
 
 #include "soc.h"
 #include "common.h"
+#include "omap-secure.h"
 #include "omap44xx.h"
 #include "omap4-sar-layout.h"
 #include "pm.h"
@@ -256,14 +257,20 @@ int omap4_enter_lowpower(unsigned int cpu, unsigned int power_state)
 
 	pwrdm_pre_transition(NULL);
 
-	/*
-	 * Check MPUSS next state and save interrupt controller if needed.
-	 * In MPUSS OSWR or device OFF, interrupt controller  contest is lost.
-	 */
+	/* Check MPUSS next state to see if context is lost */
 	mpuss_clear_prev_logic_pwrst();
 	if ((pwrdm_read_next_pwrst(mpuss_pd) == PWRDM_POWER_RET) &&
-		(pwrdm_read_logic_retst(mpuss_pd) == PWRDM_POWER_OFF))
+	    (pwrdm_read_logic_retst(mpuss_pd) == PWRDM_POWER_OFF)) {
 		save_state = 2;
+
+		/*
+		 * Save interrupt controller for HS/EMU if needed. In MPUSS OSWR
+		 * and device OFF, interrupt controller context is lost. For GP
+		 * SoCs, see the cpu_pm notifiers and cpu_pm irq_notifier().
+		 */
+		if (!cpu && omap_type() != OMAP2_DEVICE_TYPE_GP)
+			omap4_irq_save_secure_context();
+	}
 
 	cpu_clear_prev_logic_pwrst(cpu);
 	pwrdm_set_next_pwrst(pm_info->pwrdm, power_state);
