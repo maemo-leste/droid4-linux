@@ -137,6 +137,22 @@ u32 omap3_save_secure_ram(void __iomem *addr, int size)
 }
 #endif
 
+/*
+ * Save GIC and Wakeupgen interrupt context using secure API for HS/EMU devices.
+ * Must be called after cpu_pm notifiers to avoid reconfiguring MPUSS on the
+ * cpu_pm notifier error path.
+ */
+void __maybe_unused omap4_irq_save_secure_context(void)
+{
+	u32 ret;
+
+	ret = omap_secure_dispatcher(OMAP4_HAL_SAVEGIC_INDEX,
+				     FLAG_START_CRITICAL,
+				     0, 0, 0, 0, 0);
+	if (ret != API_HAL_RET_VALUE_OK)
+		pr_err("GIC and Wakeupgen context save failed\n");
+}
+
 /**
  * rx51_secure_dispatcher: Routine to dispatch secure PPA API calls
  * @idx: The PPA API index
