@@ -4,3 +4,4 @@
 0004-remove-omap2-from-defconfig.patch
 0002-allow-busy-ret.patch
 anbox-support.patch
+0005-arm-omap4-fix-cpu-pm-handling-for-hs-emu-interrupt-save.patch
