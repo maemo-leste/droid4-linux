@@ -32,6 +32,7 @@ Signed-off-by: Tony Lindgren <tony@atomide.com>
  4 files changed, 33 insertions(+), 21 deletions(-)
 
 diff --git a/arch/arm/mach-omap2/omap-mpuss-lowpower.c b/arch/arm/mach-omap2/omap-mpuss-lowpower.c
+index 9fba98c2313a..e254a53c3cf2 100644
 --- a/arch/arm/mach-omap2/omap-mpuss-lowpower.c
 +++ b/arch/arm/mach-omap2/omap-mpuss-lowpower.c
 @@ -48,6 +48,7 @@
@@ -70,9 +71,10 @@ diff --git a/arch/arm/mach-omap2/omap-mpuss-lowpower.c b/arch/arm/mach-omap2/oma
  	pwrdm_set_next_pwrst(pm_info->pwrdm, power_state);
  	pwrdm_set_logic_retst(pm_info->pwrdm, cpu_logic_state);
 diff --git a/arch/arm/mach-omap2/omap-secure.c b/arch/arm/mach-omap2/omap-secure.c
+index 0659ab4cb0af..6b852509d270 100644
 --- a/arch/arm/mach-omap2/omap-secure.c
 +++ b/arch/arm/mach-omap2/omap-secure.c
-@@ -135,6 +135,22 @@ u32 omap3_save_secure_ram(void __iomem *addr, int size)
+@@ -137,6 +137,22 @@ u32 omap3_save_secure_ram(void __iomem *addr, int size)
  }
  #endif
  
@@ -96,9 +98,10 @@ diff --git a/arch/arm/mach-omap2/omap-secure.c b/arch/arm/mach-omap2/omap-secure
   * rx51_secure_dispatcher: Routine to dispatch secure PPA API calls
   * @idx: The PPA API index
 diff --git a/arch/arm/mach-omap2/omap-secure.h b/arch/arm/mach-omap2/omap-secure.h
+index 172069f31616..2befd44d41e3 100644
 --- a/arch/arm/mach-omap2/omap-secure.h
 +++ b/arch/arm/mach-omap2/omap-secure.h
-@@ -73,6 +73,7 @@ extern phys_addr_t omap_secure_ram_mempool_base(void);
+@@ -74,6 +74,7 @@ extern phys_addr_t omap_secure_ram_mempool_base(void);
  extern int omap_secure_ram_reserve_memblock(void);
  extern u32 save_secure_ram_context(u32 args_pa);
  extern u32 omap3_save_secure_ram(void __iomem *save_regs, int size);
@@ -107,6 +110,7 @@ diff --git a/arch/arm/mach-omap2/omap-secure.h b/arch/arm/mach-omap2/omap-secure
  extern u32 rx51_secure_dispatcher(u32 idx, u32 process, u32 flag, u32 nargs,
  				  u32 arg1, u32 arg2, u32 arg3, u32 arg4);
 diff --git a/arch/arm/mach-omap2/omap-wakeupgen.c b/arch/arm/mach-omap2/omap-wakeupgen.c
+index 8d21e3a3c05f..397edd308ba7 100644
 --- a/arch/arm/mach-omap2/omap-wakeupgen.c
 +++ b/arch/arm/mach-omap2/omap-wakeupgen.c
 @@ -367,20 +367,6 @@ static void irq_restore_context(void)
