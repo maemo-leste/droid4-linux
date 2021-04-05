@@ -1898,7 +1898,6 @@ static const struct omap_dma_config omap4_data = {
 	.lch_end = CCDN,
 	.rw_priority = true,
 	.needs_lch_clear = true,
-	.may_lose_context = true,
 };
 
 static const struct of_device_id omap_dma_match[] = {
