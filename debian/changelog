@@ -1,3 +1,10 @@
+droid4-linux (5.11.2-1) unstable; urgency=medium
+
+  * Merge latest droid4-pending-v5.11 from tmlind
+  * Rebase patches for latest 5.11
+
+ -- Ivan J. <parazyd@dyne.org>  Thu, 10 Jun 2021 11:07:05 +0200
+
 droid4-linux (5.11.1-1) unstable; urgency=medium
 
   * Merge latest droid4-pending-v5.11 from tmlind
