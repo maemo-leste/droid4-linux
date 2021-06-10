@@ -2380,7 +2380,8 @@ static void commit_planes_do_stream_update(struct dc *dc,
 					if (pipe_ctx->stream_res.audio && !dc->debug.az_endpoint_mute_only)
 						pipe_ctx->stream_res.audio->funcs->az_disable(pipe_ctx->stream_res.audio);
 
-					dc->hwss.optimize_bandwidth(dc, dc->current_state);
+					dc->optimized_required = true;
+
 				} else {
 					if (dc->optimize_seamless_boot_streams == 0)
 						dc->hwss.prepare_bandwidth(dc, dc->current_state);
@@ -2526,6 +2527,10 @@ static void commit_planes_for_stream(struct dc *dc,
 						/*triple buffer for VUpdate  only*/
 						plane_state->triplebuffer_flips = true;
 				}
+			}
+			if (update_type == UPDATE_TYPE_FULL) {
+				/* force vsync flip when reconfiguring pipes to prevent underflow */
+				plane_state->flip_immediate = false;
 			}
 		}
 	}
@@ -2679,7 +2684,8 @@ void dc_commit_updates_for_stream(struct dc *dc,
 		struct dc_surface_update *srf_updates,
 		int surface_count,
 		struct dc_stream_state *stream,
-		struct dc_stream_update *stream_update)
+		struct dc_stream_update *stream_update,
+		struct dc_state *state)
 {
 	const struct dc_stream_status *stream_status;
 	enum surface_update_type update_type;
@@ -2698,12 +2704,6 @@ void dc_commit_updates_for_stream(struct dc *dc,
 
 
 	if (update_type >= UPDATE_TYPE_FULL) {
-		struct dc_plane_state *new_planes[MAX_SURFACES];
-
-		memset(new_planes, 0, sizeof(new_planes));
-
-		for (i = 0; i < surface_count; i++)
-			new_planes[i] = srf_updates[i].surface;
 
 		/* initialize scratch memory for building context */
 		context = dc_create_state(dc);
@@ -2712,21 +2712,15 @@ void dc_commit_updates_for_stream(struct dc *dc,
 			return;
 		}
 
-		dc_resource_state_copy_construct(
-				dc->current_state, context);
+		dc_resource_state_copy_construct(state, context);
 
-		/*remove old surfaces from context */
-		if (!dc_rem_all_planes_for_stream(dc, stream, context)) {
-			DC_ERROR("Failed to remove streams for new validate context!\n");
-			return;
+		for (i = 0; i < dc->res_pool->pipe_count; i++) {
+			struct pipe_ctx *new_pipe = &context->res_ctx.pipe_ctx[i];
+			struct pipe_ctx *old_pipe = &dc->current_state->res_ctx.pipe_ctx[i];
+
+			if (new_pipe->plane_state && new_pipe->plane_state != old_pipe->plane_state)
+				new_pipe->plane_state->force_full_update = true;
 		}
-
-		/* add surface to context */
-		if (!dc_add_all_planes_for_stream(dc, stream, new_planes, surface_count, context)) {
-			DC_ERROR("Failed to add streams for new validate context!\n");
-			return;
-		}
-
 	}
 
 
