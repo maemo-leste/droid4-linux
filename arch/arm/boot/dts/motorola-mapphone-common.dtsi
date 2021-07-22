@@ -19,7 +19,7 @@
 	 * We seem to have only 1021 MB accessible, 1021 - 1022 is locked,
 	 * then 1023 - 1024 seems to contain mbm.
 	 */
-	memory {
+	memory0: memory {
 		device_type = "memory";
 		reg = <0x80000000 0x3fd00000>;	/* 1021 MB */
 	};
@@ -35,7 +35,7 @@
 		 * first 512K of that and just overwrite the rest and configure
 		 * only 384K instead of 2M.
 		 */
-		ramoops@a0080000 {
+		ramoops0: ramoops@a0080000 {
 			compatible = "ramoops";
 			reg = <0xa0080000 0x60000>;
 			record-size = <0x20000>;
