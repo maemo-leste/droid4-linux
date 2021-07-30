@@ -3258,6 +3258,7 @@ fail:
 
 	return NULL;
 }
+EXPORT_SYMBOL(__vmalloc_node_range);
 
 /**
  * __vmalloc_node - allocate virtually contiguous memory
