@@ -451,8 +451,10 @@ static int motmdm_find_primary_dai(struct snd_soc_component *component,
 	if (!master_ep)
 		return -ENODEV;
 
-	daifmt = snd_soc_of_parse_daifmt(master_ep, NULL,
+	daifmt = snd_soc_daifmt_parse_format(master_ep, NULL);
+	snd_soc_daifmt_parse_clock_provider_as_phandle(master_ep, NULL,
 					 &bitclkmaster, &framemaster);
+
 	of_node_put(master_ep);
 	if (bitclkmaster && framemaster)
 		master = of_graph_get_port_parent(bitclkmaster);
