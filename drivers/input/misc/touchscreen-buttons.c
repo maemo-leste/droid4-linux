@@ -29,7 +29,7 @@
 #include <linux/string.h>
 #include <linux/workqueue.h>
 
-#define EVENT_QUEUE_SIZE 32
+#define EVENT_QUEUE_SIZE 64
 
 struct touchscreen_button {
 	u32 x;
@@ -55,6 +55,7 @@ struct event {
 struct event_queue {
 	struct event events[EVENT_QUEUE_SIZE];
 	unsigned int lastindex;
+	bool overrun;
 };
 
 struct touchscreen_buttons {
@@ -89,8 +90,8 @@ static const struct input_device_id touchscreen_buttons_ids[] = {
 };
 
 static int touchscreen_buttons_process_syn(const struct event_queue *queue,
-					   const struct touchscreen_button_map
-					   *map, struct input_dev *idev)
+										   struct touchscreen_button_map *map,
+										   struct input_dev *idev)
 {
 	u32 i;
 	int x, y, ret, pressed;
@@ -119,7 +120,8 @@ static int touchscreen_buttons_process_syn(const struct event_queue *queue,
 		    button->x <= x &&
 		    button->y <= y &&
 		    button->width + button->x >= x &&
-		    button->height + button->y >= y && button->depressed == 0) {
+		    button->height + button->y >= y &&
+		    button->depressed == 0) {
 			input_report_key(idev, button->keycode, 1);
 			button->depressed = 1;
 			ret = 1;
@@ -138,8 +140,7 @@ static int touchscreen_buttons_process_syn(const struct event_queue *queue,
 		bool buttonpressed = false;
 
 		for (i = 0; i < map->count; ++i)
-			buttonpressed = buttonpressed
-			    || map->buttons[i].depressed;
+			buttonpressed = buttonpressed || map->buttons[i].depressed;
 		if (buttonpressed)
 			ret = 3;
 	}
@@ -147,55 +148,70 @@ static int touchscreen_buttons_process_syn(const struct event_queue *queue,
 	return ret;
 }
 
-static void touchscreen_buttons_resend_events(const struct event_queue *queue,
-					      struct input_dev *idev)
+static void touchscreen_buttons_reset_buttons(struct touchscreen_button_map *map,
+										      struct input_dev *idev)
+{
+	u32 i;
+
+	for (i = 0; i < map->count; ++i) {
+		struct touchscreen_button *button = &map->buttons[i];
+
+		if (button->depressed == 1) {
+			input_report_key(idev, button->keycode, 0);
+			button->depressed = 0;
+		}
+	}
+}
+
+static void touchscreen_buttons_resend_events(const struct event_queue *queue, struct input_dev *idev)
 {
 	u32 i;
 
 	for (i = 0; i < queue->lastindex; ++i)
-		input_event(idev, queue->events[i].type, queue->events[i].code,
-			    queue->events[i].value);
+		input_event(idev, queue->events[i].type, queue->events[i].code, queue->events[i].value);
 	input_event(idev, EV_SYN, SYN_REPORT, 0);
 }
 
-static void touchscreen_buttons_copy_mt_slots(struct input_dev *target,
-					      struct input_dev *source)
-{
-	if (source->mt && target->mt
-	    && source->mt->num_slots == target->mt->num_slots) {
-		memcpy(target->mt->slots, source->mt->slots,
-		       sizeof(struct input_mt_slot) * source->mt->num_slots);
-	}
-}
-
 static void touchscreen_buttons_input_event(struct input_handle *handle,
-					    unsigned int type,
-					    unsigned int code, int value)
+					    unsigned int type, unsigned int code, int value)
 {
 	struct touchscreen_buttons *buttons;
 
 	buttons = handle->private;
 
 	if (type == EV_SYN && code == SYN_REPORT) {
-		if (touchscreen_buttons_process_syn(&buttons->queue,
-						    buttons->map,
-						    buttons->buttons_idev) == 0)
-			touchscreen_buttons_resend_events(&buttons->queue,
-							  buttons->filtered_ts_idev);
+		if (!buttons->queue.overrun && touchscreen_buttons_process_syn(&buttons->queue,
+			buttons->map, buttons->buttons_idev) == 0)
+			touchscreen_buttons_resend_events(&buttons->queue, buttons->filtered_ts_idev);
+		buttons->queue.overrun = false;
 		buttons->queue.lastindex = 0;
+	} else if (buttons->queue.overrun) {
+		input_event(buttons->filtered_ts_idev, type, code, value);
 	} else if (buttons->queue.lastindex < EVENT_QUEUE_SIZE) {
 		buttons->queue.events[buttons->queue.lastindex].type = type;
 		buttons->queue.events[buttons->queue.lastindex].code = code;
 		buttons->queue.events[buttons->queue.lastindex].value = value;
 		++buttons->queue.lastindex;
 	} else {
+		buttons->queue.overrun = true;
+		touchscreen_buttons_resend_events(&buttons->queue, buttons->filtered_ts_idev);
+		buttons->queue.lastindex = 0;
+		touchscreen_buttons_reset_buttons(buttons->map, buttons->buttons_idev);
 		dev_warn(buttons->dev,
 			 "event_qeue overrun, will not capture events until next SYN_REPORT\n");
 	}
 }
 
-static void touchscreen_buttons_merge_capabilitys(struct input_dev *target,
-						  struct input_dev *source)
+
+static void touchscreen_buttons_copy_mt_slots(struct input_dev *target, struct input_dev *source)
+{
+	if (source->mt && target->mt && source->mt->num_slots == target->mt->num_slots) {
+		memcpy(target->mt->slots, source->mt->slots,
+		       sizeof(struct input_mt_slot) * source->mt->num_slots);
+	}
+}
+
+static void touchscreen_buttons_merge_capabilities(struct input_dev *target, struct input_dev *source)
 {
 	unsigned int i;
 
@@ -221,46 +237,33 @@ static void touchscreen_buttons_merge_capabilitys(struct input_dev *target,
 		target->ffbit[i] = target->ffbit[i] | source->ffbit[i];
 	for (i = 0; i < BITS_TO_LONGS(SW_CNT); ++i)
 		target->swbit[i] = target->swbit[i] | source->swbit[i];
-	mutex_unlock(&source->mutex);
-	mutex_unlock(&target->mutex);
 
 	if (*source->evbit & (1 << EV_ABS)) {
 		input_alloc_absinfo(target);
-		mutex_lock(&target->mutex);
-		mutex_lock(&source->mutex);
 		for (i = 0; i < ABS_CNT; ++i)
 			target->absinfo[i] = source->absinfo[i];
-		mutex_unlock(&source->mutex);
-		mutex_unlock(&target->mutex);
 		if (source->mt) {
-			input_mt_init_slots(target, source->mt->num_slots,
-					    source->mt->flags);
-			mutex_lock(&target->mutex);
-			mutex_lock(&source->mutex);
+			input_mt_init_slots(target, source->mt->num_slots, source->mt->flags);
 			touchscreen_buttons_copy_mt_slots(target, source);
-			mutex_unlock(&source->mutex);
-			mutex_unlock(&target->mutex);
 		}
 	}
+	mutex_unlock(&source->mutex);
+	mutex_unlock(&target->mutex);
 }
 
-static void merge_task_handler(struct work_struct *work)
+void merge_task_handler(struct work_struct *work)
 {
-	struct touchscreen_buttons *buttons =
-	    container_of(work, struct touchscreen_buttons, merge_task);
-
+	struct touchscreen_buttons *buttons = container_of(work, struct touchscreen_buttons, merge_task);
 
 	mutex_lock(&buttons->mutex);
 	if (buttons->ts_handle && buttons->ts_handle->dev)
-		touchscreen_buttons_merge_capabilitys(buttons->filtered_ts_idev,
-						      buttons->ts_handle->dev);
+		touchscreen_buttons_merge_capabilities(buttons->filtered_ts_idev, buttons->ts_handle->dev);
 	mutex_unlock(&buttons->mutex);
 }
 
-static void close_task_handler(struct work_struct *work)
+void close_task_handler(struct work_struct *work)
 {
-	struct touchscreen_buttons *buttons =
-	    container_of(work, struct touchscreen_buttons, close_task);
+	struct touchscreen_buttons *buttons = container_of(work, struct touchscreen_buttons, close_task);
 
 	mutex_lock(&buttons->mutex);
 	if (buttons && buttons->ts_handle && buttons->ts_handle->open != 0)
@@ -268,19 +271,16 @@ static void close_task_handler(struct work_struct *work)
 	mutex_unlock(&buttons->mutex);
 }
 
-static void open_task_handler(struct work_struct *work)
+void open_task_handler(struct work_struct *work)
 {
-	struct touchscreen_buttons *buttons =
-	    container_of(work, struct touchscreen_buttons, open_task);
+	struct touchscreen_buttons *buttons = container_of(work, struct touchscreen_buttons, open_task);
 	int error;
 
 	mutex_lock(&buttons->mutex);
 	if (buttons && buttons->ts_handle) {
 		error = input_open_device(buttons->ts_handle);
 		if (error) {
-			dev_err(buttons->dev,
-				"Failed to open input device, error %d\n",
-				error);
+			dev_err(buttons->dev, "Failed to open input device, error %d\n", error);
 			input_unregister_handle(buttons->ts_handle);
 			kfree(buttons->ts_handle);
 			buttons->ts_handle = NULL;
@@ -290,8 +290,7 @@ static void open_task_handler(struct work_struct *work)
 }
 
 static int touchscreen_buttons_input_connect(struct input_handler *handler,
-					     struct input_dev *dev,
-					     const struct input_device_id *id)
+					     struct input_dev *dev, const struct input_device_id *id)
 {
 	struct touchscreen_buttons *buttons;
 
@@ -299,18 +298,13 @@ static int touchscreen_buttons_input_connect(struct input_handler *handler,
 
 	mutex_lock(&buttons->mutex);
 
-	if ((!buttons->ts_handle
-	     && device_match_of_node(&dev->dev, buttons->map->ts_node))
-	    || (dev->dev.parent
-		&& device_match_of_node(dev->dev.parent,
-					buttons->map->ts_node))) {
+	if ((!buttons->ts_handle && device_match_of_node(&dev->dev, buttons->map->ts_node)) ||
+		(dev->dev.parent && device_match_of_node(dev->dev.parent, buttons->map->ts_node))) {
 		int error;
 
-		dev_info(buttons->dev, "Binding to device: %s\n",
-			 dev_name(&dev->dev));
+		dev_info(buttons->dev, "Binding to device: %s\n", dev_name(&dev->dev));
 
-		buttons->ts_handle =
-		    kzalloc(sizeof(*buttons->ts_handle), GFP_KERNEL);
+		buttons->ts_handle = kzalloc(sizeof(*buttons->ts_handle), GFP_KERNEL);
 		if (!buttons->ts_handle) {
 			mutex_unlock(&buttons->mutex);
 			return -ENOMEM;
@@ -324,9 +318,7 @@ static int touchscreen_buttons_input_connect(struct input_handler *handler,
 
 		error = input_register_handle(buttons->ts_handle);
 		if (error) {
-			dev_err(buttons->dev,
-				"Failed to register input handler, error %d\n",
-				error);
+			dev_err(buttons->dev, "Failed to register input handler, error %d\n", error);
 			kfree(buttons->ts_handle);
 			buttons->ts_handle = NULL;
 			mutex_unlock(&buttons->mutex);
@@ -335,8 +327,7 @@ static int touchscreen_buttons_input_connect(struct input_handler *handler,
 
 		queue_work(buttons->workqueue, &buttons->merge_task);
 
-		if (buttons->filtered_ts_idev->users > 0
-		    && buttons->ts_handle->open == 0)
+		if (buttons->filtered_ts_idev->users > 0 && buttons->ts_handle->open == 0)
 			queue_work(buttons->workqueue, &buttons->open_task);
 	}
 
@@ -356,11 +347,9 @@ static void touchscreen_buttons_input_disconnect(struct input_handle *handle)
 		input_unregister_handle(handle);
 		kfree(handle);
 		buttons->ts_handle = NULL;
-		dev_info(buttons->dev,
-			 "Touchscreen device disconnected buttons disabled\n");
+		dev_info(buttons->dev, "Touchscreen device disconnected buttons disabled\n");
 	} else {
-		dev_err(buttons->dev,
-			"Unknown device disconnected, %p should be %p", handle,
+		dev_err(buttons->dev, "Unknown device disconnected, %p should be %p", handle,
 			buttons->ts_handle);
 	}
 	mutex_unlock(&buttons->mutex);
@@ -374,7 +363,7 @@ static struct touchscreen_button_map
 	struct device_node *node;
 	int i;
 
-	map = devm_kzalloc(dev, sizeof(*map), GFP_KERNEL);
+	map = kzalloc(sizeof(*map), GFP_KERNEL);
 	if (!map)
 		return ERR_PTR(-ENOMEM);
 
@@ -382,7 +371,7 @@ static struct touchscreen_button_map
 	if (map->count == 0)
 		return ERR_PTR(-ENODEV);
 
-	map->buttons = devm_kcalloc(dev, map->count, sizeof(*map->buttons), GFP_KERNEL);
+	map->buttons = kcalloc(map->count, sizeof(*map->buttons), GFP_KERNEL);
 	if (!map->buttons)
 		return ERR_PTR(-ENOMEM);
 
@@ -405,18 +394,16 @@ static struct touchscreen_button_map
 		fwnode_property_read_u32(child_node, "y-position", &button->y);
 		fwnode_property_read_u32(child_node, "x-size", &button->width);
 		fwnode_property_read_u32(child_node, "y-size", &button->height);
-		fwnode_property_read_u32(child_node, "keycode",
-					 &button->keycode);
+		fwnode_property_read_u32(child_node, "keycode", &button->keycode);
 		dev_info(dev,
 			 "Adding button at x=%u y=%u size %u x %u keycode=%u\n",
-			 button->x, button->y, button->width, button->height,
-			 button->keycode);
+			 button->x, button->y, button->width, button->height, button->keycode);
 		++i;
 	}
 	return map;
 }
 
-static int touchscreen_buttons_idev_opened(struct input_dev *idev)
+int touchscreen_buttons_idev_opened(struct input_dev *idev)
 {
 	struct touchscreen_buttons *buttons;
 
@@ -432,14 +419,14 @@ static int touchscreen_buttons_idev_opened(struct input_dev *idev)
 		}
 	} else {
 		dev_warn(idev->dev.parent,
-			 "Input device opend but touchscreen not opened. %p %p\n",
-			 buttons, buttons->ts_handle);
+			 "Input device opend but touchscreen not opened. %p %p\n", buttons,
+			 buttons->ts_handle);
 	}
 	mutex_unlock(&buttons->mutex);
 	return 0;
 }
 
-static void touchscreen_buttons_idev_closed(struct input_dev *idev)
+void touchscreen_buttons_idev_closed(struct input_dev *idev)
 {
 	struct touchscreen_buttons *buttons;
 
@@ -458,14 +445,13 @@ static int touchscreen_buttons_probe(struct platform_device *pdev)
 	struct touchscreen_buttons *buttons;
 	int error, i;
 
-	buttons = devm_kzalloc(&pdev->dev, sizeof(*buttons), GFP_KERNEL);
+	buttons = kzalloc(sizeof(*buttons), GFP_KERNEL);
 	if (!buttons)
 		return -ENOMEM;
 
 	dev_set_drvdata(&pdev->dev, buttons);
 
-	buttons->workqueue =
-	    create_singlethread_workqueue("touchscreen-buttons-workqueue");
+	buttons->workqueue = create_singlethread_workqueue("touchscreen-buttons-workqueue");
 	INIT_WORK(&buttons->merge_task, merge_task_handler);
 	INIT_WORK(&buttons->open_task, open_task_handler);
 	INIT_WORK(&buttons->close_task, close_task_handler);
@@ -497,11 +483,10 @@ static int touchscreen_buttons_probe(struct platform_device *pdev)
 	buttons->buttons_idev->phys = "touchscreen-buttons/input0";
 	buttons->buttons_idev->dev.parent = buttons->dev;
 	for (i = 0; i < buttons->map->count; ++i)
-		input_set_capability(buttons->buttons_idev, EV_KEY,
-				     buttons->map->buttons[i].keycode);
+		input_set_capability(buttons->buttons_idev, EV_KEY, buttons->map->buttons[i].keycode);
 
 	/*handler for touchscreen input device */
-	buttons->handler = devm_kzalloc(&pdev->dev, sizeof(*buttons->handler), GFP_KERNEL);
+	buttons->handler = kzalloc(sizeof(*buttons->handler), GFP_KERNEL);
 
 	buttons->handler->event = touchscreen_buttons_input_event;
 	buttons->handler->connect = touchscreen_buttons_input_connect;
@@ -512,22 +497,19 @@ static int touchscreen_buttons_probe(struct platform_device *pdev)
 
 	error = input_register_handler(buttons->handler);
 	if (error) {
-		dev_err(&pdev->dev, "Input handler register failed: %d\n",
-			error);
+		dev_err(&pdev->dev, "Input handler register failed: %d\n", error);
 		return error;
 	}
 
 	error = input_register_device(buttons->buttons_idev);
 	if (error) {
-		dev_err(&pdev->dev, "Input device register failed: %d\n",
-			error);
+		dev_err(&pdev->dev, "Input device register failed: %d\n", error);
 		return error;
 	}
 
 	error = input_register_device(buttons->filtered_ts_idev);
 	if (error) {
-		dev_err(&pdev->dev, "Input device register failed: %d\n",
-			error);
+		dev_err(&pdev->dev, "Input device register failed: %d\n", error);
 		return error;
 	}
 
@@ -536,26 +518,40 @@ static int touchscreen_buttons_probe(struct platform_device *pdev)
 
 static int touchscreen_buttons_remove(struct platform_device *pdev)
 {
-	struct touchscreen_buttons *buttons = dev_get_drvdata(&pdev->dev);
-	struct input_handle *ts_handle = buttons->ts_handle;
+	struct touchscreen_buttons *buttons;
+	struct input_handle *ts_handle;
 
-	input_unregister_device(buttons->buttons_idev);
-	input_unregister_device(buttons->filtered_ts_idev);
+	buttons = dev_get_drvdata(&pdev->dev);
 
 	mutex_lock(&buttons->mutex);
+
+	ts_handle = buttons->ts_handle;
+
+	input_unregister_handler(buttons->handler);
 	if (buttons->ts_handle) {
 		if (buttons->ts_handle->open != 0)
 			input_close_device(buttons->ts_handle);
 		input_unregister_handle(buttons->ts_handle);
 		buttons->ts_handle = NULL;
 	}
+
 	mutex_unlock(&buttons->mutex);
-	input_unregister_handler(buttons->handler);
 
 	flush_workqueue(buttons->workqueue);
 	destroy_workqueue(buttons->workqueue);
 
+	input_unregister_device(buttons->buttons_idev);
+	input_unregister_device(buttons->filtered_ts_idev);
+
 	kfree(ts_handle);
+
+	if (buttons->map) {
+		kfree(buttons->map->buttons);
+		kfree(buttons->map);
+	}
+	kfree(buttons->handler);
+
+	kfree(buttons);
 
 	return 0;
 }
@@ -574,8 +570,7 @@ static struct platform_driver touchscreen_buttons_driver = {
 	.remove = touchscreen_buttons_remove,
 	.driver = {
 		   .name = "touchscreen-buttons",
-		   .of_match_table =
-		   of_match_ptr(touchscreen_buttons_dt_match_table),
+		   .of_match_table = of_match_ptr(touchscreen_buttons_dt_match_table),
 		   },
 };
 
