@@ -381,6 +381,8 @@ patternProperties:
     description: Espressif Systems Co. Ltd.
   "^est,.*":
     description: ESTeem Wireless Modems
+  "^etsi,.*":
+    description: ETSI
   "^ettus,.*":
     description: NI Ettus Research
   "^eukrea,.*":

@@ -1380,7 +1380,6 @@ static int cpcap_voice_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	return 0;
 }
 
-
 /*
  * Configure codec for voice call if requested.
  *
@@ -1518,6 +1517,7 @@ static const struct snd_soc_dai_ops cpcap_dai_voice_ops = {
 	.set_tdm_slot	= cpcap_voice_set_tdm_slot,
 	.mute_stream	= cpcap_voice_set_mute,
 	.no_capture_mute = 1,
+	.set_tdm_slot	= cpcap_voice_set_tdm_slot,
 };
 
 static struct snd_soc_dai_driver cpcap_dai[] = {
