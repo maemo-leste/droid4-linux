@@ -24,6 +24,23 @@
 #define CPCAP_REGISTER_SIZE	4
 #define CPCAP_REGISTER_BITS	16
 
+/* Register CPCAP_REG_VAL1 bits */
+#define CPCAP_BIT_NVFLASH_MODE		BIT(14)
+#define CPCAP_BIT_RECOVERY_MODE		BIT(13)
+#define CPCAP_BIT_FASTBOOT_MODE		BIT(12)	/* Nope, not for fastboot */
+#define CPCAP_BIT_BOOT_MODE		BIT(11)	/* For fastboot mode */
+#define CPCAP_BIT_BP2_ONLY_FLASH	BIT(10)
+#define CPCAP_BIT_OUT_CHARGE_ONLY	BIT(9)
+#define CPCAP_BIT_USB_BATT_RECOVERY	BIT(8)
+#define CPCAP_BIT_PANIC			BIT(7)
+#define CPCAP_BIT_BP_ONLY_FLASH		BIT(6)
+#define CPCAP_BIT_WATCHDOG_RESET	BIT(5)
+#define CPCAP_BIT_SOFT_RESET		BIT(4)
+#define CPCAP_BIT_FLASH_FAIL		BIT(3)
+#define CPCAP_BIT_FOTA_MODE		BIT(2)
+#define CPCAP_BIT_AP_KERNEL_PANIC	BIT(1)
+#define CPCAP_BIT_FLASH_MODE		BIT(0)
+
 struct cpcap_ddata {
 	struct spi_device *spi;
 	struct regmap_irq *irqs;
@@ -81,6 +98,32 @@ static int cpcap_check_revision(struct cpcap_ddata *cpcap)
 			 "Please add old CPCAP revision support as needed\n");
 		return -ENODEV;
 	}
+
+	return 0;
+}
+
+static int cpcap_init_registers(struct cpcap_ddata *ddata)
+{
+	u16 val;
+	int err;
+
+	/* Stock kernel default values on power up */
+	val = CPCAP_BIT_OUT_CHARGE_ONLY | CPCAP_BIT_SOFT_RESET |
+		CPCAP_BIT_AP_KERNEL_PANIC;
+
+#ifdef CONFIG_PSTORE
+	/*
+	 * The CPCAP_BIT_PANIC seems to prevent the bootloader from clearing
+	 * the DDR memory. For pstore, also SoC PRM_RSTTIME needs to be set
+	 * to minimum values of 0x401.
+	 */
+	val |= CPCAP_BIT_PANIC;
+#endif
+
+	err = regmap_update_bits(ddata->regmap, CPCAP_REG_VAL1,
+				 0xffff, val);
+	if (err)
+		return err;
 
 	return 0;
 }
@@ -322,6 +365,10 @@ static int cpcap_probe(struct spi_device *spi)
 		dev_err(&cpcap->spi->dev, "Failed to detect CPCAP: %i\n", ret);
 		return ret;
 	}
+
+	ret = cpcap_init_registers(cpcap);
+	if (ret)
+		return ret;
 
 	ret = cpcap_init_irq(cpcap);
 	if (ret)
