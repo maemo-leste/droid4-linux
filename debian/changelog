@@ -1,3 +1,9 @@
+droid4-linux (5.11.2-2) unstable; urgency=medium
+
+  * Enable nftables support in defconfig
+
+ -- Ivan J. <parazyd@dyne.org>  Thu, 30 Sep 2021 11:04:53 +0200
+
 droid4-linux (5.11.2-1) unstable; urgency=medium
 
   * Merge latest droid4-pending-v5.11 from tmlind
