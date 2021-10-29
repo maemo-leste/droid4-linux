@@ -75,6 +75,9 @@
 			interrupts-extended = <&cpcap 9 0>;
 			interrupt-names = "hpplugged";
 
+			interrupts-extended = <&cpcap 9 0>;
+			interrupt-names = "hpplugged";
+
 			port@0 {
 				reg = <0>;
 				cpcap_audio_codec0: endpoint {
