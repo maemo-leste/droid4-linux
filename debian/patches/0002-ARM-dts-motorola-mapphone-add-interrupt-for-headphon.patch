@@ -1,0 +1,28 @@
+From cebbbb69b700a6fdfb1047b338ddacf22f857f66 Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Fri, 29 Oct 2021 11:48:50 +0200
+Subject: [PATCH 2/3] ARM: dts: motorola-mapphone: add interrupt for headphone
+ detection
+
+Signed-off-by: Carl Philipp Klemm <philipp@uvos.xyz>
+---
+ arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi b/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
+index 77eadebdaa1d..e4d12e7bd35a 100644
+--- a/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
++++ b/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
+@@ -75,6 +75,9 @@ cpcap_audio: audio-codec {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 
++			interrupts-extended = <&cpcap 9 0>;
++			interrupt-names = "hpplugged";
++
+ 			port@0 {
+ 				reg = <0>;
+ 				cpcap_audio_codec0: endpoint {
+-- 
+2.33.1
+

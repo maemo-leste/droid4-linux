@@ -9,3 +9,6 @@ fbdev.patch
 uart-with-charger.patch
 bus-ti-sysc-fix-flakey-idling-of-uarts.patch
 nftables-support.patch
+0001-ASoC-simple-card-utils-add-support-for-componants-pr.patch
+0002-ARM-dts-motorola-mapphone-add-interrupt-for-headphon.patch
+0003-ASoC-cpcap-add-headphone-jack-plug-detection-support.patch
