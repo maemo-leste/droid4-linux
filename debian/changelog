@@ -1,3 +1,9 @@
+droid4-linux (5.11.2-3) unstable; urgency=medium
+
+  * Add hp plug detection
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Thu, 04 Nov 2021 22:57:22 +0100
+
 droid4-linux (5.11.2-2) unstable; urgency=medium
 
   * Enable nftables support in defconfig
