@@ -1,4 +1,3 @@
-From cebbbb69b700a6fdfb1047b338ddacf22f857f66 Mon Sep 17 00:00:00 2001
 From: Carl Philipp Klemm <philipp@uvos.xyz>
 Date: Fri, 29 Oct 2021 11:48:50 +0200
 Subject: [PATCH 2/3] ARM: dts: motorola-mapphone: add interrupt for headphone

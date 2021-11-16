@@ -1,4 +1,3 @@
-From bf0e305e6f9ec477964f5bd94323c129b694d9e6 Mon Sep 17 00:00:00 2001
 From: Carl Philipp Klemm <philipp@uvos.xyz>
 Date: Fri, 29 Oct 2021 12:14:07 +0200
 Subject: [PATCH 3/3] ASoC: cpcap: add headphone jack plug detection support.
