@@ -13,7 +13,7 @@ diff --git a/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi b/arch/arm/boot/dts/
 index 77eadebdaa1d..e4d12e7bd35a 100644
 --- a/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
 +++ b/arch/arm/boot/dts/motorola-cpcap-mapphone.dtsi
-@@ -75,6 +75,9 @@ cpcap_audio: audio-codec {
+@@ -72,6 +72,9 @@ cpcap_audio: audio-codec {
  			#address-cells = <1>;
  			#size-cells = <0>;
  

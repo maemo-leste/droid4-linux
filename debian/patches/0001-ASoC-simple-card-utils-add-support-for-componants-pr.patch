@@ -14,11 +14,11 @@ Signed-off-by: Carl Philipp Klemm <philipp@uvos.xyz>
  2 files changed, 34 insertions(+), 18 deletions(-)
 
 diff --git a/include/sound/simple_card_utils.h b/include/sound/simple_card_utils.h
-index ba4a3e1897b9..471f511c0451 100644
+index 51b3b485a92e..547ad537613d 100644
 --- a/include/sound/simple_card_utils.h
 +++ b/include/sound/simple_card_utils.h
-@@ -50,8 +50,8 @@ struct asoc_simple_priv {
- 		struct snd_soc_codec_conf *codec_conf;
+@@ -57,8 +57,8 @@ struct asoc_simple_priv {
+ 		struct prop_nums num;
  		unsigned int mclk_fs;
  	} *dai_props;
 -	struct asoc_simple_jack hp_jack;
@@ -27,8 +27,8 @@ index ba4a3e1897b9..471f511c0451 100644
 +	struct asoc_simple_jack *mic_jack;
  	struct snd_soc_dai_link *dai_link;
  	struct asoc_simple_dai *dais;
- 	struct snd_soc_codec_conf *codec_conf;
-@@ -133,7 +133,7 @@ int asoc_simple_parse_pin_switches(struct snd_soc_card *card,
+ 	struct snd_soc_dai_link_component *dlcs;
+@@ -173,7 +173,7 @@ int asoc_simple_parse_pin_switches(struct snd_soc_card *card,
  				   char *prefix);
  
  int asoc_simple_init_jack(struct snd_soc_card *card,
@@ -38,20 +38,18 @@ index ba4a3e1897b9..471f511c0451 100644
  int asoc_simple_init_priv(struct asoc_simple_priv *priv,
  			       struct link_info *li);
 diff --git a/sound/soc/generic/simple-card-utils.c b/sound/soc/generic/simple-card-utils.c
-index 6cada4c1e283..38e459537c02 100644
+index 10c63b73900c..3703e5bcfe52 100644
 --- a/sound/soc/generic/simple-card-utils.c
 +++ b/sound/soc/generic/simple-card-utils.c
-@@ -379,7 +379,8 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
- {
+@@ -395,6 +395,7 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
  	struct asoc_simple_priv *priv = snd_soc_card_get_drvdata(rtd->card);
- 	struct simple_dai_props *dai_props = simple_priv_to_props(priv, rtd->num);
--	int ret;
+ 	struct simple_dai_props *props = simple_priv_to_props(priv, rtd->num);
+ 	struct asoc_simple_dai *dai;
 +	struct snd_soc_component *component;
-+	int i, ret;
+ 	int i, ret;
  
- 	ret = asoc_simple_init_dai(asoc_rtd_to_codec(rtd, 0),
- 				   dai_props->codec_dai);
-@@ -395,6 +396,18 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
+ 	for_each_prop_dai_codec(props, i, dai) {
+@@ -412,6 +413,18 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
  	if (ret < 0)
  		return ret;
  
@@ -70,7 +68,7 @@ index 6cada4c1e283..38e459537c02 100644
  	return 0;
  }
  EXPORT_SYMBOL_GPL(asoc_simple_dai_init);
-@@ -539,7 +552,7 @@ int asoc_simple_parse_pin_switches(struct snd_soc_card *card,
+@@ -554,7 +567,7 @@ int asoc_simple_parse_pin_switches(struct snd_soc_card *card,
  EXPORT_SYMBOL_GPL(asoc_simple_parse_pin_switches);
  
  int asoc_simple_init_jack(struct snd_soc_card *card,
@@ -79,7 +77,7 @@ index 6cada4c1e283..38e459537c02 100644
  			  int is_hp, char *prefix,
  			  char *pin)
  {
-@@ -554,8 +567,6 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
+@@ -569,8 +582,6 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
  	if (!prefix)
  		prefix = "";
  
@@ -88,44 +86,31 @@ index 6cada4c1e283..38e459537c02 100644
  	if (is_hp) {
  		snprintf(prop, sizeof(prop), "%shp-det-gpio", prefix);
  		pin_name	= pin ? pin : "Headphones";
-@@ -573,21 +584,26 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
+@@ -588,6 +599,11 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
  		return -EPROBE_DEFER;
  
  	if (gpio_is_valid(det)) {
--		sjack->pin.pin		= pin_name;
--		sjack->pin.mask		= mask;
 +		struct asoc_simple_jack *sjack_d;
 +
 +		sjack = devm_kzalloc(dev, sizeof(*(*sjack)), GFP_KERNEL);
 +		sjack_d = *sjack;
 +
-+		sjack_d->pin.pin		= pin_name;
-+		sjack_d->pin.mask		= mask;
+ 		sjack->pin.pin		= pin_name;
+ 		sjack->pin.mask		= mask;
  
--		sjack->gpio.name	= gpio_name;
--		sjack->gpio.report	= mask;
--		sjack->gpio.gpio	= det;
--		sjack->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
--		sjack->gpio.debounce_time = 150;
-+		sjack_d->gpio.name	= gpio_name;
-+		sjack_d->gpio.report	= mask;
-+		sjack_d->gpio.gpio	= det;
-+		sjack_d->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
-+		sjack_d->gpio.debounce_time = 150;
+@@ -598,10 +614,10 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
+ 		sjack->gpio.debounce_time = 150;
  
  		snd_soc_card_jack_new(card, pin_name, mask,
 -				      &sjack->jack,
 -				      &sjack->pin, 1);
-+				       &sjack_d->jack,
-+				       &sjack_d->pin, 1);
++				      &sjack_d->jack,
++				      &sjack_d->pin, 1);
  
 -		snd_soc_jack_add_gpios(&sjack->jack, 1,
--				       &sjack->gpio);
 +		snd_soc_jack_add_gpios(&sjack_d->jack, 1,
-+				       &sjack_d->gpio);
+ 				       &sjack->gpio);
  	}
- 
- 	return 0;
 -- 
 2.33.1
 

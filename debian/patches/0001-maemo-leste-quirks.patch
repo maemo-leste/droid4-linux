@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index ff363cc6b11f..882507572e71 100644
+index 5e7c1d854441..abe4da154c40 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1489,7 +1489,7 @@ CLEAN_FILES += include/ksym vmlinux.symvers modules-only.symvers \
+@@ -1522,7 +1522,7 @@ CLEAN_FILES += include/ksym vmlinux.symvers modules-only.symvers \
  # Directories & files removed with 'make mrproper'
  MRPROPER_FILES += include/config include/generated          \
  		  arch/$(SRCARCH)/include/generated .tmp_objdiff \
@@ -10,7 +10,7 @@ index ff363cc6b11f..882507572e71 100644
 +		  snap tar-install \
  		  .config .config.old .version \
  		  Module.symvers \
- 		  signing_key.pem signing_key.priv signing_key.x509	\
+ 		  certs/signing_key.pem certs/signing_key.x509 \
 diff --git a/scripts/package/builddeb b/scripts/package/builddeb
 index 91a502bb97e8..aba68a686269 100755
 --- a/scripts/package/builddeb

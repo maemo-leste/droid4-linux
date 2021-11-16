@@ -1,8 +1,8 @@
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 450b292d87df..2f81783b2fa7 100644
+index eff058a186c8..7804dc22cef4 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
-@@ -29,7 +29,6 @@ CONFIG_ARCH_MULTI_V6=y
+@@ -28,7 +28,6 @@ CONFIG_ARCH_MULTI_V6=y
  CONFIG_POWER_AVS_OMAP=y
  CONFIG_POWER_AVS_OMAP_CLASS3=y
  CONFIG_OMAP_RESET_CLOCKS=y
