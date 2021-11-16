@@ -1,3 +1,9 @@
+droid4-linux (5.15.0-1) unstable; urgency=medium
+
+  * Merge latest 5.15.
+
+ -- Ivan J. <parazyd@dyne.org>  Tue, 16 Nov 2021 22:33:26 +0100
+
 droid4-linux (5.11.2-3) unstable; urgency=medium
 
   * Add hp plug detection
