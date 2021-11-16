@@ -37,7 +37,7 @@ index 51b3b485a92e..547ad537613d 100644
  int asoc_simple_init_priv(struct asoc_simple_priv *priv,
  			       struct link_info *li);
 diff --git a/sound/soc/generic/simple-card-utils.c b/sound/soc/generic/simple-card-utils.c
-index 10c63b73900c..3703e5bcfe52 100644
+index 10c63b73900c..794ecac3bfaf 100644
 --- a/sound/soc/generic/simple-card-utils.c
 +++ b/sound/soc/generic/simple-card-utils.c
 @@ -395,6 +395,7 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -85,20 +85,30 @@ index 10c63b73900c..3703e5bcfe52 100644
  	if (is_hp) {
  		snprintf(prop, sizeof(prop), "%shp-det-gpio", prefix);
  		pin_name	= pin ? pin : "Headphones";
-@@ -588,6 +599,11 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
+@@ -588,21 +599,26 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
  		return -EPROBE_DEFER;
  
  	if (gpio_is_valid(det)) {
+-		sjack->pin.pin		= pin_name;
+-		sjack->pin.mask		= mask;
 +		struct asoc_simple_jack *sjack_d;
 +
 +		sjack = devm_kzalloc(dev, sizeof(*(*sjack)), GFP_KERNEL);
 +		sjack_d = *sjack;
 +
- 		sjack->pin.pin		= pin_name;
- 		sjack->pin.mask		= mask;
++		sjack_d->pin.pin		= pin_name;
++		sjack_d->pin.mask		= mask;
  
-@@ -598,10 +614,10 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
- 		sjack->gpio.debounce_time = 150;
+-		sjack->gpio.name	= gpio_name;
+-		sjack->gpio.report	= mask;
+-		sjack->gpio.gpio	= det;
+-		sjack->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
+-		sjack->gpio.debounce_time = 150;
++		sjack_d->gpio.name	= gpio_name;
++		sjack_d->gpio.report	= mask;
++		sjack_d->gpio.gpio	= det;
++		sjack_d->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
++		sjack_d->gpio.debounce_time = 150;
  
  		snd_soc_card_jack_new(card, pin_name, mask,
 -				      &sjack->jack,
@@ -107,9 +117,9 @@ index 10c63b73900c..3703e5bcfe52 100644
 +				      &sjack_d->pin, 1);
  
 -		snd_soc_jack_add_gpios(&sjack->jack, 1,
+-				       &sjack->gpio);
 +		snd_soc_jack_add_gpios(&sjack_d->jack, 1,
- 				       &sjack->gpio);
++				       &sjack_d->gpio);
  	}
--- 
-2.33.1
-
+ 
+ 	return 0;
