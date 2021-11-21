@@ -800,7 +800,7 @@ int omap_gem_pin(struct drm_gem_object *obj, dma_addr_t *dma_addr)
 			if (omap_obj->flags & OMAP_BO_TILED_MASK) {
 				block = tiler_reserve_2d(fmt,
 						omap_obj->width,
-						omap_obj->height, 0);
+						omap_obj->height, PAGE_SIZE);
 			} else {
 				block = tiler_reserve_1d(obj->size);
 			}
@@ -999,9 +999,10 @@ struct sg_table *omap_gem_get_sg(struct drm_gem_object *obj)
 		goto out;
 
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
-	ret = -ENOMEM;
-	if (!sgt)
-		goto out_unpin;
+	if (!sgt) {
+		ret = -ENOMEM;
+		goto err_unpin;
+	}
 
 	if (omap_obj->flags & OMAP_BO_TILED_MASK) {
 		enum tiler_fmt fmt = gem2fmt(omap_obj->flags);
@@ -1017,7 +1018,7 @@ struct sg_table *omap_gem_get_sg(struct drm_gem_object *obj)
 
 	ret = sg_alloc_table(sgt, count, GFP_KERNEL);
 	if (ret)
-		goto out_free;
+		goto err_free;
 
 	for_each_sg(sgt->sgl, sg, count, i) {
 		sg_set_page(sg, phys_to_page(addr), len, offset_in_page(addr));
@@ -1032,9 +1033,9 @@ out:
 	mutex_unlock(&omap_obj->lock);
 	return sgt;
 
-out_free:
+err_free:
 	kfree(sgt);
-out_unpin:
+err_unpin:
 	mutex_unlock(&omap_obj->lock);
 	omap_gem_unpin(obj);
 	return ERR_PTR(ret);
