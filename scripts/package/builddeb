@@ -101,15 +101,15 @@ deploy_libc_headers () {
 
 	# move asm headers to /usr/include/<libc-machine>/asm to match the structure
 	# used by Debian-based distros (to support multi-arch)
-	host_arch=$(dpkg-architecture -a$(cat debian/arch) -qDEB_HOST_MULTIARCH)
-	mkdir $pdir/usr/include/$host_arch
-	mv $pdir/usr/include/asm $pdir/usr/include/$host_arch/
+	#host_arch=$(dpkg-architecture -a$(cat debian/arch) -qDEB_HOST_MULTIARCH)
+	#mkdir $pdir/usr/include/$host_arch
+	#mv $pdir/usr/include/asm $pdir/usr/include/$host_arch/
 }
 
 version=$KERNELRELEASE
 tmpdir=debian/linux-image
 dbg_dir=debian/linux-image-dbg
-packagename=linux-image-$version
+packagename=linux-image-droid4
 dbg_packagename=$packagename-dbg
 
 if [ "$ARCH" = "um" ] ; then
@@ -200,9 +200,23 @@ set -e
 export DEB_MAINT_PARAMS="\$*"
 
 # Tell initramfs builder whether it's wanted
-export INITRD=$(if_enabled_echo CONFIG_BLK_DEV_INITRD Yes No)
+export INITRD=No
 
 test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_image_path" $debhookdir/$script.d
+
+case "$script" in
+postinst)
+	depmod $version
+	mkdir -p /boot/boot
+	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb
+	cp -f /boot/vmlinuz-$version /boot/boot/zImage
+	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /boot/boot
+	;;
+postrm)
+	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb
+	;;
+esac
+
 exit 0
 EOF
 	chmod 755 "$tmpdir/DEBIAN/$script"
@@ -211,11 +225,11 @@ done
 if [ "$ARCH" != "um" ]; then
 	if is_enabled CONFIG_MODULES; then
 		deploy_kernel_headers debian/linux-headers
-		create_package linux-headers-$version debian/linux-headers
+		create_package linux-headers-droid4 debian/linux-headers
 	fi
 
-	deploy_libc_headers debian/linux-libc-dev
-	create_package linux-libc-dev debian/linux-libc-dev
+	#deploy_libc_headers debian/linux-libc-dev
+	#create_package linux-libc-dev debian/linux-libc-dev
 fi
 
 create_package "$packagename" "$tmpdir"
