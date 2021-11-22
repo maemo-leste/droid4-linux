@@ -1,10 +1,4 @@
-0001-maemo-leste-quirks.patch
 0002-enable-nl80211-testmode.patch
 0004-remove-omap2-from-defconfig.patch
 anbox-support.patch
-0005-arm-omap4-fix-cpu-pm-handling-for-hs-emu-interrupt-save.patch
-fbdev.patch
 enable-nftables-and-wireguard.patch
-0001-ASoC-simple-card-utils-add-support-for-componants-pr.patch
-0002-ARM-dts-motorola-mapphone-add-interrupt-for-headphon.patch
-0003-ASoC-cpcap-add-headphone-jack-plug-detection-support.patch
