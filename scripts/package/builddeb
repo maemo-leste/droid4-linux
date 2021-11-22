@@ -64,6 +64,7 @@ deploy_kernel_headers () {
 		find include scripts -type f -o -type l
 		find arch/$SRCARCH -name Kbuild.platforms -o -name Platform
 		find $(find arch/$SRCARCH -name include -o -name scripts -type d) -type f
+		find drivers/gpu/drm/pvrsgx/1.17.4948957/ -name \*.h -type f -o -type l
 	) > debian/hdrsrcfiles
 
 	{
