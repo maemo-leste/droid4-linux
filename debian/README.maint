@@ -1,0 +1,8 @@
+The branch built is maemo-5.y
+
+The branches merged to maemo-5.y are, in order:
+
+* droid4-pending-v5.y (https://github.com/tmlind/linux/)
+* droid4-pending-pvr-omapdrm-v5.y (https://github.com/tmlind/linux_openpvrsgx/)
+
+Tagged as maemo-kernel-5.y.z (reflect in debian/changelog)
