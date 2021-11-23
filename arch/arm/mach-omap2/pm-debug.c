@@ -135,10 +135,78 @@ static int pwrdm_dbg_show_timer(struct powerdomain *pwrdm, void *user)
 	return 0;
 }
 
+#include "iomap.h"
+
+struct dregs {
+	const char	*desc;
+	u32	        phys;
+	void __iomem	*virt;
+	u32	        mask;
+};
+
+#define PER_CM_BASE	0x48005000
+#define PER_CM_REG(name, offset, mask)		                \
+	{ name, PER_CM_BASE + offset,		                        \
+	OMAP2_L4_IO_ADDRESS(PER_CM_BASE + offset), mask, }
+
+static struct dregs cm_per[] = {
+	PER_CM_REG("cm_idlest_per", 0x20, 0xfff80000), /* p 513 */
+	{ NULL, },
+};
+
+#define CORE_CM_BASE	0x48004a00
+#define CORE_CM_REG(name, offset, mask)		                        \
+	{ name, CORE_CM_BASE + offset,		                        \
+	OMAP2_L4_IO_ADDRESS(CORE_CM_BASE + offset), mask, }
+
+static struct dregs cm_core[] = {
+	CORE_CM_REG("cm_idlest1_core", 0x20, 0x9c800109), /* p 467 */
+	CORE_CM_REG("cm_idlest3_core", 0x28, 0xfffffffb),
+	{ NULL, },
+};
+
+void __dregs_dump(struct dregs *dregs, struct seq_file *s)
+{
+	for (; dregs->desc; dregs++) {
+	        u32 val, blockers;
+
+	        val = __raw_readl(dregs->virt);
+
+	        seq_printf(s, "%08x %08x (%p) %s",
+		                   val, dregs->phys, dregs->virt,
+		                   dregs->desc);
+
+	        if (dregs->mask) {
+		                blockers = ~val;
+		                blockers &= ~dregs->mask;
+
+		                if (blockers)
+		                        seq_printf(s, " blocking bits: %08x",
+			                                   blockers);
+	        }
+
+	        seq_printf(s, "\n");
+	}
+}
+
+void cm_per_dump(struct seq_file *s)
+{
+	__dregs_dump(cm_per, s);
+}
+
+void cm_core_dump(struct seq_file *s)
+{
+	__dregs_dump(cm_core, s);
+}
+
 static int pm_dbg_counters_show(struct seq_file *s, void *unused)
 {
 	pwrdm_for_each(pwrdm_dbg_show_counter, s);
 	clkdm_for_each(clkdm_dbg_show_counter, s);
+	if (cpu_is_omap34xx()) {
+	        cm_per_dump(s);
+	        cm_core_dump(s);
+	}
 
 	return 0;
 }
