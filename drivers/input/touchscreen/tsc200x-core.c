@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/pm.h>
 #include <linux/of.h>
+#include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regmap.h>
 #include <linux/gpio/consumer.h>
@@ -98,9 +99,6 @@ struct tsc200x {
 	unsigned long		last_valid_interrupt;
 
 	unsigned int		x_plate_ohm;
-
-	bool			opened;
-	bool			suspended;
 
 	bool			pen_down;
 
@@ -227,9 +225,20 @@ static void tsc200x_reset(struct tsc200x *ts)
 	}
 }
 
-/* must be called with ts->mutex held */
-static void __tsc200x_disable(struct tsc200x *ts)
+static int __maybe_unused tsc200x_runtime_suspend(struct device *dev)
 {
+	struct tsc200x *ts = dev_get_drvdata(dev);
+	struct input_dev *input_dev = ts->idev;
+	int mutex_ac;
+
+	if (!input_dev) {
+		return 0;
+	}
+
+	/* Try to acquire it, if it's already acquired, that's fine too, we just
+	 * won't unlock it */
+	mutex_ac = mutex_trylock(&ts->mutex);
+
 	tsc200x_stop_scan(ts);
 
 	disable_irq(ts->irq);
@@ -238,11 +247,27 @@ static void __tsc200x_disable(struct tsc200x *ts)
 	cancel_delayed_work_sync(&ts->esd_work);
 
 	enable_irq(ts->irq);
+
+	if (mutex_ac)
+		mutex_unlock(&ts->mutex);
+
+	return 0;
 }
 
-/* must be called with ts->mutex held */
-static void __tsc200x_enable(struct tsc200x *ts)
+static int __maybe_unused tsc200x_runtime_resume(struct device *dev)
 {
+	struct tsc200x *ts = dev_get_drvdata(dev);
+	struct input_dev *input_dev = ts->idev;
+	int mutex_ac;
+
+	if (!input_dev) {
+		return 0;
+	}
+
+	/* Try to acquire it, if it's already acquired, that's fine too, we just
+	 * won't unlock it */
+	mutex_ac = mutex_trylock(&ts->mutex);
+
 	tsc200x_start_scan(ts);
 
 	if (ts->esd_timeout && ts->reset_gpio) {
@@ -251,6 +276,11 @@ static void __tsc200x_enable(struct tsc200x *ts)
 				round_jiffies_relative(
 					msecs_to_jiffies(ts->esd_timeout)));
 	}
+
+	if (mutex_ac)
+		mutex_unlock(&ts->mutex);
+
+	return 0;
 }
 
 static ssize_t tsc200x_selftest_show(struct device *dev,
@@ -264,12 +294,13 @@ static ssize_t tsc200x_selftest_show(struct device *dev,
 	bool success = true;
 	int error;
 
-	mutex_lock(&ts->mutex);
 
 	/*
 	 * Test TSC200X communications via temp high register.
 	 */
-	__tsc200x_disable(ts);
+	mutex_lock(&ts->mutex);
+
+	tsc200x_runtime_suspend(dev);
 
 	error = regmap_read(ts->regmap, TSC200X_REG_TEMP_HIGH, &temp_high_orig);
 	if (error) {
@@ -323,7 +354,7 @@ static ssize_t tsc200x_selftest_show(struct device *dev,
 	}
 
 out:
-	__tsc200x_enable(ts);
+	tsc200x_runtime_resume(dev);
 	mutex_unlock(&ts->mutex);
 
 	return sprintf(buf, "%d\n", success);
@@ -404,22 +435,21 @@ out:
 reschedule:
 	/* re-arm the watchdog */
 	schedule_delayed_work(&ts->esd_work,
-			      round_jiffies_relative(
+				  round_jiffies_relative(
 					msecs_to_jiffies(ts->esd_timeout)));
 }
 
 static int tsc200x_open(struct input_dev *input)
 {
 	struct tsc200x *ts = input_get_drvdata(input);
+	int error;
 
-	mutex_lock(&ts->mutex);
+	error = pm_runtime_get_sync(ts->dev);
 
-	if (!ts->suspended)
-		__tsc200x_enable(ts);
-
-	ts->opened = true;
-
-	mutex_unlock(&ts->mutex);
+	if (error < 0) {
+		pm_runtime_put_noidle(ts->dev);
+		return error;
+	}
 
 	return 0;
 }
@@ -428,14 +458,7 @@ static void tsc200x_close(struct input_dev *input)
 {
 	struct tsc200x *ts = input_get_drvdata(input);
 
-	mutex_lock(&ts->mutex);
-
-	if (!ts->suspended)
-		__tsc200x_disable(ts);
-
-	ts->opened = false;
-
-	mutex_unlock(&ts->mutex);
+	pm_runtime_put_sync(ts->dev);
 }
 
 int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
@@ -536,6 +559,8 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 
 	touchscreen_parse_properties(input_dev, false, &ts->prop);
 
+	pm_runtime_enable(ts->dev);
+
 	/* Ensure the touchscreen is off */
 	tsc200x_stop_scan(ts);
 
@@ -573,6 +598,7 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 err_remove_sysfs:
 	sysfs_remove_group(&dev->kobj, &tsc200x_attr_group);
 disable_regulator:
+	pm_runtime_disable(ts->dev);
 	regulator_disable(ts->vio);
 	return error;
 }
@@ -584,6 +610,7 @@ void tsc200x_remove(struct device *dev)
 
 	sysfs_remove_group(&dev->kobj, &tsc200x_attr_group);
 
+	pm_runtime_disable(ts->dev);
 	regulator_disable(ts->vio);
 }
 EXPORT_SYMBOL_GPL(tsc200x_remove);
@@ -591,15 +618,14 @@ EXPORT_SYMBOL_GPL(tsc200x_remove);
 static int __maybe_unused tsc200x_suspend(struct device *dev)
 {
 	struct tsc200x *ts = dev_get_drvdata(dev);
+	struct input_dev *input_dev = ts->idev;
 
-	mutex_lock(&ts->mutex);
+	if (!input_dev)
+		return 0;
 
-	if (!ts->suspended && ts->opened)
-		__tsc200x_disable(ts);
-
-	ts->suspended = true;
-
-	mutex_unlock(&ts->mutex);
+	if (input_device_enabled(input_dev)) {
+		tsc200x_runtime_suspend(dev);
+	}
 
 	return 0;
 }
@@ -607,20 +633,22 @@ static int __maybe_unused tsc200x_suspend(struct device *dev)
 static int __maybe_unused tsc200x_resume(struct device *dev)
 {
 	struct tsc200x *ts = dev_get_drvdata(dev);
+	struct input_dev *input_dev = ts->idev;
 
-	mutex_lock(&ts->mutex);
+	if (!input_dev)
+		return 0;
 
-	if (ts->suspended && ts->opened)
-		__tsc200x_enable(ts);
-
-	ts->suspended = false;
-
-	mutex_unlock(&ts->mutex);
+	if (input_device_enabled(input_dev)) {
+		tsc200x_runtime_resume(dev);
+	}
 
 	return 0;
 }
 
-SIMPLE_DEV_PM_OPS(tsc200x_pm_ops, tsc200x_suspend, tsc200x_resume);
+const struct dev_pm_ops tsc200x_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(tsc200x_suspend, tsc200x_resume)
+	SET_RUNTIME_PM_OPS(tsc200x_runtime_suspend, tsc200x_runtime_resume, NULL)
+};
 EXPORT_SYMBOL_GPL(tsc200x_pm_ops);
 
 MODULE_AUTHOR("Lauri Leukkunen <lauri.leukkunen@nokia.com>");
