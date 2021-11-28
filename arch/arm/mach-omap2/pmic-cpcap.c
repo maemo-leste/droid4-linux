@@ -245,7 +245,8 @@ int __init omap4_cpcap_init(void)
 	voltdm = voltdm_lookup("mpu");
 	omap_voltage_register_pmic(voltdm, &omap443x_max8952_mpu);
 
-	if (of_machine_is_compatible("motorola,droid-bionic")) {
+	if (of_machine_is_compatible("motorola,droid-bionic") ||
+	    of_machine_is_compatible("motorola,droid3")) {
 		voltdm = voltdm_lookup("core");
 		omap_voltage_register_pmic(voltdm, &omap_cpcap_core);
 
