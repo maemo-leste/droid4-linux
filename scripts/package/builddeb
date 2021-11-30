@@ -208,12 +208,12 @@ case "$script" in
 postinst)
 	depmod $version
 	mkdir -p /boot/boot
-	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb
+	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb
 	cp -f /boot/vmlinuz-$version /boot/boot/zImage
-	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-droid4/omap4-droid3-xt862.dtb /boot/boot
+	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-droid4/omap4-droid3-xt862.dtb  /usr/lib/linux-image-droid4/omap3-n900.dtb /boot/boot
 	;;
 postrm)
-	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb
+	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb
 	;;
 esac
 
