@@ -1,4 +1,3 @@
 0002-enable-nl80211-testmode.patch
-0004-remove-omap2-from-defconfig.patch
 anbox-support.patch
 enable-nftables-and-wireguard.patch
