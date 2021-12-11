@@ -245,8 +245,6 @@ static int __maybe_unused tsc200x_runtime_suspend(struct device *dev)
 
 	cancel_delayed_work_sync(&ts->esd_work);
 
-	enable_irq(ts->irq);
-
 	if (mutex_ac)
 		mutex_unlock(&ts->mutex);
 
@@ -266,6 +264,8 @@ static int __maybe_unused tsc200x_runtime_resume(struct device *dev)
 	/* Try to acquire it, if it's already acquired, that's fine too, we just
 	 * won't unlock it */
 	mutex_ac = mutex_trylock(&ts->mutex);
+
+	enable_irq(ts->irq);
 
 	tsc200x_start_scan(ts);
 
@@ -571,6 +571,7 @@ int tsc200x_probe(struct device *dev, int irq, const struct input_id *tsc_id,
 		dev_err(dev, "Failed to request irq, err: %d\n", error);
 		return error;
 	}
+	disable_irq(irq);
 
 	error = regulator_enable(ts->vio);
 	if (error)
