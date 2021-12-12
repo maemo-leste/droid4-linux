@@ -121,7 +121,7 @@
 
 	isp1707: isp1707 {
 		compatible = "nxp,isp1707";
-		nxp,enable-gpio = <&gpio3 3 GPIO_ACTIVE_HIGH>;
+		nxp,enable-gpios = <&gpio3 3 GPIO_ACTIVE_HIGH>;
 		usb-phy = <&usb2_phy>;
 	};
 
@@ -1126,7 +1126,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&ssi_pins>;
 
-	ti,ssi-cawake-gpio = <&gpio5 23 GPIO_ACTIVE_HIGH>; /* 151 */
+	ti,ssi-cawake-gpios = <&gpio5 23 GPIO_ACTIVE_HIGH>; /* 151 */
 
 	modem: hsi-client {
 		compatible = "nokia,n900-modem";
