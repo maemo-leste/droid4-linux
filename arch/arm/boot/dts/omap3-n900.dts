@@ -28,6 +28,23 @@
 	status = "disabled";
 };
 
+/* Disable cpu_thermal and bandgap, they causes oopses on mmc access in OFF
+   mode at the moment. Let's just disable thermal_zones as well, although the
+   system works without it...
+*/
+&cpu_thermal {
+	status = "disabled";
+};
+
+&bandgap {
+	status = "disabled";
+};
+
+&thermal_zones {
+	status = "disabled";
+};
+
+
 / {
 	model = "Nokia N900";
 	compatible = "nokia,omap3-n900", "ti,omap3430", "ti,omap3";
