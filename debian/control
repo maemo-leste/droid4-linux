@@ -21,10 +21,15 @@ Package: linux-image-omap
 Architecture: armhf armel
 Description: Linux kernel for OMAP devices running Maemo Leste
  This package contains the Linux kernel, modules, and corresponding other files.
+Replaces: linux-image-n900, linux-image-droid4
+Provides: linux-image-n900, linux-image-droid4
+Conflicts: linux-image-n900, linux-image-droid4
 
 Package: linux-headers-omap
 Architecture: armhf armel
-Provides: linux-headers
+Provides: linux-headers, linux-image-n900, linux-image-droid4
+Replaces: linux-headers-n900, linux-headers-droid4
+Conflicts: linux-headers-n900, linux-headers-droid4
 Description: Linux kernel headers for OMAP devices running Maemo Leste
  This package provides kernel header files for Motorola Droid4
  .
@@ -35,3 +40,6 @@ Architecture: armhf armel
 Description: Linux kernel debugging symbols for OMAP devices running Maemo Leste
  This package will come in handy if you need to debug the kernel. It provides
  all the necessary debug symbols for the kernel and its modules.
+Replaces: linux-image-n900-dbg, linux-image-droid4-dbg
+Provides: linux-image-n900-dbg, linux-image-droid4-dbg
+Conflicts: linux-image-n900-dbg, linux-image-droid4-dbg
