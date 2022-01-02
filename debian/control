@@ -1,5 +1,5 @@
-Source: droid4-linux
-Section: droid4
+Source: omap-linux
+Section: kernel
 Priority: optional
 Maintainer: Ivan J. <parazyd@dyne.org>
 Build-Depends:
@@ -17,21 +17,21 @@ Build-Depends:
 Standards-Version: 4.3.0
 Homepage: https://www.kernel.org/
 
-Package: linux-image-droid4
+Package: linux-image-omap
 Architecture: armhf armel
-Description: Linux kernel for Motorola Droid4
+Description: Linux kernel for OMAP devices running Maemo Leste
  This package contains the Linux kernel, modules, and corresponding other files.
 
-Package: linux-headers-droid4
+Package: linux-headers-omap
 Architecture: armhf armel
 Provides: linux-headers
-Description: Linux kernel headers for Motorola Droid4
+Description: Linux kernel headers for OMAP devices running Maemo Leste
  This package provides kernel header files for Motorola Droid4
  .
  This is useful for people who need to build external modules
 
-Package: linux-image-droid4-dbg
+Package: linux-image-omap-dbg
 Architecture: armhf armel
-Description: Linux kernel debugging symbols for Motorola Droid4
+Description: Linux kernel debugging symbols for OMAP devices running Maemo Leste
  This package will come in handy if you need to debug the kernel. It provides
  all the necessary debug symbols for the kernel and its modules.

@@ -1,3 +1,9 @@
+omap-linux (5.15.0-1) unstable; urgency=medium
+
+  * Rename droid4-linux to omap-linux
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 02 Jan 2022 21:09:22 +0100
+
 droid4-linux (5.15.0-1) unstable; urgency=medium
 
   * Merge latest 5.15.
