@@ -109,7 +109,7 @@ deploy_libc_headers () {
 version=$KERNELRELEASE
 tmpdir=debian/linux-image
 dbg_dir=debian/linux-image-dbg
-packagename=linux-image-droid4
+packagename=linux-image-omap
 dbg_packagename=$packagename-dbg
 
 if [ "$ARCH" = "um" ] ; then
@@ -202,20 +202,20 @@ export DEB_MAINT_PARAMS="\$*"
 # Tell initramfs builder whether it's wanted
 export INITRD=No
 
-test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_image_path" $debhookdir/$script.d
-
 case "$script" in
 postinst)
 	depmod $version
 	mkdir -p /boot/boot
 	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb
 	cp -f /boot/vmlinuz-$version /boot/boot/zImage
-	cp -f /usr/lib/linux-image-droid4/omap4-droid4-xt894.dtb /usr/lib/linux-image-droid4/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-droid4/omap4-droid3-xt862.dtb  /usr/lib/linux-image-droid4/omap3-n900.dtb /boot/boot
+	cp -f /usr/lib/linux-image-omap/omap4-droid4-xt894.dtb /usr/lib/linux-image-omap/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-omap/omap4-droid3-xt862.dtb  /usr/lib/linux-image-omap/omap3-n900.dtb /boot/boot
 	;;
 postrm)
 	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb
 	;;
 esac
+
+test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_image_path" $debhookdir/$script.d
 
 exit 0
 EOF
@@ -225,7 +225,7 @@ done
 if [ "$ARCH" != "um" ]; then
 	if is_enabled CONFIG_MODULES; then
 		deploy_kernel_headers debian/linux-headers
-		create_package linux-headers-droid4 debian/linux-headers
+		create_package linux-headers-omap debian/linux-headers
 	fi
 
 	#deploy_libc_headers debian/linux-libc-dev
