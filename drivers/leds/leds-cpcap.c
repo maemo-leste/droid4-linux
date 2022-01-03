@@ -58,6 +58,15 @@ static const struct cpcap_led_info cpcap_led_cp = {
 	.init_val	= 0x0008,
 };
 
+/* keyboard led */
+static const struct cpcap_led_info cpcap_led_kl = {
+	.reg		= CPCAP_REG_KLC,
+	.mask		= 0x0001,
+	.limit		= 1,
+	.init_mask	= 0x07FF,
+	.init_val	= 0x07F0,
+};
+
 struct cpcap_led {
 	struct led_classdev led;
 	const struct cpcap_led_info *info;
@@ -152,6 +161,7 @@ static const struct of_device_id cpcap_led_of_match[] = {
 	{ .compatible = "motorola,cpcap-led-blue",  .data = &cpcap_led_blue },
 	{ .compatible = "motorola,cpcap-led-adl", .data = &cpcap_led_adl },
 	{ .compatible = "motorola,cpcap-led-cp", .data = &cpcap_led_cp },
+	{ .compatible = "motorola,cpcap-led-kl", .data = &cpcap_led_kl },
 	{},
 };
 MODULE_DEVICE_TABLE(of, cpcap_led_of_match);
@@ -167,6 +177,11 @@ static int cpcap_led_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, led);
 	led->info = device_get_match_data(&pdev->dev);
 	led->dev = &pdev->dev;
+	
+	if (!led->info) {
+		dev_warn(led->dev, "Can't get match data");
+		return -ENODEV;
+	}
 
 	if (led->info->reg == 0x0000) {
 		dev_err(led->dev, "Unsupported LED");
