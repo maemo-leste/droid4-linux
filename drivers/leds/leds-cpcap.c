@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
+#include <linux/spi/spi.h>
 
 #define CPCAP_LED_NO_CURRENT 0x0001
 
@@ -170,6 +171,18 @@ static int cpcap_led_probe(struct platform_device *pdev)
 {
 	struct cpcap_led *led;
 	int err;
+	struct device_node *mfd_node;
+	struct device *cpcap_dev;
+
+	mfd_node = of_parse_phandle(pdev->dev.of_node, "cpcap-phandle", 0);
+	if (!mfd_node) {
+		dev_err(&pdev->dev, "cpcap-phandle is missing in device tree\n");
+		return -ENODEV;
+	}
+
+	cpcap_dev = bus_find_device_by_of_node(&spi_bus_type, mfd_node);
+	if (IS_ERR_OR_NULL(cpcap_dev))
+		return -EAGAIN;
 
 	led = devm_kzalloc(&pdev->dev, sizeof(*led), GFP_KERNEL);
 	if (!led)
@@ -188,9 +201,11 @@ static int cpcap_led_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	led->regmap = dev_get_regmap(pdev->dev.parent, NULL);
-	if (!led->regmap)
+	led->regmap = dev_get_regmap(cpcap_dev, NULL);
+	if (!led->regmap) {
+		dev_err(led->dev, "Couldn't get regmap from cpcap mdf device");
 		return -ENODEV;
+	}
 
 	led->vdd = devm_regulator_get(&pdev->dev, "vdd");
 	if (IS_ERR(led->vdd)) {
