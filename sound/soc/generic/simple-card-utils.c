@@ -562,6 +562,7 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
 	struct asoc_simple_priv *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct simple_dai_props *props = simple_priv_to_props(priv, rtd->num);
 	struct asoc_simple_dai *dai;
+	struct snd_soc_component *component;
 	int i, ret;
 
 	for_each_prop_dai_codec(props, i, dai) {
@@ -578,6 +579,21 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
 	ret = asoc_simple_init_dai_link_params(rtd, props);
 	if (ret < 0)
 		return ret;
+
+	for_each_rtd_components(rtd, i, component) {
+		if (component->driver->set_jack) {
+			if (!priv->hp_jack) {
+				priv->hp_jack = devm_kzalloc(priv->snd_card.dev,
+					sizeof(*priv->hp_jack), GFP_KERNEL);
+				snd_soc_card_jack_new(&priv->snd_card,
+					"Headphones",
+					SND_JACK_HEADPHONE,
+					&priv->hp_jack->jack,
+					NULL, 0);
+			}
+			snd_soc_component_set_jack(component, &priv->hp_jack->jack, NULL);
+		}
+	}
 
 	return 0;
 }
@@ -678,7 +694,7 @@ int asoc_simple_parse_pin_switches(struct snd_soc_card *card,
 EXPORT_SYMBOL_GPL(asoc_simple_parse_pin_switches);
 
 int asoc_simple_init_jack(struct snd_soc_card *card,
-			  struct asoc_simple_jack *sjack,
+			  struct asoc_simple_jack **sjack,
 			  int is_hp, char *prefix,
 			  char *pin)
 {
@@ -692,8 +708,6 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
 
 	if (!prefix)
 		prefix = "";
-
-	sjack->gpio.gpio = -ENOENT;
 
 	if (is_hp) {
 		snprintf(prop, sizeof(prop), "%shp-det-gpio", prefix);
@@ -712,21 +726,26 @@ int asoc_simple_init_jack(struct snd_soc_card *card,
 		return -EPROBE_DEFER;
 
 	if (gpio_is_valid(det)) {
-		sjack->pin.pin		= pin_name;
-		sjack->pin.mask		= mask;
+		struct asoc_simple_jack *sjack_d;
 
-		sjack->gpio.name	= gpio_name;
-		sjack->gpio.report	= mask;
-		sjack->gpio.gpio	= det;
-		sjack->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
-		sjack->gpio.debounce_time = 150;
+		sjack = devm_kzalloc(dev, sizeof(*(*sjack)), GFP_KERNEL);
+		sjack_d = *sjack;
+
+		sjack_d->pin.pin		= pin_name;
+		sjack_d->pin.mask		= mask;
+
+		sjack_d->gpio.name	= gpio_name;
+		sjack_d->gpio.report	= mask;
+		sjack_d->gpio.gpio	= det;
+		sjack_d->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
+		sjack_d->gpio.debounce_time = 150;
 
 		snd_soc_card_jack_new(card, pin_name, mask,
-				      &sjack->jack,
-				      &sjack->pin, 1);
+				      &sjack_d->jack,
+				      &sjack_d->pin, 1);
 
-		snd_soc_jack_add_gpios(&sjack->jack, 1,
-				       &sjack->gpio);
+		snd_soc_jack_add_gpios(&sjack_d->jack, 1,
+				       &sjack_d->gpio);
 	}
 
 	return 0;
