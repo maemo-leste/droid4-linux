@@ -266,30 +266,6 @@ static const struct mfd_cell cpcap_mfd_devices[] = {
 		.name          = "cpcap-usb-phy",
 		.of_compatible = "motorola,mapphone-cpcap-usb-phy",
 	}, {
-		.name          = "cpcap-led",
-		.id            = 0,
-		.of_compatible = "motorola,cpcap-led-red",
-	}, {
-		.name          = "cpcap-led",
-		.id            = 1,
-		.of_compatible = "motorola,cpcap-led-green",
-	}, {
-		.name          = "cpcap-led",
-		.id            = 2,
-		.of_compatible = "motorola,cpcap-led-blue",
-	}, {
-		.name          = "cpcap-led",
-		.id            = 3,
-		.of_compatible = "motorola,cpcap-led-adl",
-	}, {
-		.name          = "cpcap-led",
-		.id            = 4,
-		.of_compatible = "motorola,cpcap-led-cp",
-	},{
-		.name          = "cpcap-led",
-		.id            = 5,
-		.of_compatible = "motorola,cpcap-led-kl",
-	},{
 		.name          = "cpcap-codec",
 	}
 };
