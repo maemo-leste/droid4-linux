@@ -629,12 +629,11 @@ static int acx565akm_probe(struct spi_device *spi)
 	lcd->spi = spi;
 	mutex_init(&lcd->mutex);
 
-	lcd->reset_gpio = devm_gpiod_get(&spi->dev, "reset", GPIOD_OUT_LOW);
+	lcd->reset_gpio = devm_gpiod_get(&spi->dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(lcd->reset_gpio)) {
 		dev_err(&spi->dev, "failed to get reset GPIO\n");
 		return PTR_ERR(lcd->reset_gpio);
 	}
-	msleep(100); /* ensure minimum reset assertion time */
 
 	ret = acx565akm_detect(lcd);
 	if (ret < 0) {
