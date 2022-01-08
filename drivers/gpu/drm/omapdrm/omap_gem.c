@@ -792,7 +792,8 @@ int omap_gem_pin(struct drm_gem_object *obj, dma_addr_t *dma_addr)
 			if (ret)
 				goto fail;
 
-			if (priv->has_dmm) {
+			if (priv->has_dmm &&
+			    (omap_obj->flags & OMAP_BO_SCANOUT)) {
 				enum tiler_fmt fmt = gem2fmt(omap_obj->flags);
 				struct tiler_block *block;
 
@@ -864,7 +865,7 @@ static void omap_gem_unpin_locked(struct drm_gem_object *obj)
 			omap_obj->sgt = NULL;
 		}
 
-		if (priv->has_dmm) {
+		if (priv->has_dmm && (omap_obj->flags & OMAP_BO_SCANOUT)) {
 			ret = tiler_unpin(omap_obj->block);
 			if (ret) {
 				dev_err(obj->dev->dev,
