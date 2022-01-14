@@ -240,6 +240,21 @@ static int cpcap_battery_get_current(struct cpcap_battery_ddata *ddata)
 	return value * 1000;
 }
 
+static int cpcap_battery_get_charge_current_reg(struct cpcap_battery_ddata *ddata)
+{
+	int error;
+	unsigned int val;
+
+	error = regmap_read(ddata->reg, CPCAP_REG_CRM, &val);
+
+	if (error) {
+		dev_err(ddata->dev, "%s failed with %i\n", __func__, error);
+		return -1;
+	}
+
+	return val & 0xf;
+}
+
 /**
  * cpcap_battery_cc_raw_div - calculate and divide coulomb counter μAms values
  * @ddata: device driver data
@@ -678,7 +693,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_STATUS_FULL;
 			break;
 		}
-		if (cpcap_battery_cc_get_avg_current(ddata) < 0)
+		if (cpcap_battery_get_charge_current_reg(ddata) != 0)
 			val->intval = POWER_SUPPLY_STATUS_CHARGING;
 		else
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
