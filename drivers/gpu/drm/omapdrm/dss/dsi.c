@@ -3121,11 +3121,14 @@ static void dsi_update_screen_dispc(struct dsi_data *dsi)
 	l = FLD_VAL(total_len, 23, 0); /* TE_SIZE */
 	dsi_write_reg(dsi, DSI_VC_TE(vc), l);
 
-	dsi_vc_write_long_header(dsi, vc, dsi->dsidev->channel, MIPI_DSI_DCS_LONG_WRITE,
-		packet_len, 0);
+	dsi_vc_write_long_header(dsi, vc, dsi->dsidev->channel,
+		MIPI_DSI_DCS_LONG_WRITE, packet_len, 0);
 
-	if (dsi->te_enabled)
+	if (dsi->te_enabled) {
+		dsi_write_reg(dsi, DSI_TE_HSYNC_NUMBER(vc), 0x0000006E);
+		dsi_write_reg(dsi, DSI_TE_VSYNC_WIDTH(vc), 0x0000FF00);
 		l = FLD_MOD(l, 1, 30, 30); /* TE_EN */
+	}
 	else
 		l = FLD_MOD(l, 1, 31, 31); /* TE_START */
 	dsi_write_reg(dsi, DSI_VC_TE(vc), l);
