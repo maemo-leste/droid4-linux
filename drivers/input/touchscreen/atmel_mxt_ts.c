@@ -100,8 +100,11 @@ struct t7_config {
 	u8 active;
 } __packed;
 
-#define MXT_POWER_CFG_RUN		0
-#define MXT_POWER_CFG_DEEPSLEEP		1
+enum mxt_power_cfg {
+	MXT_POWER_CFG_RUN,
+	MXT_POWER_CFG_IDLE,
+	MXT_POWER_CFG_DEEPSLEEP,
+};
 
 /* MXT_TOUCH_MULTI_T9 field */
 #define MXT_T9_CTRL		0
@@ -2247,17 +2250,31 @@ static int mxt_initialize(struct mxt_data *data)
 	return 0;
 }
 
-static int mxt_set_t7_power_cfg(struct mxt_data *data, u8 sleep)
+/*
+ * Note that active value 0 forces the controller to idle so 1 is the shortest
+ * active periiod with interrupts still working. Idle value of 255 blocks idle
+ * completely so 254 is the maximum idle time we can use.
+ */
+static int mxt_set_t7_power_cfg(struct mxt_data *data,
+				enum mxt_power_cfg config)
 {
 	struct device *dev = &data->client->dev;
 	int error;
 	struct t7_config *new_config;
 	struct t7_config deepsleep = { .active = 0, .idle = 0 };
+	struct t7_config idle = { .active = 1, .idle = 254 };
 
-	if (sleep == MXT_POWER_CFG_DEEPSLEEP)
+	switch (config) {
+	case MXT_POWER_CFG_IDLE:
+		new_config = &idle;
+		break;
+	case MXT_POWER_CFG_DEEPSLEEP:
 		new_config = &deepsleep;
-	else
+		break;
+	default:
 		new_config = &data->t7_cfg;
+		break;
+	}
 
 	error = __mxt_write_reg(data->client, data->T7_address,
 				sizeof(data->t7_cfg), new_config);
