@@ -24,6 +24,7 @@ Description: Linux kernel for OMAP devices running Maemo Leste
 Replaces: linux-image-n900, linux-image-droid4
 Provides: linux-image-n900, linux-image-droid4
 Conflicts: linux-image-n900, linux-image-droid4
+Depends: maemo-kernel-config
 
 Package: linux-headers-omap
 Architecture: armhf armel
