@@ -1,3 +1,9 @@
+omap-linux (5.15.1-1) unstable; urgency=medium
+
+  * Increase version by 1 just to make upgrades go ok
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 05 Feb 2022 17:52:43 +0100
+
 omap-linux (5.15.0-1) unstable; urgency=medium
 
   * Rename droid4-linux to omap-linux
