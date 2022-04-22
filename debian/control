@@ -27,11 +27,11 @@ Conflicts: linux-image-n900, linux-image-droid4
 
 Package: linux-headers-omap
 Architecture: armhf armel
-Provides: linux-headers, linux-image-n900, linux-image-droid4
+Provides: linux-headers, linux-headers-n900, linux-headers-droid4
 Replaces: linux-headers-n900, linux-headers-droid4
 Conflicts: linux-headers-n900, linux-headers-droid4
 Description: Linux kernel headers for OMAP devices running Maemo Leste
- This package provides kernel header files for Motorola Droid4
+ This package provides kernel header files for OMAP devices running Maemo Leste
  .
  This is useful for people who need to build external modules
 
