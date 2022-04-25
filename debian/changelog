@@ -1,3 +1,9 @@
+omap-linux (5.15.1-2) unstable; urgency=medium
+
+  * Fix debian/control header for N900
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 25 Apr 2022 12:39:32 +0200
+
 omap-linux (5.15.1-1) unstable; urgency=medium
 
   * Increase version by 1 just to make upgrades go ok
