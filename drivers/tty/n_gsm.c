@@ -235,8 +235,10 @@ struct gsm_mux {
 	u8 fcs;
 	u8 *txframe;			/* TX framing buffer */
 
-	/* Method for the receiver side */
+	/* Methods for the receiver side */
 	void (*receive)(struct gsm_mux *gsm, u8 ch);
+	/* And transmit side */
+	int (*output)(struct gsm_mux *mux, u8 *data, int len);
 
 	/* Link Layer */
 	unsigned int mru;
@@ -381,7 +383,6 @@ static const u8 gsm_fcs8[256] = {
 #define INIT_FCS	0xFF
 #define GOOD_FCS	0xCF
 
-static int gsmld_output(struct gsm_mux *gsm, u8 *data, int len);
 static int gsm_modem_update(struct gsm_dlci *dlci, u8 brk);
 static struct gsm_msg *gsm_data_alloc(struct gsm_mux *gsm, u8 addr, int len,
 								u8 ctrl);
@@ -830,7 +831,7 @@ static int gsm_send_packet(struct gsm_mux *gsm, struct gsm_msg *msg)
 	gsm_print_packet("-->", msg->addr, gsm->initiator, msg->ctrl, msg->data,
 			 msg->len);
 
-	ret = gsmld_output(gsm, gsm->txframe, len);
+	ret = gsm->output(gsm, gsm->txframe, len);
 	if (ret <= 0)
 		return ret;
 	/* FIXME: Can eliminate one SOF in many more cases */
@@ -2826,6 +2827,7 @@ static void gsmld_write_task(struct work_struct *work)
 static void gsmld_attach_gsm(struct tty_struct *tty, struct gsm_mux *gsm)
 {
 	gsm->tty = tty_kref_get(tty);
+	gsm->output = gsmld_output;
 	/* Turn off tty XON/XOFF handling to handle it explicitly. */
 	gsm->old_c_iflag = tty->termios.c_iflag;
 	tty->termios.c_iflag &= (IXON | IXOFF);
