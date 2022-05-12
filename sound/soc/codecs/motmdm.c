@@ -41,6 +41,8 @@ struct motmdm_driver_data {
 	int (*receive_buf_orig)(struct gsm_serdev_dlci *ops,
 				const unsigned char *buf,
 				size_t len);
+	unsigned int dtmf_val;
+	unsigned int dtmf_en;
 };
 
 enum motmdm_cmd {
@@ -293,6 +295,87 @@ static int motmdm_noise_put(struct snd_kcontrol *kcontrol,
 	return motmdm_value_put(kcontrol, ucontrol, CMD_AT_NREC, 0);
 }
 
+static const char * const motmdm_tonegen_dtmf_key_txt[] = {
+	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D",
+	"*", "#"
+};
+
+static SOC_ENUM_SINGLE_EXT_DECL(motmd_tonegen_dtmf_enum,
+				motmdm_tonegen_dtmf_key_txt);
+
+static int motmdm_dtmf_get(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+		snd_soc_kcontrol_component(kcontrol);
+	struct motmdm_driver_data *ddata =
+		snd_soc_component_get_drvdata(component);
+
+	ucontrol->value.enumerated.item[0] = ddata->dtmf_val;
+
+	return 0;
+}
+
+static int motmdm_dtmf_put(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+		snd_soc_kcontrol_component(kcontrol);
+	struct motmdm_driver_data *ddata =
+		snd_soc_component_get_drvdata(component);
+
+	ddata->dtmf_val = ucontrol->value.enumerated.item[0];
+
+	return 0;
+}
+
+static int motmdm_tonegen_dtmf_send_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+		snd_soc_kcontrol_component(kcontrol);
+	struct motmdm_driver_data *ddata =
+		snd_soc_component_get_drvdata(component);
+
+	ucontrol->value.enumerated.item[0] = ddata->dtmf_en;
+
+	return 0;
+}
+
+static int motmdm_tonegen_dtmf_send_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+		snd_soc_kcontrol_component(kcontrol);
+	struct motmdm_driver_data *ddata =
+		snd_soc_component_get_drvdata(component);
+	const unsigned char *cmd, *fmt = "AT+DTSE=%s,%i";
+	const char *tone = "";
+	int error;
+
+	if (!ddata->enabled)
+		return 0;
+
+	ddata->dtmf_en = ucontrol->value.enumerated.item[0];
+	if (ddata->dtmf_en)
+		tone = motmdm_tonegen_dtmf_key_txt[ddata->dtmf_val];
+
+	/* Value 0 enables tone generator, 1 disables it */
+	cmd = kasprintf(GFP_KERNEL, fmt, tone, !ddata->dtmf_en);
+
+	error = motmdm_send_command(ddata, cmd, strlen(cmd));
+	if (error < 0) {
+		dev_err(component->dev, "%s: %s failed with %i\n",
+			__func__, cmd, error);
+		goto free;
+	}
+
+free:
+	kfree(cmd);
+
+	return error;
+}
+
 static int
 motmdm_enable_primary_dai(struct snd_soc_component *component)
 {
@@ -410,6 +493,12 @@ static const struct snd_kcontrol_new motmdm_snd_controls[] = {
 	SOC_SINGLE_BOOL_EXT("Call Noise Cancellation", 0,
 			    motmdm_noise_get,
 			    motmdm_noise_put),
+	SOC_ENUM_EXT("Call DTMF", motmd_tonegen_dtmf_enum,
+		     motmdm_dtmf_get,
+		     motmdm_dtmf_put),
+	SOC_SINGLE_BOOL_EXT("Call DTMF Send", 0,
+			    motmdm_tonegen_dtmf_send_get,
+			    motmdm_tonegen_dtmf_send_put),
 };
 
 static struct snd_soc_dai_driver motmdm_dai[] = {
