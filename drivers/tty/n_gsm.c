@@ -223,8 +223,10 @@ struct gsm_mux {
 	u8 fcs;
 	u8 *txframe;			/* TX framing buffer */
 
-	/* Method for the receiver side */
+	/* Methods for the receiver side */
 	void (*receive)(struct gsm_mux *gsm, u8 ch);
+	/* And transmit side */
+	int (*output)(struct gsm_mux *mux, u8 *data, int len);
 
 	/* Link Layer */
 	unsigned int mru;
@@ -366,7 +368,6 @@ static const u8 gsm_fcs8[256] = {
 #define INIT_FCS	0xFF
 #define GOOD_FCS	0xCF
 
-static int gsmld_output(struct gsm_mux *gsm, u8 *data, int len);
 static int gsm_modem_update(struct gsm_dlci *dlci, u8 brk);
 
 /**
@@ -614,7 +615,7 @@ static void gsm_send(struct gsm_mux *gsm, int addr, int cr, int control)
 		WARN_ON(1);
 		return;
 	}
-	gsmld_output(gsm, cbuf, len);
+	gsm->output(gsm, cbuf, len);
 	if (!gsm->initiator) {
 		cr = cr & gsm->initiator;
 		control = control & ~PF;
@@ -717,7 +718,7 @@ static void gsm_data_kick(struct gsm_mux *gsm, struct gsm_dlci *dlci)
 
 		if (debug & 4)
 			gsm_hex_dump_bytes(__func__, gsm->txframe, len);
-		if (gsmld_output(gsm, gsm->txframe, len) <= 0)
+		if (gsm->output(gsm, gsm->txframe, len) <= 0)
 			break;
 		/* FIXME: Can eliminate one SOF in many more cases */
 		gsm->tx_bytes -= msg->len;
@@ -2479,6 +2480,7 @@ static int gsmld_attach_gsm(struct tty_struct *tty, struct gsm_mux *gsm)
 	int ret, i;
 
 	gsm->tty = tty_kref_get(tty);
+	gsm->output = gsmld_output;
 	/* Turn off tty XON/XOFF handling to handle it explicitly. */
 	gsm->old_c_iflag = tty->termios.c_iflag;
 	tty->termios.c_iflag &= (IXON | IXOFF);
