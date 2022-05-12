@@ -638,11 +638,25 @@
 
 	modem {
 		compatible = "motorola,mapphone-mdm6600-serial";
-		ttymask = <0 0x00001fee>;
+		ttymask = <0 0x00001fea>;
 		phys = <&fsusb1_phy>;
 		phy-names = "usb";
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		mot_mdm6600_audio: audio-codec@2 {
+			compatible = "motorola,mapphone-mdm6600-codec";
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#sound-dai-cells = <1>;
+
+			port@0 {
+				mot_mdm6600_audio_codec0: endpoint {
+					remote-endpoint = <&cpu_dai_mdm>;
+				};
+			};
+		};
 
 		gnss@4 {
 			compatible = "motorola,mapphone-mdm6600-gnss";
@@ -716,12 +730,18 @@
 	pinctrl-0 = <&mcbsp2_pins>;
 	status = "okay";
 
-	mcbsp2_port: port {
-		cpu_dai2: endpoint {
-			dai-format = "i2s";
-			remote-endpoint = <&cpcap_audio_codec0>;
-			frame-master = <&cpcap_audio_codec0>;
-			bitclock-master = <&cpcap_audio_codec0>;
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		mcbsp2_port: port@0 {
+			reg = <0>;
+			cpu_dai2: endpoint@0 {
+				dai-format = "i2s";
+				remote-endpoint = <&cpcap_audio_codec0>;
+				frame-master = <&cpcap_audio_codec0>;
+				bitclock-master = <&cpcap_audio_codec0>;
+			};
 		};
 	};
 };
@@ -732,12 +752,26 @@
 	pinctrl-0 = <&mcbsp3_pins>;
 	status = "okay";
 
-	mcbsp3_port: port {
-		cpu_dai3: endpoint {
-			dai-format = "dsp_a";
-			frame-master = <&cpcap_audio_codec1>;
-			bitclock-master = <&cpcap_audio_codec1>;
-			remote-endpoint = <&cpcap_audio_codec1>;
+	ports {
+		mcbsp3_port: port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			cpu_dai3: endpoint@0 {
+				reg = <0>;
+				dai-format = "dsp_a";
+				frame-master = <&cpcap_audio_codec1>;
+				bitclock-master = <&cpcap_audio_codec1>;
+				remote-endpoint = <&cpcap_audio_codec1>;
+			};
+
+			cpu_dai_mdm: endpoint@1 {
+				reg = <1>;
+				dai-format = "dsp_a";
+				frame-master = <&cpcap_audio_codec1>;
+				bitclock-master = <&cpcap_audio_codec1>;
+				remote-endpoint = <&mot_mdm6600_audio_codec0>;
+			};
 		};
 	};
 };
