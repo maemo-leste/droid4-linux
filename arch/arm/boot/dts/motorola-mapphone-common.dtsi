@@ -635,6 +635,20 @@
 			       &omap4_pmx_core 0x110>;
 	uart-has-rtscts;
 	current-speed = <115200>;
+
+	modem {
+		compatible = "motorola,mapphone-mdm6600-serial";
+		ttymask = <0 0x00001fee>;
+		phys = <&fsusb1_phy>;
+		phy-names = "usb";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gnss@4 {
+			compatible = "motorola,mapphone-mdm6600-gnss";
+			reg = <4>;
+		};
+	};
 };
 
 &uart3 {
