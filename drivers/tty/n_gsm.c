@@ -2833,6 +2833,22 @@ void gsm_serdev_unregister_tty_port(struct gsm_serdev *gsd, int line)
 }
 EXPORT_SYMBOL_GPL(gsm_serdev_unregister_tty_port);
 
+struct gsm_serdev_dlci *
+gsm_serdev_tty_port_get_dlci(struct gsm_serdev *gsd, int line)
+{
+	struct gsm_dlci *dlci;
+
+	if (line < 1)
+		return NULL;
+
+	dlci = gsd_dlci_get(gsd, line, false);
+	if (IS_ERR(dlci))
+		return NULL;
+
+	return dlci->ops;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_tty_port_get_dlci);
+
 int gsm_serdev_register_device(struct gsm_serdev *gsd)
 {
 	struct gsm_mux *gsm;
