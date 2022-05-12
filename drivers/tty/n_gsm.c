@@ -47,6 +47,8 @@
 #include <linux/file.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
+#include <linux/serdev.h>
+#include <linux/serdev-gsm.h>
 #include <linux/timer.h>
 #include <linux/tty_flip.h>
 #include <linux/tty_driver.h>
@@ -161,6 +163,7 @@ struct gsm_dlci {
 	/* Data handling callback */
 	void (*data)(struct gsm_dlci *dlci, const u8 *data, int len);
 	void (*prev_data)(struct gsm_dlci *dlci, const u8 *data, int len);
+	struct gsm_serdev_dlci *ops; /* serdev dlci ops, if used */
 	struct net_device *net; /* network interface, if created */
 };
 
@@ -209,6 +212,7 @@ enum gsm_mux_state {
  */
 
 struct gsm_mux {
+	struct gsm_serdev *gsd;		/* Serial device bus data */
 	struct tty_struct *tty;		/* The tty our ldisc is bound to */
 	spinlock_t lock;
 	struct mutex mutex;
@@ -887,7 +891,8 @@ static int gsm_data_kick(struct gsm_mux *gsm)
 	struct gsm_dlci *dlci;
 	int ret;
 
-	clear_bit(TTY_DO_WRITE_WAKEUP, &gsm->tty->flags);
+	if (gsm->tty)
+		clear_bit(TTY_DO_WRITE_WAKEUP, &gsm->tty->flags);
 
 	/* Serialize control messages and control channel messages first */
 	list_for_each_entry_safe(msg, nmsg, &gsm->tx_ctrl_list, list) {
@@ -2479,12 +2484,14 @@ static void gsm_cleanup_mux(struct gsm_mux *gsm, bool disc)
 			gsm_dlci_release(gsm->dlci[i]);
 	mutex_unlock(&gsm->mutex);
 	/* Now wipe the queues */
-	tty_ldisc_flush(gsm->tty);
+	if (gsm->tty)
+		tty_ldisc_flush(gsm->tty);
 	list_for_each_entry_safe(txq, ntxq, &gsm->tx_ctrl_list, list)
 		kfree(txq);
 	INIT_LIST_HEAD(&gsm->tx_ctrl_list);
 	list_for_each_entry_safe(txq, ntxq, &gsm->tx_data_list, list)
 		kfree(txq);
+
 	INIT_LIST_HEAD(&gsm->tx_data_list);
 }
 
@@ -2672,7 +2679,7 @@ static void gsm_copy_config_values(struct gsm_mux *gsm,
 	c->k = 0;
 }
 
-static int gsm_config(struct gsm_mux *gsm, struct gsm_config *c)
+static int gsm_config(struct gsm_mux *gsm, const struct gsm_config *c)
 {
 	int ret = 0;
 	int need_close = 0;
@@ -2752,6 +2759,420 @@ static int gsm_config(struct gsm_mux *gsm, struct gsm_config *c)
 	return 0;
 }
 
+#ifdef CONFIG_SERIAL_DEV_BUS
+
+/**
+ * gsm_serdev_get_config - read ts 27.010 config
+ * @gsd:	serdev-gsm instance
+ * @c:		ts 27.010 config data
+ *
+ * See gsm_copy_config_values() for more information.
+ */
+int gsm_serdev_get_config(struct gsm_serdev *gsd, struct gsm_config *c)
+{
+	struct gsm_mux *gsm;
+
+	if (!gsd || !gsd->gsm)
+		return -ENODEV;
+
+	gsm = gsd->gsm;
+
+	if (!c)
+		return -EINVAL;
+
+	gsm_copy_config_values(gsm, c);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_get_config);
+
+/**
+ * gsm_serdev_set_config - set ts 27.010 config
+ * @gsd:	serdev-gsm instance
+ * @c:		ts 27.010 config data
+ *
+ * See gsm_config() for more information.
+ */
+int gsm_serdev_set_config(struct gsm_serdev *gsd, const struct gsm_config *c)
+{
+	struct gsm_mux *gsm;
+
+	if (!gsd || !gsd->serdev || !gsd->gsm)
+		return -ENODEV;
+
+	gsm = gsd->gsm;
+
+	if (!c)
+		return -EINVAL;
+
+	return gsm_config(gsm, c);
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_set_config);
+
+static struct gsm_dlci *gsd_dlci_get(struct gsm_serdev *gsd, int line,
+				     bool allocate)
+{
+	struct gsm_mux *gsm;
+	struct gsm_dlci *dlci;
+
+	if (!gsd || !gsd->gsm)
+		return ERR_PTR(-ENODEV);
+
+	gsm = gsd->gsm;
+
+	if (line < 1 || line >= 63)
+		return ERR_PTR(-EINVAL);
+
+	mutex_lock(&gsm->mutex);
+
+	if (gsm->dlci[line]) {
+		dlci = gsm->dlci[line];
+		goto unlock;
+	} else if (!allocate) {
+		dlci = ERR_PTR(-ENODEV);
+		goto unlock;
+	}
+
+	dlci = gsm_dlci_alloc(gsm, line);
+	if (!dlci) {
+		dlci = ERR_PTR(-ENOMEM);
+		goto unlock;
+	}
+
+	gsm->dlci[line] = dlci;
+
+unlock:
+	mutex_unlock(&gsm->mutex);
+
+	return dlci;
+}
+
+static int gsd_dlci_receive_buf(struct gsm_serdev_dlci *ops,
+				const unsigned char *buf,
+				size_t len)
+{
+	struct gsm_serdev *gsd = ops->gsd;
+	struct gsm_dlci *dlci;
+	struct tty_port *port;
+
+	dlci = gsd_dlci_get(gsd, ops->line, false);
+	if (IS_ERR(dlci))
+		return PTR_ERR(dlci);
+
+	port = &dlci->port;
+	tty_insert_flip_string(port, buf, len);
+	tty_flip_buffer_push(port);
+
+	return len;
+}
+
+static void gsd_dlci_data(struct gsm_dlci *dlci, const u8 *buf, int len)
+{
+	struct gsm_mux *gsm = dlci->gsm;
+	struct gsm_serdev *gsd = gsm->gsd;
+
+	if (!gsd || !dlci->ops)
+		return;
+
+	switch (dlci->adaption) {
+	case 0:
+	case 1:
+		if (dlci->ops->receive_buf)
+			dlci->ops->receive_buf(dlci->ops, buf, len);
+		break;
+	default:
+		pr_warn("dlci%i adaption %i not yet implemented\n",
+			dlci->addr, dlci->adaption);
+		break;
+	}
+}
+
+/**
+ * gsm_serdev_write - write data to a ts 27.010 channel
+ * @gsd:	serdev-gsm instance
+ * @ops:	channel ops
+ * @buf:	write buffer
+ * @len:	buffer length
+ */
+int gsm_serdev_write(struct gsm_serdev *gsd, struct gsm_serdev_dlci *ops,
+		     const u8 *buf, int len)
+{
+	struct gsm_mux *gsm;
+	struct gsm_dlci *dlci;
+	struct gsm_msg *msg;
+	int h, size, total_size = 0;
+	u8 *dp;
+
+	if (!gsd || !gsd->gsm)
+		return -ENODEV;
+
+	gsm = gsd->gsm;
+
+	dlci = gsd_dlci_get(gsd, ops->line, false);
+	if (IS_ERR(dlci))
+		return PTR_ERR(dlci);
+
+	if (dlci->state == DLCI_OPENING)
+		wait_event(gsm->event, dlci->state != DLCI_OPENING);
+
+	if (dlci->state != DLCI_OPEN)
+		return -ENODEV;
+
+	h = dlci->adaption - 1;
+
+	if (len > gsm->mtu)
+		len = gsm->mtu;
+
+	size = len + h;
+
+	msg = gsm_data_alloc(gsm, dlci->addr, size, gsm->ftype);
+	if (!msg)
+		return -ENOMEM;
+
+	dp = msg->data;
+	switch (dlci->adaption) {
+	case 1:
+		break;
+	case 2:
+		*dp++ = gsm_encode_modem(dlci);
+		break;
+	}
+	memcpy(dp, buf, len);
+	gsm_data_queue(dlci, msg);
+	total_size += size;
+
+	return total_size;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_write);
+
+/**
+ * gsm_serdev_data_kick - indicate more data can be transmitted
+ * @gsd:	serdev-gsm instance
+ *
+ * See gsm_data_kick() for more information.
+ */
+void gsm_serdev_data_kick(struct gsm_serdev *gsd)
+{
+	struct gsm_mux *gsm;
+	unsigned long flags;
+
+	if (!gsd || !gsd->gsm)
+		return;
+
+	gsm = gsd->gsm;
+
+	spin_lock_irqsave(&gsm->tx_lock, flags);
+	gsm_data_kick(gsm);
+	spin_unlock_irqrestore(&gsm->tx_lock, flags);
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_data_kick);
+
+/**
+ * gsm_serdev_register_dlci - register a ts 27.010 channel
+ * @gsd:	serdev-gsm instance
+ * @ops:	channel ops
+ */
+int gsm_serdev_register_dlci(struct gsm_serdev *gsd,
+			     struct gsm_serdev_dlci *ops)
+{
+	struct gsm_dlci *dlci;
+	struct gsm_mux *gsm;
+
+	if (!gsd || !gsd->gsm || !gsd->serdev)
+		return -ENODEV;
+
+	gsm = gsd->gsm;
+
+	if (!ops || !ops->line)
+		return -EINVAL;
+
+	dlci = gsd_dlci_get(gsd, ops->line, true);
+	if (IS_ERR(dlci))
+		return PTR_ERR(dlci);
+
+	if (dlci->state == DLCI_OPENING || dlci->state == DLCI_OPEN ||
+	    dlci->state == DLCI_CLOSING)
+		return -EBUSY;
+
+	mutex_lock(&dlci->mutex);
+	ops->gsd = gsd;
+	dlci->ops = ops;
+	dlci->modem_rx = 0;
+	dlci->prev_data = dlci->data;
+	dlci->data = gsd_dlci_data;
+	mutex_unlock(&dlci->mutex);
+
+	gsm_dlci_begin_open(dlci);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_register_dlci);
+
+/**
+ * gsm_serdev_unregister_dlci - unregister a ts 27.010 channel
+ * @gsd:	serdev-gsm instance
+ * @ops:	channel ops
+ */
+void gsm_serdev_unregister_dlci(struct gsm_serdev *gsd,
+				struct gsm_serdev_dlci *ops)
+{
+	struct gsm_mux *gsm;
+	struct gsm_dlci *dlci;
+
+	if (!gsd || !gsd->gsm || !gsd->serdev)
+		return;
+
+	gsm = gsd->gsm;
+
+	if (!ops || !ops->line)
+		return;
+
+	dlci = gsd_dlci_get(gsd, ops->line, false);
+	if (IS_ERR(dlci))
+		return;
+
+	mutex_lock(&dlci->mutex);
+	gsm_destroy_network(dlci);
+	dlci->data = dlci->prev_data;
+	dlci->ops->gsd = NULL;
+	dlci->ops = NULL;
+	mutex_unlock(&dlci->mutex);
+
+	gsm_dlci_begin_close(dlci);
+	wait_event(gsm->event, dlci->state != DLCI_CLOSING);
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_unregister_dlci);
+
+static int gsm_serdev_output(struct gsm_mux *gsm, u8 *data, int len)
+{
+	struct serdev_device *serdev = gsm->gsd->serdev;
+
+	if (gsm->gsd->output)
+		return gsm->gsd->output(gsm->gsd, data, len);
+	else
+		return serdev_device_write_buf(serdev, data, len);
+}
+
+static int gsd_receive_buf(struct serdev_device *serdev, const u8 *data,
+			   size_t count)
+{
+	struct gsm_serdev *gsd = serdev_device_get_drvdata(serdev);
+	struct gsm_mux *gsm;
+	const unsigned char *dp;
+	int i;
+
+	if (WARN_ON(!gsd))
+		return 0;
+
+	gsm = gsd->gsm;
+
+	if (debug & 4)
+		gsm_hex_dump_bytes(__func__, data, count);
+
+	for (i = count, dp = data; i; i--, dp++)
+		gsm->receive(gsm, *dp);
+
+	return count;
+}
+
+static void gsd_write_wakeup(struct serdev_device *serdev)
+{
+	serdev_device_write_wakeup(serdev);
+}
+
+static struct serdev_device_ops gsd_client_ops = {
+	.receive_buf = gsd_receive_buf,
+	.write_wakeup = gsd_write_wakeup,
+};
+
+int gsm_serdev_register_tty_port(struct gsm_serdev *gsd, int line)
+{
+	struct gsm_serdev_dlci *ops;
+	int error;
+
+	if (line < 1)
+		return -EINVAL;
+
+	ops = kzalloc(sizeof(*ops), GFP_KERNEL);
+	if (!ops)
+		return -ENOMEM;
+
+	ops->line = line;
+	ops->receive_buf = gsd_dlci_receive_buf;
+
+	error = gsm_serdev_register_dlci(gsd, ops);
+	if (error) {
+		kfree(ops);
+
+		return error;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_register_tty_port);
+
+void gsm_serdev_unregister_tty_port(struct gsm_serdev *gsd, int line)
+{
+	struct gsm_dlci *dlci;
+
+	if (line < 1)
+		return;
+
+	dlci = gsd_dlci_get(gsd, line, false);
+	if (IS_ERR(dlci))
+		return;
+
+	gsm_serdev_unregister_dlci(gsd, dlci->ops);
+	kfree(dlci->ops);
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_unregister_tty_port);
+
+int gsm_serdev_register_device(struct gsm_serdev *gsd)
+{
+	struct gsm_mux *gsm;
+	int error;
+
+	if (WARN(!gsd || !gsd->serdev || !gsd->output,
+		 "serdev and output must be initialized\n"))
+		return -EINVAL;
+
+	serdev_device_set_client_ops(gsd->serdev, &gsd_client_ops);
+
+	gsm = gsm_alloc_mux();
+	if (!gsm)
+		return -ENOMEM;
+
+	gsm->encoding = 1;
+	gsm->tty = NULL;
+	gsm->gsd = gsd;
+	gsm->output = gsm_serdev_output;
+	gsd->gsm = gsm;
+	/* No need for mux_get(), gsm_alloc_mux() does kref_init() */
+
+	error = gsm_activate_mux(gsd->gsm);
+	if (error) {
+		gsm_cleanup_mux(gsd->gsm, false);
+		/* Paired with kref_init() in gsm_alloc_mux() */
+		mux_put(gsd->gsm);
+
+		return error;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_register_device);
+
+void gsm_serdev_unregister_device(struct gsm_serdev *gsd)
+{
+	gsm_cleanup_mux(gsd->gsm, true);
+	/* Paired with kref_init() in gsm_alloc_mux() */
+	mux_put(gsd->gsm);
+	gsd->gsm = NULL;
+}
+EXPORT_SYMBOL_GPL(gsm_serdev_unregister_device);
+
+#endif	/* CONFIG_SERIAL_DEV_BUS */
+
 /**
  *	gsmld_output		-	write to link
  *	@gsm: our mux
@@ -2804,7 +3225,7 @@ static void gsmld_write_task(struct work_struct *work)
 	 */
 	ret = -ENODEV;
 	spin_lock_irqsave(&gsm->tx_lock, flags);
-	if (gsm->tty)
+	if (gsm->tty || gsm->gsd)
 		ret = gsm_data_kick(gsm);
 	spin_unlock_irqrestore(&gsm->tx_lock, flags);
 
