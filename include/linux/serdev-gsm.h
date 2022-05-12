@@ -45,6 +45,17 @@ struct gsm_serdev_dlci {
 
 #if IS_ENABLED(CONFIG_N_GSM) && IS_ENABLED(CONFIG_SERIAL_DEV_BUS)
 
+/* TS 27.010 channel specific functions for consumer drivers */
+#if IS_ENABLED(CONFIG_SERIAL_DEV_N_GSM)
+extern int
+serdev_ngsm_register_dlci(struct device *dev, struct gsm_serdev_dlci *dlci);
+extern void serdev_ngsm_unregister_dlci(struct device *dev,
+					struct gsm_serdev_dlci *dlci);
+extern int serdev_ngsm_write(struct device *dev, struct gsm_serdev_dlci *ops,
+			     const u8 *buf, int len);
+#endif
+
+/* Interface for_gsm serdev support */
 extern int gsm_serdev_register_device(struct gsm_serdev *gsd);
 extern void gsm_serdev_unregister_device(struct gsm_serdev *gsd);
 extern int gsm_serdev_register_tty_port(struct gsm_serdev *gsd, int line);
