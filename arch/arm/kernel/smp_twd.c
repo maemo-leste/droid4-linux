@@ -247,6 +247,7 @@ static void twd_timer_setup(void)
 	clk->set_state_shutdown = twd_shutdown;
 	clk->set_state_periodic = twd_set_periodic;
 	clk->set_state_oneshot = twd_set_oneshot;
+	clk->set_state_oneshot_stopped = twd_shutdown;
 	clk->tick_resume = twd_shutdown;
 	clk->set_next_event = twd_set_next_event;
 	clk->irq = twd_ppi;
