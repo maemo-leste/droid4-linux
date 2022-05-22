@@ -17,6 +17,7 @@
  */
 
 #include <linux/atomic.h>
+#include <linux/console.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -719,11 +720,38 @@ static int cpcap_usb_phy_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int __maybe_unused cpcap_usb_suspend(struct device *dev)
+{
+	struct cpcap_phy_ddata *ddata = dev_get_drvdata(dev);
+
+	if (!console_suspend_enabled)
+		return 0;
+
+	regulator_disable(ddata->vusb);
+
+	return 0;
+}
+
+static int __maybe_unused cpcap_usb_resume(struct device *dev)
+{
+	struct cpcap_phy_ddata *ddata = dev_get_drvdata(dev);
+
+	if (!console_suspend_enabled)
+		return 0;
+
+	return regulator_enable(ddata->vusb);
+}
+
+static const struct dev_pm_ops cpcap_usb_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(cpcap_usb_suspend, cpcap_usb_resume)
+};
+
 static struct platform_driver cpcap_usb_phy_driver = {
 	.probe		= cpcap_usb_phy_probe,
 	.remove		= cpcap_usb_phy_remove,
 	.driver		= {
 		.name	= "cpcap-usb-phy",
+		.pm	= &cpcap_usb_pm_ops,
 		.of_match_table = of_match_ptr(cpcap_usb_phy_id_table),
 	},
 };
