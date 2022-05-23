@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/serdev/serdev-ngsm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Generic serdev-ngsm TS 27.010 driver
+
+maintainers:
+  - Tony Lindgren <tony@atomide.com>
+
+properties:
+  compatible:
+    enum:
+      - etsi,3gpp-ts27010-adaption1
+      - motorola,mapphone-mdm6600-serial
+
+  ttymask:
+    $ref: /schemas/types.yaml#/definitions/uint64
+    description: Mask of the TS 27.010 channel TTY interfaces to start (64 bit)
+
+  "#address-cells":
+    const: 1
+
+  "#size-cells":
+    const: 0
+
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: motorola,mapphone-mdm6600-serial
+    then:
+      properties:
+        phys:
+          $ref: /schemas/types.yaml#/definitions/phandle-array
+          description: USB PHY needed for shared GPIO PM wake-up pins
+          maxItems: 1
+
+        phy-names:
+          description: Name of the USB PHY
+          const: usb
+
+        compatible:
+          description: GNSS receiver
+          const: motorola,mapphone-mdm6600-gnss
+
+      required:
+        - phys
+        - phy-names
+
+required:
+  - compatible
+  - ttymask
+  - "#address-cells"
+  - "#size-cells"
+
+examples:
+  - |
+    modem {
+      compatible = "motorola,mapphone-mdm6600-serial";
+      ttymask = <0 0x00001fee>;
+      phys = <&fsusb1_phy>;
+      phy-names = "usb";
+      #address-cells = <1>;
+      #size-cells = <0>;
+
+      gnss@4 {
+         compatible = "motorola,mapphone-mdm6600-gnss";
+         reg = <4>;
+      };
+    };
