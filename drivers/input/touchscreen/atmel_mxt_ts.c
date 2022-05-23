@@ -22,6 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/of.h>
+#include <linux/pm_runtime.h>
 #include <linux/property.h>
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
@@ -99,8 +100,11 @@ struct t7_config {
 	u8 active;
 } __packed;
 
-#define MXT_POWER_CFG_RUN		0
-#define MXT_POWER_CFG_DEEPSLEEP		1
+enum mxt_power_cfg {
+	MXT_POWER_CFG_RUN,
+	MXT_POWER_CFG_IDLE,
+	MXT_POWER_CFG_DEEPSLEEP,
+};
 
 /* MXT_TOUCH_MULTI_T9 field */
 #define MXT_T9_CTRL		0
@@ -1182,21 +1186,26 @@ update_count:
 static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 {
 	struct mxt_data *data = dev_id;
+	irqreturn_t ret = IRQ_HANDLED;
 
 	if (data->in_bootloader) {
 		/* bootloader state transition completion */
 		complete(&data->bl_completion);
-		return IRQ_HANDLED;
+		goto out_done;
 	}
 
 	if (!data->object_table)
-		return IRQ_HANDLED;
+		goto out_done;
 
-	if (data->T44_address) {
-		return mxt_process_messages_t44(data);
-	} else {
-		return mxt_process_messages(data);
-	}
+	if (data->T44_address)
+		ret = mxt_process_messages_t44(data);
+	else
+		ret = mxt_process_messages(data);
+
+out_done:
+	pm_runtime_mark_last_busy(&data->client->dev);
+
+	return ret;
 }
 
 static int mxt_t6_command(struct mxt_data *data, u16 cmd_offset,
@@ -2246,17 +2255,31 @@ static int mxt_initialize(struct mxt_data *data)
 	return 0;
 }
 
-static int mxt_set_t7_power_cfg(struct mxt_data *data, u8 sleep)
+/*
+ * Note that active value 0 forces the controller to idle so 1 is the shortest
+ * active periiod with interrupts still working. Idle value of 255 blocks idle
+ * completely so 254 is the maximum idle time we can use.
+ */
+static int mxt_set_t7_power_cfg(struct mxt_data *data,
+				enum mxt_power_cfg config)
 {
 	struct device *dev = &data->client->dev;
 	int error;
 	struct t7_config *new_config;
 	struct t7_config deepsleep = { .active = 0, .idle = 0 };
+	struct t7_config idle = { .active = 1, .idle = 254 };
 
-	if (sleep == MXT_POWER_CFG_DEEPSLEEP)
+	switch (config) {
+	case MXT_POWER_CFG_IDLE:
+		new_config = &idle;
+		break;
+	case MXT_POWER_CFG_DEEPSLEEP:
 		new_config = &deepsleep;
-	else
+		break;
+	default:
 		new_config = &data->t7_cfg;
+		break;
+	}
 
 	error = __mxt_write_reg(data->client, data->T7_address,
 				sizeof(data->t7_cfg), new_config);
@@ -3019,8 +3042,15 @@ static const struct attribute_group mxt_attr_group = {
 	.attrs = mxt_attrs,
 };
 
-static void mxt_start(struct mxt_data *data)
+static int __maybe_unused mxt_runtime_resume(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
+	struct mxt_data *data = i2c_get_clientdata(client);
+	struct input_dev *input_dev = data->input_dev;
+
+	if (!input_dev)
+		return 0;
+
 	mxt_wakeup_toggle(data->client, true, false);
 
 	switch (data->suspend_mode) {
@@ -3041,10 +3071,19 @@ static void mxt_start(struct mxt_data *data)
 		mxt_t6_command(data, MXT_COMMAND_CALIBRATE, 1, false);
 		break;
 	}
+
+	return 0;
 }
 
-static void mxt_stop(struct mxt_data *data)
+static int __maybe_unused mxt_runtime_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
+	struct mxt_data *data = i2c_get_clientdata(client);
+	struct input_dev *input_dev = data->input_dev;
+
+	if (!input_dev)
+		return 0;
+
 	switch (data->suspend_mode) {
 	case MXT_SUSPEND_T9_CTRL:
 		/* Touch disable */
@@ -3059,22 +3098,55 @@ static void mxt_stop(struct mxt_data *data)
 	}
 
 	mxt_wakeup_toggle(data->client, false, false);
-}
-
-static int mxt_input_open(struct input_dev *dev)
-{
-	struct mxt_data *data = input_get_drvdata(dev);
-
-	mxt_start(data);
 
 	return 0;
 }
 
-static void mxt_input_close(struct input_dev *dev)
+static int mxt_input_open(struct input_dev *input_dev)
 {
-	struct mxt_data *data = input_get_drvdata(dev);
+	struct mxt_data *data = input_get_drvdata(input_dev);
+	struct device *dev = &data->client->dev;
+	int error;
 
-	mxt_stop(data);
+	error = pm_runtime_get_sync(dev);
+	if (error < 0) {
+		pm_runtime_put_noidle(dev);
+		return error;
+	}
+
+	/*
+	 * Prevent autoidle if MXT_SUSPEND_T9_CTRL is the default as it will
+	 * power off the controller. Balanced inmxt_input_close().
+	 */
+	if (data->suspend_mode == MXT_SUSPEND_T9_CTRL)
+		pm_runtime_get(dev);
+
+	pm_runtime_use_autosuspend(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+
+	return 0;
+}
+
+static void mxt_input_close(struct input_dev *input_dev)
+{
+	struct mxt_data *data = input_get_drvdata(input_dev);
+	struct device *dev = &data->client->dev;
+	int error;
+
+	/* Release extra usage count for MXT_SUSPEND_T9_CTRL done in open */
+	if (data->suspend_mode == MXT_SUSPEND_T9_CTRL)
+		pm_runtime_put(dev);
+
+	/* Wake the device so autosuspend sees correct input_dev->users */
+	error = pm_runtime_get_sync(dev);
+	if (error < 0) {
+		pm_runtime_put_noidle(dev);
+		return;
+	}
+
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_put_sync(dev);
 }
 
 static int mxt_parse_device_properties(struct mxt_data *data)
@@ -3132,6 +3204,7 @@ static const struct dmi_system_id chromebook_T9_suspend_dmi[] = {
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mxt_data *data;
+	struct device *dev;
 	int error;
 
 	/*
@@ -3166,6 +3239,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	snprintf(data->phys, sizeof(data->phys), "i2c-%u-%04x/input0",
 		 client->adapter->nr, client->addr);
 
+	dev = &client->dev;
 	data->client = client;
 	data->irq = client->irq;
 	i2c_set_clientdata(client, data);
@@ -3262,23 +3336,36 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	device_property_read_u32(&client->dev, "atmel,wakeup-method",
 				 &data->wakeup_method);
 
+	pm_runtime_enable(dev);
+	/* Autosuspend won't be enabled until in open */
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_set_autosuspend_delay(dev, -1);
+	error = pm_runtime_get_sync(dev);
+	if (error < 0) {
+		pm_runtime_put_noidle(dev);
+		goto err_disable_pm_runtime;
+	}
+
 	error = mxt_initialize(data);
 	if (error)
-		goto err_disable_regulators;
+		goto err_disable_pm_runtime;
 
 	error = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
 	if (error) {
 		dev_err(&client->dev, "Failure %d creating sysfs group\n",
 			error);
-		goto err_free_object;
+		goto err_disable;
 	}
+
+	pm_runtime_put_sync(dev);
 
 	return 0;
 
-err_free_object:
+err_disable:
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
-err_disable_regulators:
+err_disable_pm_runtime:
+	pm_runtime_disable(dev);
 	regulator_bulk_disable(ARRAY_SIZE(data->regulators),
 			       data->regulators);
 	return error;
@@ -3287,11 +3374,14 @@ err_disable_regulators:
 static int mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
+	struct device *dev = &data->client->dev;
 
 	disable_irq(data->irq);
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_disable(dev);
 	regulator_bulk_disable(ARRAY_SIZE(data->regulators),
 			       data->regulators);
 
@@ -3310,7 +3400,7 @@ static int __maybe_unused mxt_suspend(struct device *dev)
 	mutex_lock(&input_dev->mutex);
 
 	if (input_device_enabled(input_dev))
-		mxt_stop(data);
+		mxt_runtime_suspend(dev);
 
 	mutex_unlock(&input_dev->mutex);
 
@@ -3333,14 +3423,17 @@ static int __maybe_unused mxt_resume(struct device *dev)
 	mutex_lock(&input_dev->mutex);
 
 	if (input_device_enabled(input_dev))
-		mxt_start(data);
+		mxt_runtime_resume(dev);
 
 	mutex_unlock(&input_dev->mutex);
 
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(mxt_pm_ops, mxt_suspend, mxt_resume);
+const struct dev_pm_ops mxt_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(mxt_suspend, mxt_resume)
+	SET_RUNTIME_PM_OPS(mxt_runtime_suspend, mxt_runtime_resume, NULL)
+};
 
 static const struct of_device_id mxt_of_match[] = {
 	{ .compatible = "atmel,maxtouch", },
