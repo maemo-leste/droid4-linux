@@ -101,6 +101,7 @@ struct cpcap_interrupt_desc {
 
 struct cpcap_battery_config {
 	int cd_factor;
+	char id;
 	struct power_supply_info info;
 	struct power_supply_battery_info bat;
 };
@@ -143,6 +144,7 @@ struct cpcap_battery_ddata {
 	int status;
 	u16 vendor;
 	bool check_nvmem;
+	bool no_nvmem_warned;
 	unsigned int is_full:1;
 };
 
@@ -236,6 +238,21 @@ static int cpcap_battery_get_current(struct cpcap_battery_ddata *ddata)
 	}
 
 	return value * 1000;
+}
+
+static int cpcap_battery_get_charge_current_reg(struct cpcap_battery_ddata *ddata)
+{
+	int error;
+	unsigned int val;
+
+	error = regmap_read(ddata->reg, CPCAP_REG_CRM, &val);
+
+	if (error) {
+		dev_err(ddata->dev, "%s failed with %i\n", __func__, error);
+		return -1;
+	}
+
+	return val & 0xf;
 }
 
 /**
@@ -422,7 +439,10 @@ static void cpcap_battery_detect_battery_type(struct cpcap_battery_ddata *ddata)
 	nvmem = nvmem_device_find(NULL, &cpcap_battery_match_nvmem);
 	if (IS_ERR_OR_NULL(nvmem)) {
 		ddata->check_nvmem = true;
-		dev_info_once(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
+		if (!ddata->no_nvmem_warned) {
+			dev_info(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
+			ddata->no_nvmem_warned = true;
+		}
 	} else if (nvmem_device_read(nvmem, 2, 1, &battery_id) < 0) {
 		battery_id = 0;
 		ddata->check_nvmem = true;
@@ -431,13 +451,13 @@ static void cpcap_battery_detect_battery_type(struct cpcap_battery_ddata *ddata)
 
 	switch (battery_id) {
 	case CPCAP_BATTERY_EB41_HW4X_ID:
-		ddata->config = cpcap_battery_eb41_data;
+		memcpy(&ddata->config, &cpcap_battery_eb41_data, sizeof(ddata->config));
 		break;
 	case CPCAP_BATTERY_BW8X_ID:
-		ddata->config = cpcap_battery_bw8x_data;
+		memcpy(&ddata->config, &cpcap_battery_bw8x_data, sizeof(ddata->config));
 		break;
 	default:
-		ddata->config = cpcap_battery_unkown_data;
+		memcpy(&ddata->config, &cpcap_battery_unkown_data, sizeof(ddata->config));
 	}
 }
 
@@ -673,7 +693,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_STATUS_FULL;
 			break;
 		}
-		if (cpcap_battery_cc_get_avg_current(ddata) < 0)
+		if (cpcap_battery_get_charge_current_reg(ddata) != 0)
 			val->intval = POWER_SUPPLY_STATUS_CHARGING;
 		else
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -1092,6 +1112,7 @@ static const struct power_supply_desc cpcap_charger_battery_desc = {
 	.property_is_writeable = cpcap_battery_property_is_writeable,
 	.external_power_changed = cpcap_battery_external_power_changed,
 };
+
 
 static int cpcap_battery_probe(struct platform_device *pdev)
 {
