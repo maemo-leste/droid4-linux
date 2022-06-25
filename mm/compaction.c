@@ -29,7 +29,7 @@
 /*
  * Fragmentation score check interval for proactive compaction purposes.
  */
-#define HPAGE_FRAG_CHECK_INTERVAL_MSEC	(500)
+#define HPAGE_FRAG_CHECK_INTERVAL_MSEC	(1000 * 120)
 
 static inline void count_compact_event(enum vm_event_item item)
 {

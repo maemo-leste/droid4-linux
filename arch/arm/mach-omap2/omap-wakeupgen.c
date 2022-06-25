@@ -367,20 +367,6 @@ static void irq_restore_context(void)
 		wakeupgen_ops->restore_context();
 }
 
-/*
- * Save GIC and Wakeupgen interrupt context using secure API
- * for HS/EMU devices.
- */
-static void irq_save_secure_context(void)
-{
-	u32 ret;
-	ret = omap_secure_dispatcher(OMAP4_HAL_SAVEGIC_INDEX,
-				FLAG_START_CRITICAL,
-				0, 0, 0, 0, 0);
-	if (ret != API_HAL_RET_VALUE_OK)
-		pr_err("GIC and Wakeupgen context save failed\n");
-}
-
 /* Define ops for context save and restore for each SoC */
 static struct omap_wakeupgen_ops omap4_wakeupgen_ops = {
 	.save_context = omap4_irq_save_context,
@@ -429,14 +415,16 @@ static void __init irq_hotplug_init(void)
 #endif
 
 #ifdef CONFIG_CPU_PM
+/*
+ * Note that gic context save for HS/EMU devices must be done after the cpu_pm
+ * notifiers, see omap4_irq_save_secure_context().
+ */
 static int irq_notifier(struct notifier_block *self, unsigned long cmd,	void *v)
 {
 	switch (cmd) {
 	case CPU_CLUSTER_PM_ENTER:
 		if (omap_type() == OMAP2_DEVICE_TYPE_GP || soc_is_am43xx())
 			irq_save_context();
-		else
-			irq_save_secure_context();
 		break;
 	case CPU_CLUSTER_PM_EXIT:
 		if (omap_type() == OMAP2_DEVICE_TYPE_GP || soc_is_am43xx())
