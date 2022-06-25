@@ -38,6 +38,7 @@ struct dsic_panel_data {
 	u32 max_hs_rate;
 	u32 max_lp_rate;
 	bool te_support;
+	u32 te_scan_line;
 };
 
 struct panel_drv_data {
@@ -297,6 +298,319 @@ static void dsicm_hw_reset(struct panel_drv_data *ddata)
 	usleep_range(5000, 10000);
 }
 
+static int dsi_mipi_cm_400_540_960_m2_v1_panel_enable_1(
+		struct mipi_dsi_device *dsi)
+{
+	int r;
+	u8 buf[20];
+
+	printk("%s\n", __func__);
+
+	buf[0] = 0xF0;
+	buf[1] = 0x5A;
+	buf[2] = 0x5A;
+	r = mipi_dsi_generic_write(dsi, buf, 3);
+	if (r)
+		goto err;
+
+	buf[0] = MIPI_DCS_WRITE_POWER_SAVE;
+	buf[1] = 0x01;
+	r = mipi_dsi_generic_write(dsi, buf, 2);
+	if (r)
+		goto err;
+
+	/* MIPI TE Drop out fix */
+	buf[0] = 0xFC;
+	buf[1] = 0x5A;
+	buf[2] = 0x5A;
+	r = mipi_dsi_generic_write(dsi, buf, 3);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFE;
+	buf[1] = 0x04;
+	buf[2] = 0x08;
+	buf[3] = 0x26;
+	buf[4] = 0x00;
+	buf[5] = 0x04;
+	buf[6] = 0x1B;
+	r = mipi_dsi_generic_write(dsi, buf, 7);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFC;
+	buf[1] = 0x00;
+	buf[2] = 0x00;
+	r = mipi_dsi_generic_write(dsi, buf, 3);
+	if (r)
+		goto err;
+	/* MIPI TE Drop out fix done*/
+	return 0;
+err:
+	printk(KERN_ERR "\n****Failed to init the display****\n");
+	return r;
+}
+
+static int dsi_mipi_cm_400_540_960_m2_v1_panel_enable_2(
+		struct mipi_dsi_device *dsi)
+{
+	int r;
+	u8 buf[20];
+
+	printk("%s\n", __func__);
+
+	buf[0] = 0xB5;
+	buf[1] = 0x03;
+	buf[2] = 0x7F;
+	buf[3] = 0x00;
+	buf[4] = 0x80;
+	buf[5] = 0xFF;
+	buf[6] = 0x00;
+	r = mipi_dsi_generic_write(dsi, buf, 7);
+	if (r)
+		goto err;
+
+	buf[0] = 0xB7;
+	buf[1] = 0xBA;
+	buf[2] = 0xFE;
+	buf[3] = 0x4E;
+	buf[4] = 0xA5;
+	buf[5] = 0x90;
+	buf[6] = 0xB0;
+	buf[7] = 0xFF;
+	buf[8] = 0x80;
+	buf[9] = 0x6D;
+	buf[10] = 0x01;
+	r = mipi_dsi_generic_write(dsi, buf, 11);
+	if (r)
+		goto err;
+	/* change to 0x7A to resolve the flicker and blackout issues */
+	buf[0] = 0xF4;
+	buf[1] = 0x00;
+	buf[2] = 0x7A;
+	buf[3] = 0x46;
+	buf[4] = 0x20;
+	buf[5] = 0x00;
+	buf[6] = 0x49;
+	buf[7] = 0x74;
+	buf[8] = 0x29;
+	buf[9] = 0x12;
+	buf[10] = 0x14;
+	buf[11] = 0x2F;
+	buf[12] = 0x2F;
+	buf[13] = 0x01;
+	buf[14] = 0x00;
+	r = mipi_dsi_generic_write(dsi, buf, 15);
+	if (r)
+		goto err;
+
+	buf[0] = 0xF6;
+	buf[1] = 0x00;
+	buf[2] = 0x00;
+	buf[3] = 0x06;
+	buf[4] = 0x00;
+	buf[5] = 0x00;
+	buf[6] = 0x0C;
+	r = mipi_dsi_generic_write(dsi, buf, 7);
+	if (r)
+		goto err;
+
+	buf[0] = 0xF8;
+	buf[1] = 0x15;
+	buf[2] = 0x1C;
+	buf[3] = 0x00;
+	buf[4] = 0x18;
+	buf[5] = 0x49;
+	buf[6] = 0x49;
+	buf[7] = 0x49;
+	buf[8] = 0X49;
+	buf[9] = 0X14;
+	buf[10] = 0X16;
+	buf[11] = 0X01;
+	buf[12] = 0X64;
+	buf[13] = 0X64;
+	buf[14] = 0X02;
+	buf[15] = 0X24;
+	buf[16] = 0X64;
+	buf[17] = 0X00;
+	buf[18] = 0X00;
+	r = mipi_dsi_generic_write(dsi, buf, 19);
+	if (r)
+		goto err;
+
+	/* Red */
+	buf[0] = 0xF9;
+	buf[1] = 0x04;
+	r = mipi_dsi_generic_write(dsi, buf, 2);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFA;
+	buf[1] = 0x0C;
+	buf[2] = 0x2C;
+	buf[3] = 0x29;
+	buf[4] = 0x11;
+	buf[5] = 0x03;
+	buf[6] = 0x02;
+	buf[7] = 0x20;
+	buf[8] = 0x24;
+	buf[9] = 0x2D;
+	buf[10] = 0x23;
+	buf[11] = 0x05;
+	buf[12] = 0x0A;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFB;
+	buf[1] = 0x0C;
+	buf[2] = 0x2C;
+	buf[3] = 0x29;
+	buf[4] = 0x11;
+	buf[5] = 0x03;
+	buf[6] = 0x02;
+	buf[7] = 0x20;
+	buf[8] = 0x24;
+	buf[9] = 0x2D;
+	buf[10] = 0x23;
+	buf[11] = 0x05;
+	buf[12] = 0x0A;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+
+	/* Green */
+	buf[0] = 0xF9;
+	buf[1] = 0x02;
+	r = mipi_dsi_generic_write(dsi, buf, 2);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFA;
+	buf[1] = 0x10;
+	buf[2] = 0x24;
+	buf[3] = 0x2B;
+	buf[4] = 0x0F;
+	buf[5] = 0x08;
+	buf[6] = 0x02;
+	buf[7] = 0x27;
+	buf[8] = 0x22;
+	buf[9] = 0x32;
+	buf[10] = 0x2E;
+	buf[11] = 0x07;
+	buf[12] = 0x0E;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+	buf[0] = 0xFB;
+	buf[1] = 0x10;
+	buf[2] = 0x24;
+	buf[3] = 0x2B;
+	buf[4] = 0x0F;
+	buf[5] = 0x08;
+	buf[6] = 0x02;
+	buf[7] = 0x27;
+	buf[8] = 0x22;
+	buf[9] = 0x32;
+	buf[10] = 0x2E;
+	buf[11] = 0x07;
+	buf[12] = 0x0E;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+
+	/* Blue */
+	buf[0] = 0xF9;
+	buf[1] = 0x01;
+	r = mipi_dsi_generic_write(dsi, buf, 2);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFA;
+	buf[1] = 0x12;
+	buf[2] = 0x2B;
+	buf[3] = 0x2D;
+	buf[4] = 0x0A;
+	buf[5] = 0x12;
+	buf[6] = 0x0C;
+	buf[7] = 0x21;
+	buf[8] = 0x24;
+	buf[9] = 0x2C;
+	buf[10] = 0x21;
+	buf[11] = 0x06;
+	buf[12] = 0x06;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFB;
+	buf[1] = 0x12;
+	buf[2] = 0x2B;
+	buf[3] = 0x2D;
+	buf[4] = 0x0A;
+	buf[5] = 0x12;
+	buf[6] = 0x0C;
+	buf[7] = 0x21;
+	buf[8] = 0x24;
+	buf[9] = 0x2C;
+	buf[10] = 0x21;
+	buf[11] = 0x06;
+	buf[12] = 0x06;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+	/* White */
+	buf[0] = 0xF9;
+	buf[1] = 0x20;
+	r = mipi_dsi_generic_write(dsi, buf, 2);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFA;
+	buf[1] = 0x3B;
+	buf[2] = 0x1F;
+	buf[3] = 0x0E;
+	buf[4] = 0x01;
+	buf[5] = 0x08;
+	buf[6] = 0x04;
+	buf[7] = 0x19;
+	buf[8] = 0x1B;
+	buf[9] = 0x27;
+	buf[10] = 0x28;
+	buf[11] = 0x04;
+	buf[12] = 0x14;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+
+	buf[0] = 0xFB;
+	buf[1] = 0x3B;
+	buf[2] = 0x1F;
+	buf[3] = 0x0E;
+	buf[4] = 0x01;
+	buf[5] = 0x08;
+	buf[6] = 0x04;
+	buf[7] = 0x19;
+	buf[8] = 0x1B;
+	buf[9] = 0x27;
+	buf[10] = 0x28;
+	buf[11] = 0x04;
+	buf[12] = 0x14;
+	r = mipi_dsi_generic_write(dsi, buf, 13);
+	if (r)
+		goto err;
+	buf[0] = 0x53;
+	buf[1] = 0x2C;
+	r = mipi_dsi_generic_write(dsi, buf, 2);
+	if (r)
+		goto err;
+
+	return 0;
+err:
+	printk(KERN_ERR "\n****Failed to init the display****\n");
+	return r;
+}
+
 static int dsicm_power_on(struct panel_drv_data *ddata)
 {
 	u8 id1, id2, id3;
@@ -305,6 +619,8 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 	dsicm_hw_reset(ddata);
 
 	ddata->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+
+	dsi_mipi_cm_400_540_960_m2_v1_panel_enable_1(ddata->dsi);
 
 	r = dsicm_sleep_out(ddata);
 	if (r)
@@ -335,10 +651,19 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 	if (r)
 		goto err;
 
+	dsi_mipi_cm_400_540_960_m2_v1_panel_enable_2(ddata->dsi);
+
 	if (ddata->panel_data->te_support) {
-		r = mipi_dsi_dcs_set_tear_on(ddata->dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
+		r = mipi_dsi_dcs_set_tear_on(ddata->dsi,
+					MIPI_DSI_DCS_TEAR_MODE_VBLANK);
 		if (r)
 			goto err;
+		if (ddata->panel_data->te_scan_line) {
+			r = mipi_dsi_dcs_set_tear_scanline(ddata->dsi,
+					ddata->panel_data->te_scan_line);
+			if (r)
+				goto err;
+		}
 	}
 
 	/* possible panel bug */
@@ -644,7 +969,8 @@ static const struct dsic_panel_data droid4_data = {
 	.height_mm = 89,
 	.max_hs_rate = 300000000,
 	.max_lp_rate = 10000000,
-	.te_support = false,
+	.te_support = true,
+	.te_scan_line = 300,
 };
 
 static const struct of_device_id dsicm_of_match[] = {
