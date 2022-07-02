@@ -723,7 +723,7 @@ static void gsm_data_kick(struct gsm_mux *gsm, struct gsm_dlci *dlci)
 
 		if (debug & 4)
 			gsm_hex_dump_bytes(__func__, gsm->txframe, len);
-		if (gsm->output(gsm, gsm->txframe, len) <= 0)
+		if (gsmld_output(gsm, gsm->txframe, len) <= 0)
 			break;
 		/* FIXME: Can eliminate one SOF in many more cases */
 		gsm->tx_bytes -= msg->len;
