@@ -1,3 +1,9 @@
+omap-linux (5.18.9-1) unstable; urgency=medium
+
+  * Rebase onto 5.18.9, done by Uvos
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 05 Jul 2022 10:38:41 +0200
+
 omap-linux (5.15.2-2) unstable; urgency=medium
 
   * Switch to IIO driver for N900 Accelerometer
