@@ -1,3 +1,9 @@
+omap-linux (5.18.9-2) unstable; urgency=medium
+
+  * Add n900 ssi patch
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Tue, 05 Jul 2022 21:28:13 +0200
+
 omap-linux (5.18.9-1) unstable; urgency=medium
 
   * Rebase onto 5.18.9, done by Uvos
