@@ -1481,9 +1481,13 @@ static int cpcap_voice_call(struct cpcap_audio *cpcap, struct snd_soc_dai *dai,
 
 		w = snd_soc_dai_get_widget(dai, SNDRV_PCM_STREAM_PLAYBACK);
 
-		w->active = 1;
 		snd_soc_dai_activate(dai, SNDRV_PCM_STREAM_PLAYBACK);
 		snd_soc_dapm_force_enable_pin(w->dapm, w->name);
+		snd_soc_dapm_force_enable_pin(w->dapm, "Voice PGA");
+		snd_soc_dapm_force_enable_pin(w->dapm, "Speaker Right PGA");
+		snd_soc_dapm_force_enable_pin(w->dapm, "Headset Left PGA");
+		snd_soc_dapm_force_enable_pin(w->dapm, "Headset Right PGA");
+		snd_soc_dapm_force_enable_pin(w->dapm, "Earpiece PGA");
 		snd_soc_dapm_sync(w->dapm);
 	}
 	else
@@ -1492,9 +1496,13 @@ static int cpcap_voice_call(struct cpcap_audio *cpcap, struct snd_soc_dai *dai,
 
 		w = snd_soc_dai_get_widget(dai, SNDRV_PCM_STREAM_PLAYBACK);
 
-		w->active = 0;
 		snd_soc_dai_deactivate(dai, SNDRV_PCM_STREAM_PLAYBACK);
 		snd_soc_dapm_disable_pin(w->dapm, w->name);
+		snd_soc_dapm_disable_pin(w->dapm, "Voice PGA");
+		snd_soc_dapm_disable_pin(w->dapm, "Voice PGA");
+		snd_soc_dapm_disable_pin(w->dapm, "Headset Left PGA");
+		snd_soc_dapm_disable_pin(w->dapm, "Headset Right PGA");
+		snd_soc_dapm_disable_pin(w->dapm, "Earpiece PGA");
 		snd_soc_dapm_sync(w->dapm);
 	}
 
