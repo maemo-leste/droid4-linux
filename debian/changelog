@@ -1,3 +1,9 @@
+omap-linux (5.18.14-1) unstable; urgency=medium
+
+  * Update to 5.18.14
+
+ -- Carl Klemm <carl@uvos.xyz>  Sat Jul 30 22:41:22 +0200
+
 omap-linux (5.18.9-3) unstable; urgency=medium
 
   * Add hack to enable cpcap PGAs in voice calls
