@@ -1,3 +1,9 @@
+omap-linux (5.18.9-3) unstable; urgency=medium
+
+  * Add hack to enable cpcap PGAs in voice calls
+
+ -- Carl Klemm <carl@uvos.xyz>  Sat Jul 30 21:41:22 +0200
+
 omap-linux (5.18.9-2) unstable; urgency=medium
 
   * Add n900 ssi patch
