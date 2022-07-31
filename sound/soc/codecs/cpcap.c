@@ -1499,7 +1499,7 @@ static int cpcap_voice_call(struct cpcap_audio *cpcap, struct snd_soc_dai *dai,
 		snd_soc_dai_deactivate(dai, SNDRV_PCM_STREAM_PLAYBACK);
 		snd_soc_dapm_disable_pin(w->dapm, w->name);
 		snd_soc_dapm_disable_pin(w->dapm, "Voice PGA");
-		snd_soc_dapm_disable_pin(w->dapm, "Voice PGA");
+		snd_soc_dapm_disable_pin(w->dapm, "Speaker Right PGA");
 		snd_soc_dapm_disable_pin(w->dapm, "Headset Left PGA");
 		snd_soc_dapm_disable_pin(w->dapm, "Headset Right PGA");
 		snd_soc_dapm_disable_pin(w->dapm, "Earpiece PGA");
