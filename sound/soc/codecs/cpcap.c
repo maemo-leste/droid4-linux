@@ -1490,6 +1490,7 @@ static int cpcap_voice_call(struct cpcap_audio *cpcap, struct snd_soc_dai *dai,
 		snd_soc_dapm_force_enable_pin(w->dapm, "Earpiece PGA");
 		snd_soc_dapm_force_enable_pin(w->dapm, "Microphone 1 PGA");
 		snd_soc_dapm_force_enable_pin(w->dapm, "Microphone 2 PGA");
+		snd_soc_dapm_force_enable_pin(w->dapm, "ADC Right");
 		snd_soc_dapm_sync(w->dapm);
 	}
 	else
@@ -1507,6 +1508,7 @@ static int cpcap_voice_call(struct cpcap_audio *cpcap, struct snd_soc_dai *dai,
 		snd_soc_dapm_disable_pin(w->dapm, "Earpiece PGA");
 		snd_soc_dapm_disable_pin(w->dapm, "Microphone 1 PGA");
 		snd_soc_dapm_disable_pin(w->dapm, "Microphone 2 PGA");
+		snd_soc_dapm_disable_pin(w->dapm, "ADC Right");
 		snd_soc_dapm_sync(w->dapm);
 	}
 
