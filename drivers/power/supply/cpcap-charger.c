@@ -983,7 +983,7 @@ static int cpcap_charger_probe(struct platform_device *pdev)
 
 	cpcap_charger_init_optional_gpios(ddata);
 
-	schedule_delayed_work(&ddata->detect_work, 0);
+	schedule_delayed_work(&ddata->detect_work, msecs_to_jiffies(500));
 
 	return 0;
 }
