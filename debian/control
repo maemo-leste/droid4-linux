@@ -1,7 +1,7 @@
 Source: omap-linux
 Section: kernel
 Priority: optional
-Maintainer: Ivan J. <parazyd@dyne.org>
+Maintainer: Carl Klemm <carl@uvos.xyz>
 Build-Depends:
  debhelper (>= 10),
  rsync,
