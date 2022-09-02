@@ -1,8 +1,8 @@
-omap-linux (5.18.14.1-1) unstable; urgency=medium
+omap-linux (5.18.19-1) unstable; urgency=medium
 
-  * Potenionally fix problem where mapphones would not charge on boot
+  * Various serdev fixes for mapphone modems
 
- -- Carl Klemm <carl@uvos.xyz>  Mon Aug  1 21:44:32 +0200
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 02 Sep 2022 13:42:06 +0200
 
 omap-linux (5.18.14-1) unstable; urgency=medium
 
