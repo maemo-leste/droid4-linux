@@ -81,7 +81,7 @@ static int motmdm_send_command(struct motmdm_driver_data *ddata,
 			       const u8 *buf, int len)
 {
 	struct device *dev = ddata->component->dev;
-	const int timeout_ms = 1000;
+	const int timeout_ms = 5000;
 	unsigned char cmd[MOTMDM_AUDIO_MAX_LEN];
 	int ret, cmdlen;
 
