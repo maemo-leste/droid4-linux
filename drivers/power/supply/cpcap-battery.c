@@ -129,6 +129,7 @@ struct cpcap_battery_ddata {
 	struct power_supply *psy;
 	struct cpcap_battery_config config;
 	struct cpcap_battery_state_data state[CPCAP_BATTERY_STATE_NR];
+	struct delayed_work low_irq_work;
 	u32 cc_lsb;		/* μAms per LSB */
 	atomic_t active;
 	int charge_full;
@@ -906,9 +907,13 @@ static irqreturn_t cpcap_battery_irq_thread(int irq, void *data)
 		dev_info(ddata->dev, "Coulomb counter calibration done\n");
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW:
-		if (latest->current_ua >= 0)
+		if (latest->current_ua >= 0 &&
+		    !delayed_work_pending((&ddata->low_irq_work))) {
 			dev_warn(ddata->dev, "Battery low at %imV!\n",
 				latest->voltage / 1000);
+			schedule_delayed_work(&ddata->low_irq_work, 30 * HZ);
+			disable_irq_nosync(d->irq);
+		}
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_POWEROFF:
 		if (latest->current_ua >= 0 && latest->voltage <= 3200000) {
@@ -1079,6 +1084,21 @@ restore:
 	return error;
 }
 
+static void cpcap_battery_lowbph_enable(struct work_struct *work)
+{
+	struct delayed_work *d_work = to_delayed_work(work);
+	struct cpcap_battery_ddata *ddata = container_of(d_work,
+			struct cpcap_battery_ddata, low_irq_work);
+	struct cpcap_interrupt_desc *d;
+
+	list_for_each_entry(d, &ddata->irq_list, node) {
+		if (d->action == CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW)
+			break;
+	}
+
+	enable_irq(d->irq);
+}
+
 #ifdef CONFIG_OF
 static const struct of_device_id cpcap_battery_id_table[] = {
 	{
@@ -1109,6 +1129,8 @@ static int cpcap_battery_probe(struct platform_device *pdev)
 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
 	if (!ddata)
 		return -ENOMEM;
+
+	INIT_DELAYED_WORK(&ddata->low_irq_work, cpcap_battery_lowbph_enable);
 
 	cpcap_battery_detect_battery_type(ddata);
 
@@ -1176,6 +1198,9 @@ static int cpcap_battery_remove(struct platform_device *pdev)
 				   0xffff, 0);
 	if (error)
 		dev_err(&pdev->dev, "could not disable: %i\n", error);
+
+	/* make sure to call enable_irq() if needed */
+	flush_delayed_work(&ddata->low_irq_work);
 
 	return 0;
 }
