@@ -625,9 +625,9 @@ static int omap_8250_dma_handle_irq(struct uart_port *port);
 
 static irqreturn_t omap8250_irq(int irq, void *dev_id)
 {
-	struct uart_port *port = dev_id;
-	struct omap8250_priv *priv = port->private_data;
-	struct uart_8250_port *up = up_to_u8250p(port);
+	struct omap8250_priv *priv = dev_id;
+	struct uart_8250_port *up = serial8250_get_port(priv->line);
+	struct uart_port *port = &up->port;
 	unsigned int iir, lsr;
 	int ret;
 
@@ -683,12 +683,6 @@ static int omap_8250_startup(struct uart_port *port)
 	struct omap8250_priv *priv = port->private_data;
 	int ret;
 
-	if (priv->wakeirq) {
-		ret = dev_pm_set_dedicated_wake_irq(port->dev, priv->wakeirq);
-		if (ret)
-			return ret;
-	}
-
 	pm_runtime_get_sync(port->dev);
 
 	up->mcr = 0;
@@ -712,11 +706,6 @@ static int omap_8250_startup(struct uart_port *port)
 		}
 	}
 
-	ret = request_irq(port->irq, omap8250_irq, IRQF_SHARED,
-			  dev_name(port->dev), port);
-	if (ret < 0)
-		goto err;
-
 	up->ier = UART_IER_RLSI | UART_IER_RDI;
 	serial_out(up, UART_IER, up->ier);
 
@@ -736,11 +725,6 @@ static int omap_8250_startup(struct uart_port *port)
 	pm_runtime_mark_last_busy(port->dev);
 	pm_runtime_put_autosuspend(port->dev);
 	return 0;
-err:
-	pm_runtime_mark_last_busy(port->dev);
-	pm_runtime_put_autosuspend(port->dev);
-	dev_pm_clear_wake_irq(port->dev);
-	return ret;
 }
 
 static void omap_8250_shutdown(struct uart_port *port)
@@ -773,8 +757,6 @@ static void omap_8250_shutdown(struct uart_port *port)
 
 	pm_runtime_mark_last_busy(port->dev);
 	pm_runtime_put_autosuspend(port->dev);
-	free_irq(port->irq, port);
-	dev_pm_clear_wake_irq(port->dev);
 }
 
 static void omap_8250_throttle(struct uart_port *port)
@@ -1387,8 +1369,6 @@ static int omap8250_probe(struct platform_device *pdev)
 				 &up.overrun_backoff_time_ms) != 0)
 		up.overrun_backoff_time_ms = 0;
 
-	priv->wakeirq = irq_of_parse_and_map(np, 1);
-
 	pdata = of_device_get_match_data(&pdev->dev);
 	if (pdata)
 		priv->habit |= pdata->habit;
@@ -1466,16 +1446,33 @@ static int omap8250_probe(struct platform_device *pdev)
 		}
 	}
 #endif
+
+	irq_set_status_flags(irq, IRQ_NOAUTOEN);
+	ret = devm_request_irq(&pdev->dev, irq, omap8250_irq, 0,
+			       dev_name(&pdev->dev), priv);
+	if (ret < 0)
+		return ret;
+
+	priv->wakeirq = irq_of_parse_and_map(np, 1);
+	if (priv->wakeirq) {
+		ret = dev_pm_set_dedicated_wake_irq(&pdev->dev, priv->wakeirq);
+		if (ret)
+			return ret;
+	}
+
 	ret = serial8250_register_8250_port(&up);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "unable to register 8250 port\n");
 		goto err;
 	}
 	priv->line = ret;
+	platform_set_drvdata(pdev, priv);
+	enable_irq(irq);
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_autosuspend(&pdev->dev);
 	return 0;
 err:
+	dev_pm_clear_wake_irq(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -1493,6 +1490,7 @@ static int omap8250_remove(struct platform_device *pdev)
 
 	serial8250_unregister_port(priv->line);
 	priv->line = -ENODEV;
+	dev_pm_clear_wake_irq(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_put_sync(&pdev->dev);
 	flush_work(&priv->qos_work);
