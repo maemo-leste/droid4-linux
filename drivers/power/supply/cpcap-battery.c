@@ -137,6 +137,7 @@ struct cpcap_battery_ddata {
 	struct power_supply *psy;
 	struct cpcap_battery_config config;
 	struct cpcap_battery_state_data state[CPCAP_BATTERY_STATE_NR];
+	struct timer_list low_timer;
 	u32 cc_lsb;		/* μAms per LSB */
 	atomic_t active;
 	int charge_full;
@@ -914,9 +915,14 @@ static irqreturn_t cpcap_battery_irq_thread(int irq, void *data)
 		dev_info(ddata->dev, "Coulomb counter calibration done\n");
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW:
-		if (latest->current_ua >= 0)
+		if (latest->current_ua >= 0 &&
+		    !timer_pending(&ddata->low_timer)) {
 			dev_warn(ddata->dev, "Battery low at %imV!\n",
 				latest->voltage / 1000);
+			mod_timer(&ddata->low_timer,
+				  jiffies + msecs_to_jiffies(30000));
+			disable_irq_nosync(d->irq);
+		}
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_POWEROFF:
 		if (latest->current_ua >= 0 && latest->voltage <= 3200000) {
@@ -1087,6 +1093,19 @@ restore:
 	return error;
 }
 
+static void cpcap_battery_lowbph_enable(struct timer_list *t)
+{
+	struct cpcap_battery_ddata *ddata = from_timer(ddata, t, low_timer);
+	struct cpcap_interrupt_desc *d;
+
+	list_for_each_entry(d, &ddata->irq_list, node) {
+		if (d->action == CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW)
+			break;
+	}
+
+	enable_irq(d->irq);
+}
+
 #ifdef CONFIG_OF
 static const struct of_device_id cpcap_battery_id_table[] = {
 	{
@@ -1117,6 +1136,8 @@ static int cpcap_battery_probe(struct platform_device *pdev)
 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
 	if (!ddata)
 		return -ENOMEM;
+
+	timer_setup(&ddata->low_timer, cpcap_battery_lowbph_enable, 0);
 
 	cpcap_battery_detect_battery_type(ddata);
 
@@ -1184,6 +1205,8 @@ static int cpcap_battery_remove(struct platform_device *pdev)
 				   0xffff, 0);
 	if (error)
 		dev_err(&pdev->dev, "could not disable: %i\n", error);
+
+	del_timer_sync(&ddata->low_timer);
 
 	return 0;
 }
