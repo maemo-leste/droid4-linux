@@ -66,9 +66,6 @@
 
 #define CPCAP_BATTERY_CC_SAMPLE_PERIOD_MS	250
 
-#define CPCAP_BATTERY_EB41_HW4X_ID 0x9E
-#define CPCAP_BATTERY_BW8X_ID 0x98
-
 enum {
 	CPCAP_BATTERY_IIO_BATTDET,
 	CPCAP_BATTERY_IIO_VOLTAGE,
@@ -380,22 +377,9 @@ cpcap_battery_read_accumulated(struct cpcap_battery_ddata *ddata,
  * kernel on droid 4, full is 4351000 and software initiates shutdown
  * at 3078000. The device will die around 2743000.
  */
-static const struct cpcap_battery_config cpcap_battery_eb41_data = {
+static struct cpcap_battery_config cpcap_battery_mot_data = {
 	.cd_factor = 0x3cc,
 	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
-	.info.voltage_max_design = 4351000,
-	.info.voltage_min_design = 3100000,
-	.info.charge_full_design = 1740000,
-	.bat.constant_charge_voltage_max_uv = 4200000,
-};
-
-/* Values for the extended Droid Bionic battery bw8x. */
-static const struct cpcap_battery_config cpcap_battery_bw8x_data = {
-	.cd_factor = 0x3cc,
-	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
-	.info.voltage_max_design = 4200000,
-	.info.voltage_min_design = 3200000,
-	.info.charge_full_design = 2760000,
 	.bat.constant_charge_voltage_max_uv = 4200000,
 };
 
@@ -423,39 +407,63 @@ static int cpcap_battery_match_nvmem(struct device *dev, const void *data)
 static void cpcap_battery_detect_battery_type(struct cpcap_battery_ddata *ddata)
 {
 	struct nvmem_device *nvmem;
-	u8 battery_id = 0;
+	char buf[24];
+	u8 capacity;
+	u8 mul_idx;
+	u8 charge_voltage;
+	u32 v;
+	static const u32 multipliers[] = {20, 10, 10, 10, 10, 40, 10, 20, 40};
 
 	ddata->check_nvmem = false;
 
 	nvmem = nvmem_device_find(NULL, &cpcap_battery_match_nvmem);
 	if (IS_ERR_OR_NULL(nvmem)) {
-		ddata->check_nvmem = true;
 		dev_info_once(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
-	} else {
-		char buf[24];
-
-		if (nvmem_device_read(nvmem, 96, 4, buf) < 0 ||
-		    strncmp(buf, "COPR", 4) != 0 ||
-		    nvmem_device_read(nvmem, 104, 24, buf) < 0 ||
-		    strncmp(buf, "MOTOROLA E.P CHARGE ONLY", 24) != 0 ||
-		    nvmem_device_read(nvmem, 2, 1, &battery_id) < 0) {
-			battery_id = 0;
-			ddata->check_nvmem = true;
-			dev_warn(ddata->dev, "Can not read battery nvmem device. Assuming generic lipo battery\n");
-		}
-
+		goto unknown;
 	}
 
-	switch (battery_id) {
-	case CPCAP_BATTERY_EB41_HW4X_ID:
-		ddata->config = cpcap_battery_eb41_data;
-		break;
-	case CPCAP_BATTERY_BW8X_ID:
-		ddata->config = cpcap_battery_bw8x_data;
-		break;
-	default:
-		ddata->config = cpcap_battery_unkown_data;
+	if (nvmem_device_read(nvmem, 96, 4, buf) < 0 ||
+	    strncmp(buf, "COPR", 4) != 0 ||
+	    nvmem_device_read(nvmem, 104, 24, buf) < 0 ||
+	    strncmp(buf, "MOTOROLA E.P CHARGE ONLY", 24) != 0) {
+		dev_warn(ddata->dev, "Unknown battery nvmem device. Assuming generic lipo battery\n");
+		goto unknown;
 	}
+
+	if (nvmem_device_read(nvmem, 49, 1, &mul_idx) < 0 ||
+	    nvmem_device_read(nvmem, 34, 1, &capacity) < 0 ||
+	    nvmem_device_read(nvmem, 65, 1, &charge_voltage) < 0) {
+		dev_warn(ddata->dev, "Can not read battery nvmem device. Assuming generic lipo battery\n");
+		goto unknown;
+	}
+
+	/* design capacity */
+	mul_idx -= 2;
+
+	if (mul_idx < ARRAY_SIZE(multipliers))
+		v = multipliers[mul_idx];
+	else
+		v = 10;
+
+	cpcap_battery_mot_data.info.charge_full_design = 1000 * v * capacity;
+
+	/* design max voltage */
+	v = 1000 * ((16702 * charge_voltage) / 1000 + 1260);
+	cpcap_battery_mot_data.info.voltage_max_design = v;
+
+	/* design min voltage */
+	if (v > 4200000)
+		cpcap_battery_mot_data.info.voltage_min_design = 3100000;
+	else
+		cpcap_battery_mot_data.info.voltage_min_design = 3200000;
+
+	ddata->config = cpcap_battery_mot_data;
+
+	return;
+
+unknown:
+	ddata->check_nvmem = true;
+	ddata->config = cpcap_battery_unkown_data;
 }
 
 /**
