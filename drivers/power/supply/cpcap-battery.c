@@ -414,7 +414,7 @@ static const struct cpcap_battery_config cpcap_battery_unkown_data = {
 
 static int cpcap_battery_match_nvmem(struct device *dev, const void *data)
 {
-	if (strcmp(dev_name(dev), "89-500029ba0f73") == 0)
+	if (strncmp(dev_name(dev), "89-500", 6) == 0)
 		return 1;
 	else
 		return 0;
@@ -431,10 +431,19 @@ static void cpcap_battery_detect_battery_type(struct cpcap_battery_ddata *ddata)
 	if (IS_ERR_OR_NULL(nvmem)) {
 		ddata->check_nvmem = true;
 		dev_info_once(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
-	} else if (nvmem_device_read(nvmem, 2, 1, &battery_id) < 0) {
-		battery_id = 0;
-		ddata->check_nvmem = true;
-		dev_warn(ddata->dev, "Can not read battery nvmem device. Assuming generic lipo battery\n");
+	} else {
+		char buf[24];
+
+		if (nvmem_device_read(nvmem, 96, 4, buf) < 0 ||
+		    strncmp(buf, "COPR", 4) != 0 ||
+		    nvmem_device_read(nvmem, 104, 24, buf) < 0 ||
+		    strncmp(buf, "MOTOROLA E.P CHARGE ONLY", 24) != 0 ||
+		    nvmem_device_read(nvmem, 2, 1, &battery_id) < 0) {
+			battery_id = 0;
+			ddata->check_nvmem = true;
+			dev_warn(ddata->dev, "Can not read battery nvmem device. Assuming generic lipo battery\n");
+		}
+
 	}
 
 	switch (battery_id) {
