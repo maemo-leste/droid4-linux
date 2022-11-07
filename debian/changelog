@@ -1,6 +1,16 @@
+omap-linux (5.18.19.3-1) unstable; urgency=medium
+
+  * power: cpcap-battery: Do not issue low signal too frequently
+  * power: supply: cpcap-battery: Fix battery identification
+  * power: supply: cpcap_battery: Read battery parameters from nvram
+
+ -- Carl Klemm <carl@uvos.xyz>  Mon, 07 Nov 2022 21:38:36 +0100
+
 omap-linux (5.18.19.2-1) unstable; urgency=medium
 
   * Apply tmlinds patches for uart driver improvements
+
+ -- Carl Klemm <carl@uvos.xyz>  Mon, 07 Nov 2022 21:36:06 +0100
 
 omap-linux (5.18.19-1) unstable; urgency=medium
 
