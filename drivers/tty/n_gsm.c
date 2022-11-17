@@ -2837,10 +2837,8 @@ static void gsmld_write_task(struct work_struct *work)
 	/* All outstanding control channel and control messages and one data
 	 * frame is sent.
 	 */
-	ret = -ENODEV;
 	spin_lock_irqsave(&gsm->tx_lock, flags);
-	if (gsm->tty)
-		ret = gsm_data_kick(gsm);
+	ret = gsm_data_kick(gsm);
 	spin_unlock_irqrestore(&gsm->tx_lock, flags);
 
 	if (ret >= 0)
