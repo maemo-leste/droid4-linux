@@ -6,6 +6,13 @@
 / {
 	model = "Motorola Droid Bionic XT875";
 	compatible = "motorola,droid-bionic", "ti,omap4430", "ti,omap4";
+
+	led_kl: led-kl {
+		compatible = "motorola,cpcap-led-kl";
+		vdd-supply = <&sw5>;
+		label = "button-backlight";
+		cpcap-phandle = <&cpcap>;
+	};
 };
 
 &keypad {
