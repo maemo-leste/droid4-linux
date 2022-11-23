@@ -1,3 +1,9 @@
+omap-linux (6.1-1) unstable; urgency=medium
+
+  * update to 6.1-rc6
+
+ -- Carl Klemm <carl@uvos.xyz>  Wed, 23 Nov 2022 21:00:36 +0100
+
 omap-linux (5.18.19.3-1) unstable; urgency=medium
 
   * power: cpcap-battery: Do not issue low signal too frequently
