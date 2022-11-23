@@ -644,13 +644,18 @@ int asoc_simple_dai_init(struct snd_soc_pcm_runtime *rtd)
 	for_each_rtd_components(rtd, i, component) {
 		if (component->driver->set_jack) {
 			if (!priv->hp_jack) {
+				struct snd_soc_jack_pin *pin = devm_kzalloc(priv->snd_card.dev, sizeof(*pin), GFP_KERNEL);
+				pin->pin = "Headphones";
+				pin->mask = SND_JACK_HEADPHONE;
+
+
 				priv->hp_jack = devm_kzalloc(priv->snd_card.dev,
 					sizeof(*priv->hp_jack), GFP_KERNEL);
 				snd_soc_card_jack_new_pins(&priv->snd_card,
 					"Headphones",
 					SND_JACK_HEADPHONE,
 					&priv->hp_jack->jack,
-					NULL, 1);
+					pin, 1);
 			}
 			snd_soc_component_set_jack(component, &priv->hp_jack->jack, NULL);
 		}
