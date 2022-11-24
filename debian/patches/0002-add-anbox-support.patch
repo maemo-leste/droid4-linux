@@ -1,5 +1,15 @@
+From 102410c22338daa602862daff8adf2e559f60e9d Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Thu, 24 Nov 2022 20:31:10 +0100
+Subject: [PATCH 2/3] add anbox support
+
+Signed-off-by: Carl Philipp Klemm <philipp@uvos.xyz>
+---
+ arch/arm/configs/omap2plus_defconfig | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 7804dc22cef4..61e77be1f149 100644
+index ea8579df893b..14ecf84965ca 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
 @@ -85,6 +85,29 @@ CONFIG_IP_PNP=y
@@ -32,3 +42,6 @@ index 7804dc22cef4..61e77be1f149 100644
  CONFIG_NETFILTER=y
  CONFIG_NF_CONNTRACK=m
  CONFIG_NF_LOG_NETDEV=m
+-- 
+2.38.1
+

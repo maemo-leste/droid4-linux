@@ -1,5 +1,15 @@
+From bbb02399c3b106337f6d9336ac648c907ace3d03 Mon Sep 17 00:00:00 2001
+From: Carl Philipp Klemm <philipp@uvos.xyz>
+Date: Thu, 24 Nov 2022 20:32:28 +0100
+Subject: [PATCH 3/3] enable nftables and wireguard
+
+Signed-off-by: Carl Philipp Klemm <philipp@uvos.xyz>
+---
+ arch/arm/configs/omap2plus_defconfig | 99 ++++++++++++++++++++++++++++
+ 1 file changed, 99 insertions(+)
+
 diff --git a/arch/arm/configs/omap2plus_defconfig b/arch/arm/configs/omap2plus_defconfig
-index 61e77be1f149..0c54200da092 100644
+index 14ecf84965ca..025e72539c71 100644
 --- a/arch/arm/configs/omap2plus_defconfig
 +++ b/arch/arm/configs/omap2plus_defconfig
 @@ -76,11 +76,18 @@ CONFIG_ZSMALLOC=m
@@ -181,8 +191,8 @@ index 61e77be1f149..0c54200da092 100644
 +CONFIG_NETLINK_DIAG=m
  CONFIG_NET_SWITCHDEV=y
  CONFIG_CAN=m
- CONFIG_CAN_C_CAN=m
-@@ -346,6 +442,9 @@ CONFIG_ATA=y
+ CONFIG_BT=m
+@@ -345,6 +441,9 @@ CONFIG_ATA=y
  CONFIG_SATA_AHCI_PLATFORM=y
  CONFIG_AHCI_DM816=m
  CONFIG_NETDEVICES=y
@@ -192,3 +202,6 @@ index 61e77be1f149..0c54200da092 100644
  # CONFIG_NET_VENDOR_ARC is not set
  # CONFIG_NET_VENDOR_BROADCOM is not set
  # CONFIG_NET_VENDOR_CIRRUS is not set
+-- 
+2.38.1
+
