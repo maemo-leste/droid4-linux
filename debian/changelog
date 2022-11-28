@@ -1,3 +1,12 @@
+omap-linux (6.1.0.1-1) unstable; urgency=medium
+
+  * ARM: dts: N900: use iio driver for accelerometer
+  * bus: ti-sysc: Add otg quirk flags for omap3 musb
+  * ARM: OMAP2+: Drop legacy hwmod data for omap3 otg
+  * Revert "partially Revert "usb: musb: Set the DT node on the child device""
+
+ -- Carl Klemm <carl@uvos.xyz>  Wed, 23 Nov 2022 21:00:36 +0100
+
 omap-linux (6.1-1) unstable; urgency=medium
 
   * update to 6.1-rc6
