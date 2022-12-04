@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/dts-v1/;
+
+#include "motorola-mapphone-xt910-xt912.dtsi"
+
+/ {
+	model = "Motorola Razr xt912";
+	compatible = "motorola,razr-xt912,", "ti,omap4430", "ti,omap4";
+
+	chosen {
+		stdout-path = &uart3;
+	};
+
+	aliases {
+		display0 = &lcd0;
+		display1 = &hdmi0;
+	};
+};
