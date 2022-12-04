@@ -1,3 +1,9 @@
+omap-linux (6.1.0.2-1) unstable; urgency=medium
+
+  * Add support for xt91x
+
+ -- Carl Klemm <carl@uvos.xyz>  Sun, 4 Dec 2022 14:00:33 +0100
+
 omap-linux (6.1.0.1-1) unstable; urgency=medium
 
   * ARM: dts: N900: use iio driver for accelerometer
