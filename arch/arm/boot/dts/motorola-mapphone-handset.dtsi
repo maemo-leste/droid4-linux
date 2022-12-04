@@ -68,7 +68,7 @@
 };
 
 &i2c2 {
-	touchscreen@4a {
+	touchscreen: touchscreen@4a {
 		compatible = "atmel,maxtouch";
 		reg = <0x4a>;
 		pinctrl-names = "default";
