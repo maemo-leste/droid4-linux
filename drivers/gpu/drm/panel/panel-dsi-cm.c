@@ -62,6 +62,10 @@ struct panel_drv_data {
 
 	struct regulator_bulk_data supplies[DCS_REGULATOR_SUPPLY_NUM];
 
+	u8 vendor;			/* Panel manufacturer ID */
+	u8 controller;			/* Panel controller version */
+	u8 driver;			/* Panel controller driver version */
+
 	bool use_dsi_backlight;
 
 	/* runtime variables */
@@ -153,17 +157,20 @@ static int dsicm_sleep_out(struct panel_drv_data *ddata)
 	return 0;
 }
 
-static int dsicm_get_id(struct panel_drv_data *ddata, u8 *id1, u8 *id2, u8 *id3)
+static int dsicm_init_id(struct panel_drv_data *ddata)
 {
 	int r;
 
-	r = dsicm_dcs_read_1(ddata, DCS_GET_ID1, id1);
+	if (ddata->vendor || ddata->controller || ddata->driver)
+		return 0;
+
+	r = dsicm_dcs_read_1(ddata, DCS_GET_ID1, &ddata->vendor);
 	if (r)
 		return r;
-	r = dsicm_dcs_read_1(ddata, DCS_GET_ID2, id2);
+	r = dsicm_dcs_read_1(ddata, DCS_GET_ID2, &ddata->controller);
 	if (r)
 		return r;
-	r = dsicm_dcs_read_1(ddata, DCS_GET_ID3, id3);
+	r = dsicm_dcs_read_1(ddata, DCS_GET_ID3, &ddata->driver);
 	if (r)
 		return r;
 
@@ -240,20 +247,9 @@ static ssize_t hw_revision_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct panel_drv_data *ddata = dev_get_drvdata(dev);
-	u8 id1, id2, id3;
-	int r = -ENODEV;
 
-	mutex_lock(&ddata->lock);
-
-	if (ddata->enabled)
-		r = dsicm_get_id(ddata, &id1, &id2, &id3);
-
-	mutex_unlock(&ddata->lock);
-
-	if (r)
-		return r;
-
-	return sysfs_emit(buf, "%02x.%02x.%02x\n", id1, id2, id3);
+	return sysfs_emit(buf, "%02x.%02x.%02x\n",
+			  ddata->vendor, ddata->controller, ddata->driver);
 }
 
 static DEVICE_ATTR_RO(num_dsi_errors);
@@ -597,7 +593,6 @@ err:
 
 static int dsicm_power_on(struct panel_drv_data *ddata)
 {
-	u8 id1, id2, id3;
 	int r;
 
 	dsicm_hw_reset(ddata);
@@ -610,7 +605,7 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 	if (r)
 		goto err;
 
-	r = dsicm_get_id(ddata, &id1, &id2, &id3);
+	r = dsicm_init_id(ddata);
 	if (r)
 		goto err;
 
@@ -657,7 +652,7 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 
 	if (!ddata->intro_printed) {
 		dev_info(&ddata->dsi->dev, "panel revision %02x.%02x.%02x\n",
-			id1, id2, id3);
+			ddata->vendor, ddata->controller, ddata->driver);
 		ddata->intro_printed = true;
 	}
 
