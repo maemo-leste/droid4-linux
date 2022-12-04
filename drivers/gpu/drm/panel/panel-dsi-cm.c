@@ -170,12 +170,13 @@ static int dsicm_get_id(struct panel_drv_data *ddata, u8 *id1, u8 *id2, u8 *id3)
 	return 0;
 }
 
-static int dsicm_set_update_window(struct panel_drv_data *ddata)
+static int dsicm_set_update_window(struct panel_drv_data *ddata, int x_offset)
 {
 	struct mipi_dsi_device *dsi = ddata->dsi;
 	int r;
 
-	r = mipi_dsi_dcs_set_column_address(dsi, 0, ddata->mode.hdisplay - 1);
+	r = mipi_dsi_dcs_set_column_address(dsi, x_offset,
+					    ddata->mode.hdisplay + x_offset - 1);
 	if (r < 0)
 		return r;
 
@@ -626,7 +627,7 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 	if (r)
 		goto err;
 
-	r = dsicm_set_update_window(ddata);
+	r = dsicm_set_update_window(ddata, 0);
 	if (r)
 		goto err;
 
