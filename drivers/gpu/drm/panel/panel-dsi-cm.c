@@ -627,8 +627,6 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 
 	ddata->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
-	dsi_mipi_cm_400_540_960_m2_v1_panel_enable_1(ddata->dsi);
-
 	r = dsicm_sleep_out(ddata);
 	if (r)
 		goto err;
@@ -658,19 +656,10 @@ static int dsicm_power_on(struct panel_drv_data *ddata)
 	if (r)
 		goto err;
 
-	dsi_mipi_cm_400_540_960_m2_v1_panel_enable_2(ddata->dsi);
-
 	if (ddata->panel_data->te_support) {
-		r = mipi_dsi_dcs_set_tear_on(ddata->dsi,
-					MIPI_DSI_DCS_TEAR_MODE_VBLANK);
+		r = mipi_dsi_dcs_set_tear_on(ddata->dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
 		if (r)
 			goto err;
-		if (ddata->panel_data->te_scan_line) {
-			r = mipi_dsi_dcs_set_tear_scanline(ddata->dsi,
-					ddata->panel_data->te_scan_line);
-			if (r)
-				goto err;
-		}
 	}
 
 	/* possible panel bug */
@@ -977,8 +966,7 @@ static const struct dsic_panel_data droid4_data = {
 	.height_mm = 89,
 	.max_hs_rate = 300000000,
 	.max_lp_rate = 10000000,
-	.te_support = true,
-	.te_scan_line = 300,
+	.te_support = false,
 };
 
 static const struct dsic_panel_data razr_xt9xx_data = {
