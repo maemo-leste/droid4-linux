@@ -17,13 +17,15 @@ Requires node properties:
    * "motorola,cpcap-led-cp"		(Camera Privacy LED)
 - label: see Documentation/devicetree/bindings/leds/common.txt
 - vdd-supply: A phandle to the regulator powering the LED
+- cpcap-phandle: A phandle to the cpcap mfd device node
 
 Example:
 
-&cpcap {
+/ {
 	cpcap_led_red: red-led {
 		compatible = "motorola,cpcap-led-red";
 		label = "cpcap:red";
 		vdd-supply = <&sw5>;
+		cpcap-phandle = <&cpcap>;
 	};
 };

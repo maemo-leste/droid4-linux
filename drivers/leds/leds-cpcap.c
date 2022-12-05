@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
+#include <linux/spi/spi.h>
 
 #define CPCAP_LED_NO_CURRENT 0x0001
 
@@ -56,6 +57,15 @@ static const struct cpcap_led_info cpcap_led_cp = {
 	.limit		= 1,
 	.init_mask	= 0x03FF,
 	.init_val	= 0x0008,
+};
+
+/* keyboard led */
+static const struct cpcap_led_info cpcap_led_kl = {
+	.reg		= CPCAP_REG_KLC,
+	.mask		= 0x0001,
+	.limit		= 1,
+	.init_mask	= 0x07FF,
+	.init_val	= 0x07F0,
 };
 
 struct cpcap_led {
@@ -152,6 +162,7 @@ static const struct of_device_id cpcap_led_of_match[] = {
 	{ .compatible = "motorola,cpcap-led-blue",  .data = &cpcap_led_blue },
 	{ .compatible = "motorola,cpcap-led-adl", .data = &cpcap_led_adl },
 	{ .compatible = "motorola,cpcap-led-cp", .data = &cpcap_led_cp },
+	{ .compatible = "motorola,cpcap-led-kl", .data = &cpcap_led_kl },
 	{},
 };
 MODULE_DEVICE_TABLE(of, cpcap_led_of_match);
@@ -160,6 +171,18 @@ static int cpcap_led_probe(struct platform_device *pdev)
 {
 	struct cpcap_led *led;
 	int err;
+	struct device_node *mfd_node;
+	struct device *cpcap_dev;
+
+	mfd_node = of_parse_phandle(pdev->dev.of_node, "cpcap-phandle", 0);
+	if (!mfd_node) {
+		dev_err(&pdev->dev, "cpcap-phandle is missing in device tree\n");
+		return -ENODEV;
+	}
+
+	cpcap_dev = bus_find_device_by_of_node(&spi_bus_type, mfd_node);
+	if (IS_ERR_OR_NULL(cpcap_dev))
+		return -EAGAIN;
 
 	led = devm_kzalloc(&pdev->dev, sizeof(*led), GFP_KERNEL);
 	if (!led)
@@ -168,14 +191,21 @@ static int cpcap_led_probe(struct platform_device *pdev)
 	led->info = device_get_match_data(&pdev->dev);
 	led->dev = &pdev->dev;
 
+	if (!led->info) {
+		dev_warn(led->dev, "Can't get match data");
+		return -ENODEV;
+	}
+
 	if (led->info->reg == 0x0000) {
 		dev_err(led->dev, "Unsupported LED");
 		return -ENODEV;
 	}
 
-	led->regmap = dev_get_regmap(pdev->dev.parent, NULL);
-	if (!led->regmap)
+	led->regmap = dev_get_regmap(cpcap_dev, NULL);
+	if (!led->regmap) {
+		dev_err(led->dev, "Couldn't get regmap from cpcap mdf device");
 		return -ENODEV;
+	}
 
 	led->vdd = devm_regulator_get(&pdev->dev, "vdd");
 	if (IS_ERR(led->vdd)) {
