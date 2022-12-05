@@ -66,9 +66,6 @@
 
 #define CPCAP_BATTERY_CC_SAMPLE_PERIOD_MS	250
 
-#define CPCAP_BATTERY_EB41_HW4X_ID 0x9E
-#define CPCAP_BATTERY_BW8X_ID 0x98
-
 enum {
 	CPCAP_BATTERY_IIO_BATTDET,
 	CPCAP_BATTERY_IIO_VOLTAGE,
@@ -129,6 +126,7 @@ struct cpcap_battery_ddata {
 	struct power_supply *psy;
 	struct cpcap_battery_config config;
 	struct cpcap_battery_state_data state[CPCAP_BATTERY_STATE_NR];
+	struct delayed_work low_irq_work;
 	u32 cc_lsb;		/* μAms per LSB */
 	atomic_t active;
 	int charge_full;
@@ -228,6 +226,21 @@ static int cpcap_battery_get_current(struct cpcap_battery_ddata *ddata)
 	}
 
 	return value * 1000;
+}
+
+static int cpcap_battery_get_charge_current_reg(struct cpcap_battery_ddata *ddata)
+{
+	int error;
+	unsigned int val;
+
+	error = regmap_read(ddata->reg, CPCAP_REG_CRM, &val);
+
+	if (error) {
+		dev_err(ddata->dev, "%s failed with %i\n", __func__, error);
+		return -1;
+	}
+
+	return val & 0xf;
 }
 
 /**
@@ -364,22 +377,9 @@ cpcap_battery_read_accumulated(struct cpcap_battery_ddata *ddata,
  * kernel on droid 4, full is 4351000 and software initiates shutdown
  * at 3078000. The device will die around 2743000.
  */
-static const struct cpcap_battery_config cpcap_battery_eb41_data = {
+static struct cpcap_battery_config cpcap_battery_mot_data = {
 	.cd_factor = 0x3cc,
 	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
-	.info.voltage_max_design = 4351000,
-	.info.voltage_min_design = 3100000,
-	.info.charge_full_design = 1740000,
-	.bat.constant_charge_voltage_max_uv = 4200000,
-};
-
-/* Values for the extended Droid Bionic battery bw8x. */
-static const struct cpcap_battery_config cpcap_battery_bw8x_data = {
-	.cd_factor = 0x3cc,
-	.info.technology = POWER_SUPPLY_TECHNOLOGY_LION,
-	.info.voltage_max_design = 4200000,
-	.info.voltage_min_design = 3200000,
-	.info.charge_full_design = 2760000,
 	.bat.constant_charge_voltage_max_uv = 4200000,
 };
 
@@ -398,7 +398,7 @@ static const struct cpcap_battery_config cpcap_battery_unkown_data = {
 
 static int cpcap_battery_match_nvmem(struct device *dev, const void *data)
 {
-	if (strcmp(dev_name(dev), "89-500029ba0f73") == 0)
+	if (strncmp(dev_name(dev), "89-500", 6) == 0)
 		return 1;
 	else
 		return 0;
@@ -407,30 +407,63 @@ static int cpcap_battery_match_nvmem(struct device *dev, const void *data)
 static void cpcap_battery_detect_battery_type(struct cpcap_battery_ddata *ddata)
 {
 	struct nvmem_device *nvmem;
-	u8 battery_id = 0;
+	char buf[24];
+	u8 capacity;
+	u8 mul_idx;
+	u8 charge_voltage;
+	u32 v;
+	static const u32 multipliers[] = {20, 10, 10, 10, 10, 40, 10, 20, 40};
 
 	ddata->check_nvmem = false;
 
 	nvmem = nvmem_device_find(NULL, &cpcap_battery_match_nvmem);
 	if (IS_ERR_OR_NULL(nvmem)) {
-		ddata->check_nvmem = true;
 		dev_info_once(ddata->dev, "Can not find battery nvmem device. Assuming generic lipo battery\n");
-	} else if (nvmem_device_read(nvmem, 2, 1, &battery_id) < 0) {
-		battery_id = 0;
-		ddata->check_nvmem = true;
-		dev_warn(ddata->dev, "Can not read battery nvmem device. Assuming generic lipo battery\n");
+		goto unknown;
 	}
 
-	switch (battery_id) {
-	case CPCAP_BATTERY_EB41_HW4X_ID:
-		ddata->config = cpcap_battery_eb41_data;
-		break;
-	case CPCAP_BATTERY_BW8X_ID:
-		ddata->config = cpcap_battery_bw8x_data;
-		break;
-	default:
-		ddata->config = cpcap_battery_unkown_data;
+	if (nvmem_device_read(nvmem, 96, 4, buf) < 0 ||
+	    strncmp(buf, "COPR", 4) != 0 ||
+	    nvmem_device_read(nvmem, 104, 24, buf) < 0 ||
+	    strncmp(buf, "MOTOROLA E.P CHARGE ONLY", 24) != 0) {
+		dev_warn(ddata->dev, "Unknown battery nvmem device. Assuming generic lipo battery\n");
+		goto unknown;
 	}
+
+	if (nvmem_device_read(nvmem, 49, 1, &mul_idx) < 0 ||
+	    nvmem_device_read(nvmem, 34, 1, &capacity) < 0 ||
+	    nvmem_device_read(nvmem, 65, 1, &charge_voltage) < 0) {
+		dev_warn(ddata->dev, "Can not read battery nvmem device. Assuming generic lipo battery\n");
+		goto unknown;
+	}
+
+	/* design capacity */
+	mul_idx -= 2;
+
+	if (mul_idx < ARRAY_SIZE(multipliers))
+		v = multipliers[mul_idx];
+	else
+		v = 10;
+
+	cpcap_battery_mot_data.info.charge_full_design = 1000 * v * capacity;
+
+	/* design max voltage */
+	v = 1000 * ((16702 * charge_voltage) / 1000 + 1260);
+	cpcap_battery_mot_data.info.voltage_max_design = v;
+
+	/* design min voltage */
+	if (v > 4200000)
+		cpcap_battery_mot_data.info.voltage_min_design = 3100000;
+	else
+		cpcap_battery_mot_data.info.voltage_min_design = 3200000;
+
+	ddata->config = cpcap_battery_mot_data;
+
+	return;
+
+unknown:
+	ddata->check_nvmem = true;
+	ddata->config = cpcap_battery_unkown_data;
 }
 
 /**
@@ -665,7 +698,7 @@ static int cpcap_battery_get_property(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_STATUS_FULL;
 			break;
 		}
-		if (cpcap_battery_cc_get_avg_current(ddata) < 0)
+		if (cpcap_battery_get_charge_current_reg(ddata) != 0)
 			val->intval = POWER_SUPPLY_STATUS_CHARGING;
 		else
 			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -891,9 +924,13 @@ static irqreturn_t cpcap_battery_irq_thread(int irq, void *data)
 		dev_info(ddata->dev, "Coulomb counter calibration done\n");
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW:
-		if (latest->current_ua >= 0)
+		if (latest->current_ua >= 0 &&
+		    !delayed_work_pending((&ddata->low_irq_work))) {
 			dev_warn(ddata->dev, "Battery low at %imV!\n",
 				latest->voltage / 1000);
+			schedule_delayed_work(&ddata->low_irq_work, 30 * HZ);
+			disable_irq_nosync(d->irq);
+		}
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_POWEROFF:
 		if (latest->current_ua >= 0 && latest->voltage <= 3200000) {
@@ -1064,6 +1101,21 @@ restore:
 	return error;
 }
 
+static void cpcap_battery_lowbph_enable(struct work_struct *work)
+{
+	struct delayed_work *d_work = to_delayed_work(work);
+	struct cpcap_battery_ddata *ddata = container_of(d_work,
+			struct cpcap_battery_ddata, low_irq_work);
+	struct cpcap_interrupt_desc *d;
+
+	list_for_each_entry(d, &ddata->irq_list, node) {
+		if (d->action == CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW)
+			break;
+	}
+
+	enable_irq(d->irq);
+}
+
 #ifdef CONFIG_OF
 static const struct of_device_id cpcap_battery_id_table[] = {
 	{
@@ -1094,6 +1146,8 @@ static int cpcap_battery_probe(struct platform_device *pdev)
 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
 	if (!ddata)
 		return -ENOMEM;
+
+	INIT_DELAYED_WORK(&ddata->low_irq_work, cpcap_battery_lowbph_enable);
 
 	cpcap_battery_detect_battery_type(ddata);
 
@@ -1161,6 +1215,9 @@ static int cpcap_battery_remove(struct platform_device *pdev)
 				   0xffff, 0);
 	if (error)
 		dev_err(&pdev->dev, "could not disable: %i\n", error);
+
+	/* make sure to call enable_irq() if needed */
+	flush_delayed_work(&ddata->low_irq_work);
 
 	return 0;
 }
