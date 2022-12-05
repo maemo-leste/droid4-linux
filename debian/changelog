@@ -1,3 +1,10 @@
+omap-linux (6.1.0.4-1) unstable; urgency=medium
+
+  * Remove touchscreen buttons from xt91x dtb
+  * Maybe fix xt91x rolling issue
+
+ -- Carl Klemm <carl@uvos.xyz>  Mon, 5 Dec 2022 21:00:33 +0100
+
 omap-linux (6.1.0.3-1) unstable; urgency=medium
 
   * Add Missing xt910 dtb
