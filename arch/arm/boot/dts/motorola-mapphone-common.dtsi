@@ -24,6 +24,26 @@
 		reg = <0x80000000 0x3fd00000>;	/* 1021 MB */
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * The stock kernel has 2M@0xa0000000 for ram_console using the
+		 * old file format. That won't work for us, so let's ignore the
+		 * first 512K of that and just overwrite the rest and configure
+		 * only 384K instead of 2M.
+		 */
+		ramoops@a0080000 {
+			compatible = "ramoops";
+			reg = <0xa0080000 0x60000>;
+			record-size = <0x20000>;
+			console-size = <0x20000>;
+			ftrace-size = <0x20000>;
+		};
+	};
+
 	/* Poweroff GPIO probably connected to CPCAP */
 	gpio-poweroff {
 		compatible = "gpio-poweroff";
@@ -614,12 +634,12 @@
 /* Configure pwm clock source for timers 8 & 9 */
 &timer8 {
 	assigned-clocks = <&abe_clkctrl OMAP4_TIMER8_CLKCTRL 24>;
-	assigned-clock-parents = <&sys_clkin_ck>;
+	assigned-clock-parents = <&sys_32k_ck>;
 };
 
 &timer9 {
 	assigned-clocks = <&l4_per_clkctrl OMAP4_TIMER9_CLKCTRL 24>;
-	assigned-clock-parents = <&sys_clkin_ck>;
+	assigned-clock-parents = <&sys_32k_ck>;
 };
 
 /*
@@ -635,11 +655,40 @@
 			       &omap4_pmx_core 0x110>;
 	uart-has-rtscts;
 	current-speed = <115200>;
+
+	modem {
+		compatible = "motorola,mapphone-mdm6600-serial";
+		ttymask = <0 0x00001fea>;
+		phys = <&fsusb1_phy>;
+		phy-names = "usb";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		mot_mdm6600_audio: audio-codec@2 {
+			compatible = "motorola,mapphone-mdm6600-codec";
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#sound-dai-cells = <1>;
+
+			port@0 {
+				mot_mdm6600_audio_codec0: endpoint {
+					remote-endpoint = <&cpu_dai_mdm>;
+				};
+			};
+		};
+
+		gnss@4 {
+			compatible = "motorola,mapphone-mdm6600-gnss";
+			reg = <4>;
+		};
+	};
 };
 
 &uart3 {
 	interrupts-extended = <&wakeupgen GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH
 			       &omap4_pmx_core 0x17c>;
+	overrun-throttle-ms = <500>;
 };
 
 &uart4 {
@@ -702,12 +751,18 @@
 	pinctrl-0 = <&mcbsp2_pins>;
 	status = "okay";
 
-	mcbsp2_port: port {
-		cpu_dai2: endpoint {
-			dai-format = "i2s";
-			remote-endpoint = <&cpcap_audio_codec0>;
-			frame-master = <&cpcap_audio_codec0>;
-			bitclock-master = <&cpcap_audio_codec0>;
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		mcbsp2_port: port@0 {
+			reg = <0>;
+			cpu_dai2: endpoint@0 {
+				dai-format = "i2s";
+				remote-endpoint = <&cpcap_audio_codec0>;
+				frame-master = <&cpcap_audio_codec0>;
+				bitclock-master = <&cpcap_audio_codec0>;
+			};
 		};
 	};
 };
@@ -718,12 +773,26 @@
 	pinctrl-0 = <&mcbsp3_pins>;
 	status = "okay";
 
-	mcbsp3_port: port {
-		cpu_dai3: endpoint {
-			dai-format = "dsp_a";
-			frame-master = <&cpcap_audio_codec1>;
-			bitclock-master = <&cpcap_audio_codec1>;
-			remote-endpoint = <&cpcap_audio_codec1>;
+	ports {
+		mcbsp3_port: port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			cpu_dai3: endpoint@0 {
+				reg = <0>;
+				dai-format = "dsp_a";
+				frame-master = <&cpcap_audio_codec1>;
+				bitclock-master = <&cpcap_audio_codec1>;
+				remote-endpoint = <&cpcap_audio_codec1>;
+			};
+
+			cpu_dai_mdm: endpoint@1 {
+				reg = <1>;
+				dai-format = "dsp_a";
+				frame-master = <&cpcap_audio_codec1>;
+				bitclock-master = <&cpcap_audio_codec1>;
+				remote-endpoint = <&mot_mdm6600_audio_codec0>;
+			};
 		};
 	};
 };
