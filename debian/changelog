@@ -1,3 +1,10 @@
+omap-linux (6.1.0.5-1) unstable; urgency=medium
+
+  * Re add droid3 support
+  * revert non-working fix for xt91x rolling issue
+
+ -- Carl Klemm <carl@uvos.xyz>  Mon, 5 Dec 2022 22:30:33 +0100
+
 omap-linux (6.1.0.4-1) unstable; urgency=medium
 
   * Remove touchscreen buttons from xt91x dtb
