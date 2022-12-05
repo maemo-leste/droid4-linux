@@ -989,7 +989,7 @@ static const struct dsic_panel_data razr_xt9xx_data = {
 	.height_mm = 95,
 	.max_hs_rate = 300000000,
 	.max_lp_rate = 10000000,
-	.te_support = false,
+	.te_support = true,
 	.amoled_bl = true,
 };
 
