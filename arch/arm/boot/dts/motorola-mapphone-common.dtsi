@@ -104,39 +104,6 @@
 
 		dais = <&mcbsp2_port>, <&mcbsp3_port>;
 	};
-	mapphone_touchscreen {
-			compatible = "touchscreen-buttons";
-			touchscreen_phandle = <&touchscreen>;
-			menu {
-				x-position = <0>;
-				y-position = <959>;
-				x-size = <256>;
-				y-size = <65>;
-				keycode = <KEY_F9>;
-			};
-			home {
-				x-position = <256>;
-				y-position = <959>;
-				x-size = <256>;
-				y-size = <65>;
-				keycode = <KEY_F10>;
-			};
-			back {
-				x-position = <512>;
-				y-position = <959>;
-				x-size = <256>;
-				y-size = <65>;
-				keycode = <KEY_F11>;
-			};
-			search {
-				x-position = <768>;
-				y-position = <959>;
-				x-size = <256>;
-				y-size = <65>;
-				keycode = <KEY_SEARCH>;
-			};
-	};
-
 };
 
 &cpu_thermal {
