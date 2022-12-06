@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /dts-v1/;
 
-#include "motorola-mapphone-common.dtsi"
+#include "motorola-mapphone-xt8xx.dtsi"
 
 / {
 	model = "Motorola Droid 3 XT862";
 	compatible = "motorola,droid3", "ti,omap4430", "ti,omap4";
+
+	aliases {
+		display0 = &lcd0;
+		display1 = &hdmi0;
+	};
 
 	/*
 	 * We use pad 0x4a100116 abe_dmic_din3.gpio_122 as the irq instead
