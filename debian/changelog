@@ -1,3 +1,9 @@
+omap-linux (6.1.0.7-1) unstable; urgency=medium
+
+  * ASoC: simple-card-utils: fix null pointer dref in asoc_simple_dai_init
+
+ -- Carl Klemm <carl@uvos.xyz>  Wed, 7 Dec 2022 23:18:00 +0100
+
 omap-linux (6.1.0.6-1) unstable; urgency=medium
 
   * Fix als and vibra on n900
