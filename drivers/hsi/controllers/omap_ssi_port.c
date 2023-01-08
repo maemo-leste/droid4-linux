@@ -327,12 +327,14 @@ static int ssi_start_transfer(struct list_head *queue)
 	msg = list_first_entry(queue, struct hsi_msg, link);
 	if (msg->status != HSI_STATUS_QUEUED)
 		return 0;
+    /*
 	if ((msg->sgt.nents) && (msg->sgt.sgl->length > sizeof(u32)))
 		lch = ssi_claim_lch(msg);
 	if (lch >= 0)
 		return ssi_start_dma(msg, lch);
 	else
-		return ssi_start_pio(msg);
+    */
+    return ssi_start_pio(msg);
 }
 
 static int ssi_async_break(struct hsi_msg *msg)
