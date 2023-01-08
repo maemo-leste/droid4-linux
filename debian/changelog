@@ -1,3 +1,9 @@
+omap-linux (6.1.0.8-1) unstable; urgency=medium
+
+  * Fix modem resets in Nokia N900, thanks to Sicelo
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 08 Jan 2023 13:06:22 +0100
+
 omap-linux (6.1.0.7-1) unstable; urgency=medium
 
   * ASoC: simple-card-utils: fix null pointer dref in asoc_simple_dai_init
