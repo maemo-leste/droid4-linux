@@ -28,8 +28,9 @@ else
 endif
 
 clean:
-	rm -rf debian/*tmp debian/files
-	$(MAKE) mrproper
+	rm -rf debian/*tmp debian/files debian/linux-headers \
+		debian/linux-image debian/linux-image-dbg
+	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) mrproper
 
 build:  build-arch
 binary: binary-arch
