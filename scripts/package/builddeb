@@ -202,18 +202,37 @@ export DEB_MAINT_PARAMS="\$*"
 # Tell initramfs builder whether it's wanted
 export INITRD=No
 
-case "$script" in
-postinst)
-	depmod $version
-	mkdir -p /boot/boot
-	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb
-	cp -f /boot/vmlinuz-$version /boot/boot/zImage
-	cp -f /usr/lib/linux-image-omap/omap4-droid4-xt894.dtb /usr/lib/linux-image-omap/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-omap/omap4-droid3-xt862.dtb  /usr/lib/linux-image-omap/omap3-n900.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt912.dtb /boot/boot
+$(case "$script" in
+	postinst)
+	cat << POSTINST
+depmod $version
+mkdir -p /boot/boot
+rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb
+cp -f /boot/vmlinuz-$version /boot/boot/zImage
+cp -f /usr/lib/linux-image-omap/omap4-droid4-xt894.dtb /usr/lib/linux-image-omap/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-omap/omap4-droid3-xt862.dtb  /usr/lib/linux-image-omap/omap3-n900.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt912.dtb /boot/boot
+POSTINST
 	;;
-postrm)
-	rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb
+	prerm)
+	cat << PRERM
+if [ "\$1" != remove ]; then
+	if [ -x /usr/sbin/dkms ]; then
+		dkms status -k "$version" 2>/dev/null | grep ": installed" | while read line; do
+			name=\`echo "\$line" | awk '{print \$1}' | sed 's/,\$//'\`
+			vers=\`echo "\$line" | awk '{print \$2}' | sed 's/,\$//'\`
+			arch=\`echo "\$line" | awk '{print \$4}' | sed 's/:\$//'\`
+			dkms unbuild -m \$name -v \$vers -k "$version" -a \$arch
+		done
+	fi
+	exit 0
+fi
+PRERM
 	;;
-esac
+	postrm)
+	cat << POSTRM
+rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb
+POSTRM
+	;;
+esac)
 
 test -d $debhookdir/$script.d && run-parts --arg="$version" --arg="/$installed_image_path" $debhookdir/$script.d
 
@@ -225,6 +244,28 @@ done
 if [ "$ARCH" != "um" ]; then
 	if is_enabled CONFIG_MODULES; then
 		deploy_kernel_headers debian/linux-headers
+		mkdir -m 755 -p "debian/linux-headers/DEBIAN"
+		cat <<EOF > "debian/linux-headers/DEBIAN/postinst"
+#!/usr/bin/perl
+# Author: Michael Gilbert <michael.s.gilbert@gmail.com>
+# Origin: Stripped down version of the linux-headers postinst from Ubuntu's
+#         2.6.32-14-generic kernel, which was itself derived from a
+#         Debian linux-image postinst script.
+
+$|=1;
+my \$version  = "$version";
+
+if (-d "/etc/kernel/header_postinst.d") {
+  system ("run-parts --report --exit-on-error --arg=\$version " .
+          "/etc/kernel/header_postinst.d") &&
+            die "Failed to process /etc/kernel/header_postinst.d";
+}
+
+exit 0;
+
+__END__
+EOF
+		chmod 755 "debian/linux-headers/DEBIAN/postinst"
 		create_package linux-headers-omap debian/linux-headers
 	fi
 
