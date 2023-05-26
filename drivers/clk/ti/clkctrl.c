@@ -101,11 +101,13 @@ static bool _omap4_is_timeout(union omap4_timeout *time, u32 timeout)
 	if (unlikely(_early_timeout || timekeeping_suspended)) {
 		if (time->cycles++ < timeout) {
 			udelay(1 * 2);
+			cpu_relax();
 			return false;
 		}
 	} else {
 		if (!ktime_to_ns(time->start)) {
 			time->start = ktime_get();
+			cpu_relax();
 			return false;
 		}
 
