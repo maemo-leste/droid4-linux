@@ -1,10 +1,18 @@
-omap-linux (6.1.20.0-2) unstable; urgency=medium
+omap-linux (6.1.30.1-1) unstable; urgency=medium
+
+  * Update to latest linux-stable
+  * enable more SI4713 related modules
+  * add tmlinds patch to possibly resolve a long uptime reboot issue
+
+ -- Carl Klemm <carl@uvos.xyz> Wed, 31 May 2023 19:04:01 +0200
+
+ omap-linux (6.1.20.0-2) unstable; urgency=medium
 
   * WIP: idle reporting patch from Tony
   * patch builddep to provide debian compatible scripts
 
  -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sat, 15 Apr 2023 17:03:24 +0300
-
+ 
 omap-linux (6.1.20.0-1) unstable; urgency=medium
 
   * Update to latest linux-stable
