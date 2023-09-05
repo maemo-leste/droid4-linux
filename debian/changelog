@@ -1,3 +1,10 @@
+omap-linux (6.1.48.1-1) unstable; urgency=medium
+
+  * Potentally fix the rx51 ir device
+  * Revert THUMB2 support, as it seams to be causeing omap4 hangs
+
+ -- Carl Klemm <carl@uvos.xyz> Tue, 05 Sep 2023 22:33:43 +0200
+
 omap-linux (6.1.48.0-1) unstable; urgency=medium
 
   * Update to latest linux-stable
