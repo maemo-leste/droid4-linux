@@ -167,6 +167,11 @@ static void ir_rx51_release(struct rc_dev *dev)
 	clear_bit(1, &ir_rx51->device_is_open);
 }
 
+static struct ir_rx51 ir_rx51 = {
+	.duty_cycle	= 50,
+	.wbuf_index	= -1,
+};
+
 static int ir_rx51_set_duty_cycle(struct rc_dev *dev, u32 duty)
 {
 	struct ir_rx51 *ir_rx51 = dev->priv;
@@ -190,9 +195,8 @@ static int ir_rx51_set_tx_carrier(struct rc_dev *dev, u32 carrier)
 
 #ifdef CONFIG_PM
 
-static int ir_rx51_suspend(struct platform_device *pdev, pm_message_t state)
+static int ir_rx51_suspend(struct platform_device *dev, pm_message_t state)
 {
-       struct ir_rx51 *ir_rx51 = platform_get_drvdata(pdev);
 	/*
 	 * In case the device is still open, do not suspend. Normally
 	 * this should not be a problem as lircd only keeps the device
@@ -201,15 +205,15 @@ static int ir_rx51_suspend(struct platform_device *pdev, pm_message_t state)
 	 * were in a middle of a transmit. Thus, we defer any suspend
 	 * actions until transmit has completed.
 	 */
-       if (test_and_set_bit(1, &ir_rx51->device_is_open))
+	if (test_and_set_bit(1, &ir_rx51.device_is_open))
 		return -EAGAIN;
 
-       clear_bit(1, &ir_rx51->device_is_open);
+	clear_bit(1, &ir_rx51.device_is_open);
 
 	return 0;
 }
 
-static int ir_rx51_resume(struct platform_device *pdev)
+static int ir_rx51_resume(struct platform_device *dev)
 {
 	return 0;
 }
@@ -221,46 +225,35 @@ static int ir_rx51_resume(struct platform_device *pdev)
 
 #endif /* CONFIG_PM */
 
-static int ir_rx51_probe(struct platform_device *pdev)
+static int ir_rx51_probe(struct platform_device *dev)
 {
-       struct device *dev = &pdev->dev;
 	struct pwm_device *pwm;
 	struct rc_dev *rcdev;
-       struct ir_rx51 *ir_rx51;
 
-       pwm = pwm_get(dev, NULL);
+	pwm = pwm_get(&dev->dev, NULL);
 	if (IS_ERR(pwm)) {
 		int err = PTR_ERR(pwm);
 
 		if (err != -EPROBE_DEFER)
-                       dev_err(dev, "pwm_get failed: %d\n", err);
+			dev_err(&dev->dev, "pwm_get failed: %d\n", err);
 		return err;
 	}
 
-       ir_rx51 = devm_kzalloc(dev, sizeof(*ir_rx51), GFP_KERNEL);
-       if (!ir_rx51)
-               return -ENOMEM;
-
-       init_waitqueue_head(&ir_rx51->wqueue);
-
 	/* Use default, in case userspace does not set the carrier */
-       ir_rx51->duty_cycle = 50;
-       ir_rx51->wbuf_index = -1;
-       ir_rx51->freq = DIV_ROUND_CLOSEST_ULL(pwm_get_period(pwm),
-                                             NSEC_PER_SEC);
-       pwm_init_state(pwm, &ir_rx51->state);
+	ir_rx51.freq = DIV_ROUND_CLOSEST_ULL(pwm_get_period(pwm), NSEC_PER_SEC);
+	pwm_init_state(pwm, &ir_rx51.state);
 	pwm_put(pwm);
 
-       hrtimer_init(&ir_rx51->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-       ir_rx51->timer.function = ir_rx51_timer_cb;
+	hrtimer_init(&ir_rx51.timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	ir_rx51.timer.function = ir_rx51_timer_cb;
 
-       ir_rx51->dev = &dev->dev;
+	ir_rx51.dev = &dev->dev;
 
-       rcdev = devm_rc_allocate_device(dev, RC_DRIVER_IR_RAW_TX);
+	rcdev = devm_rc_allocate_device(&dev->dev, RC_DRIVER_IR_RAW_TX);
 	if (!rcdev)
 		return -ENOMEM;
 
-       rcdev->priv = ir_rx51;
+	rcdev->priv = &ir_rx51;
 	rcdev->open = ir_rx51_open;
 	rcdev->close = ir_rx51_release;
 	rcdev->tx_ir = ir_rx51_tx;
@@ -268,20 +261,13 @@ static int ir_rx51_probe(struct platform_device *pdev)
 	rcdev->s_tx_carrier = ir_rx51_set_tx_carrier;
 	rcdev->driver_name = KBUILD_MODNAME;
 
-       ir_rx51->rcdev = rcdev;
+	ir_rx51.rcdev = rcdev;
 
-       platform_set_drvdata(pdev, ir_rx51);
-
-       return devm_rc_register_device(dev, ir_rx51->rcdev);
+	return devm_rc_register_device(&dev->dev, ir_rx51.rcdev);
 }
 
-static int ir_rx51_remove(struct platform_device *pdev)
+static int ir_rx51_remove(struct platform_device *dev)
 {
-       struct ir_rx51 *ir_rx51 = platform_get_drvdata(pdev);
-
-       /* Wait any pending transfers to finish */
-       wait_event_interruptible(ir_rx51->wqueue, ir_rx51->wbuf_index < 0);
-
 	return 0;
 }
 
