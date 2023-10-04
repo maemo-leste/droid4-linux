@@ -2920,6 +2920,35 @@ static const struct panel_desc multi_inno_mi1010ait_1cp = {
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
+static const struct drm_display_mode motorola_lvds_mipi_vm_1007_mode = {
+	.clock = 78945,
+	.hdisplay = 1280,
+	.hsync_start = 1280 + 0,
+	.hsync_end = 1280 + 0 + 2,
+	.htotal = 1280 + 62 + 0 + 2,
+	.vdisplay = 800,
+	.vsync_start = 800 + 8,
+	.vsync_end = 800 + 8 + 2,
+	.vtotal = 800 + 6 + 8 + 2,
+};
+
+static const struct panel_desc motorola_lvds_mipi_vm_1007 = {
+	.modes = &motorola_lvds_mipi_vm_1007_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 217,
+		.height = 136,
+	},
+	.delay = {
+		.enable = 50,
+		.disable = 50,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA,
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct display_timing nec_nl12880bc20_05_timing = {
 	.pixelclock = { 67000000, 71000000, 75000000 },
 	.hactive = { 1280, 1280, 1280 },
@@ -4371,6 +4400,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "multi-inno,mi1010ait-1cp",
 		.data = &multi_inno_mi1010ait_1cp,
+	}, {
+		.compatible = "motorola,lvds-mipi-vm-1007",
+		.data = &motorola_lvds_mipi_vm_1007,
 	}, {
 		.compatible = "nec,nl12880bc20-05",
 		.data = &nec_nl12880bc20_05,
