@@ -4555,6 +4555,9 @@ static int dsi_init_pll_data(struct dss_device *dss, struct dsi_data *dsi)
  * Component Bind & Unbind
  */
 
+static int dsi_init_output(struct dsi_data *dsi);
+static void dsi_uninit_output(struct dsi_data *dsi);
+
 static int dsi_bind(struct device *dev, struct device *master, void *data)
 {
 	struct dss_device *dss = dss_get_device(master);
@@ -4565,11 +4568,15 @@ static int dsi_bind(struct device *dev, struct device *master, void *data)
 
 	dsi->dss = dss;
 
+	r = dsi_init_output(dsi);
+	if (r)
+		return r;
+
 	dsi_init_pll_data(dss, dsi);
 
 	r = dsi_runtime_get(dsi);
 	if (r)
-		return r;
+		goto err_uninit_output;
 
 	rev = dsi_read_reg(dsi, DSI_REVISION);
 	dev_dbg(dev, "OMAP DSI rev %d.%d\n",
@@ -4592,6 +4599,11 @@ static int dsi_bind(struct device *dev, struct device *master, void *data)
 						    dsi_dump_dsi_clocks, dsi);
 
 	return 0;
+
+err_uninit_output:
+	dsi_uninit_output(dsi);
+
+	return r;
 }
 
 static void dsi_unbind(struct device *dev, struct device *master, void *data)
@@ -4605,6 +4617,8 @@ static void dsi_unbind(struct device *dev, struct device *master, void *data)
 	WARN_ON(dsi->scp_clk_refcount > 0);
 
 	dss_pll_unregister(&dsi->pll);
+
+	dsi_uninit_output(dsi);
 }
 
 static const struct component_ops dsi_component_ops = {
@@ -5025,18 +5039,12 @@ static int dsi_probe(struct platform_device *pdev)
 		goto err_pm_disable;
 	}
 
-	r = dsi_init_output(dsi);
+	r = component_add(&pdev->dev, &dsi_component_ops);
 	if (r)
 		goto err_dsi_host_unregister;
 
-	r = component_add(&pdev->dev, &dsi_component_ops);
-	if (r)
-		goto err_uninit_output;
-
 	return 0;
 
-err_uninit_output:
-	dsi_uninit_output(dsi);
 err_dsi_host_unregister:
 	mipi_dsi_host_unregister(&dsi->host);
 err_pm_disable:
@@ -5049,8 +5057,6 @@ static void dsi_remove(struct platform_device *pdev)
 	struct dsi_data *dsi = platform_get_drvdata(pdev);
 
 	component_del(&pdev->dev, &dsi_component_ops);
-
-	dsi_uninit_output(dsi);
 
 	mipi_dsi_host_unregister(&dsi->host);
 
