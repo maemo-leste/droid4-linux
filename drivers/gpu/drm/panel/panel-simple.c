@@ -3342,6 +3342,35 @@ static const struct panel_desc mitsubishi_aa084xe01 = {
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH | DRM_BUS_FLAG_PIXDATA_SAMPLE_NEGEDGE,
 };
 
+static const struct drm_display_mode motorola_lvds_mipi_vm_1007_mode = {
+       .clock = 78945,
+       .hdisplay = 1280,
+       .hsync_start = 1280 + 0,
+       .hsync_end = 1280 + 0 + 2,
+       .htotal = 1280 + 62 + 0 + 2,
+       .vdisplay = 800,
+       .vsync_start = 800 + 8,
+       .vsync_end = 800 + 8 + 2,
+       .vtotal = 800 + 6 + 8 + 2,
+};
+
+static const struct panel_desc motorola_lvds_mipi_vm_1007 = {
+       .modes = &motorola_lvds_mipi_vm_1007_mode,
+       .num_modes = 1,
+       .bpc = 8,
+       .size = {
+               .width = 217,
+               .height = 136,
+       },
+       .delay = {
+               .enable = 50,
+               .disable = 50,
+       },
+       .bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA,
+       .bus_flags = DRM_BUS_FLAG_DE_HIGH,
+       .connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct display_timing multi_inno_mi0700a2t_30_timing = {
 	.pixelclock = { 26400000, 33000000, 46800000 },
 	.hactive = { 800, 800, 800 },
@@ -5259,6 +5288,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "mitsubishi,aa084xe01",
 		.data = &mitsubishi_aa084xe01,
+	}, {
+		.compatible = "motorola,lvds-mipi-vm-1007",
+		.data = &motorola_lvds_mipi_vm_1007,
 	}, {
 		.compatible = "multi-inno,mi0700a2t-30",
 		.data = &multi_inno_mi0700a2t_30,
