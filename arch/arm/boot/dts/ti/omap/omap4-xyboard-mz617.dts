@@ -14,4 +14,96 @@
 	aliases {
 		display1 = &hdmi0;
 	};
+
+	lp8550_3v3_reg: regulator-lp8550 {
+		compatible = "regulator-fixed";
+		regulator-name = "lp8550-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio6 12 GPIO_ACTIVE_HIGH>;    /* gpio_172 */
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	pwm8: dmtimer-pwm-8 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&backlight_pwm_pin>;
+		compatible = "ti,omap-dmtimer-pwm";
+		#pwm-cells = <3>;
+		ti,timers = <&timer8>;
+		ti,clock-source = <0x01>;
+	};
+};
+
+&i2c1 {
+	backlight: backlight@2c {
+		compatible = "ti,lp8550";
+		reg = <0x2c>;
+		power-supply = <&lp8550_3v3_reg>;
+		dev-ctrl = /bits/ 8 <0x03>;
+		init-brt = /bits/ 8 <0x80>;
+		pwm-period = <65536>;
+		pwms = <&pwm8 0 65536 0>;
+		pwm-names = "lp8550";
+
+		/*
+		 * Boost freq 312khz, PWM controled w/constant current,
+		 * thermal deration disabled, brightness slope 500mS
+		 */
+		rom_a1h {
+			rom-addr = /bits/ 8 <0xa1>;
+			rom-val = /bits/ 8 <0x67>;
+		};
+
+		/*
+		 * Adaptive mode for light loads, advanced slope enabled, 50%
+		 * mode. Adaptive mode enabled, Boost is enabled, Boost Imax is
+		 * 2.5A
+		 */
+		rom_a2h {
+			rom-addr = /bits/ 8 <0xa2>;
+			rom-val = /bits/ 8 <0xbf>;
+		};
+
+		/* UVLO is disabled, phase shift PWM enabled, PWM Freq 19232 */
+		rom_a3h {
+			rom-addr = /bits/ 8 <0xa3>;
+			rom-val = /bits/ 8 <0x3f>;
+		};
+
+		/* LED current resistor disabled, LED Fault = 3.3V */
+		rom_a4h {
+			rom-addr = /bits/ 8 <0xa4>;
+			rom-val = /bits/ 8 <0x08>;
+		};
+
+		/* Vsync is enabled, Dither enabled, Boost voltage 20V */
+		rom_a5h {
+			rom-addr = /bits/ 8 <0xa5>;
+			rom-val = /bits/ 8 <0xea>;
+		};
+
+		/* PLL 13-bit counter */
+		rom_a6h {
+			rom-addr = /bits/ 8 <0xa6>;
+			rom-val = /bits/ 8 <0x64>;
+		};
+
+		/*
+		 * 1-bit hysteresis w/10 bit resolution, PWM output freq is set
+		 * with PWM_FREQ EEPROM bits
+		 */
+		rom_a7h {
+			rom-addr = /bits/ 8 <0xa7>;
+			rom-val = /bits/ 8 <0x2a>;
+		};
+	};
+};
+
+&omap4_pmx_core {
+	backlight_pwm_pin: backlight_pwm_pin {
+		pinctrl-single,pins = <
+		OMAP4_IOPAD(0x1ce, PIN_OUTPUT | MUX_MODE1)	/* dmtimer8_pwm_evt (gpio_27) */
+		>;
+	};
 };
