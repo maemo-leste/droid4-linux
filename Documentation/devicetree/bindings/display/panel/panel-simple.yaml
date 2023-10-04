@@ -212,6 +212,8 @@ properties:
       - mitsubishi,aa070mc01-ca1
         # Mitsubishi AA084XE01 8.4" XGA TFT LCD panel
       - mitsubishi,aa084xe01
+        # Motorola 10.1" 1280x800 LVDS panel
+      - motorola,lvds-mipi-vm-1007
         # Multi-Inno Technology Co.,Ltd MI0700A2T-30 7" 800x480 TFT Resistive Touch Module
       - multi-inno,mi0700a2t-30
         # Multi-Inno Technology Co.,Ltd MI0700S4T-6 7" 800x480 TFT Resistive Touch Module
