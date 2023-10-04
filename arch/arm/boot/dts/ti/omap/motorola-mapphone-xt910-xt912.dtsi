@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/dts-v1/;
+
+#include "motorola-mapphone-handset.dtsi"
+
+&keypad {
+	keypad,num-rows = <8>;
+	keypad,num-columns = <8>;
+	linux,keymap = <MATRIX_KEY(5, 0, KEY_VOLUMEUP)>,
+		       <MATRIX_KEY(3, 0, KEY_VOLUMEDOWN)>;
+};
+
+/* Used by the LCD */
+&vsimcard {
+	regulator-min-microvolt = <2900000>;
+	regulator-max-microvolt = <2900000>;
+};
