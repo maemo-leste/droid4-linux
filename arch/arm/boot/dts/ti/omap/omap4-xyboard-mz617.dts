@@ -97,6 +97,23 @@
 	};
 };
 
+&i2c2 {
+	touchscreen@5b {
+		compatible = "atmel,maxtouch";
+		reg = <0x5b>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touchscreen_pins>;
+
+		reset-gpios = <&gpio6 13 GPIO_ACTIVE_LOW>; /* gpio_173 */
+
+		/* gpio_183 with sys_nirq2 pad as wakeup */
+		interrupts-extended = <&gpio6 23 IRQ_TYPE_LEVEL_LOW>,
+				      <&omap4_pmx_core 0x160>;
+		interrupt-names = "irq", "wakeup";
+		wakeup-source;
+	};
+};
+
 &omap4_pmx_core {
 	/*
 	 * 0x4a1001ce dpm_emu16.safe_mode (gpio_27) ab2, dmtimer8_pwm_evt not in
@@ -104,5 +121,11 @@
 	 */
 	backlight_pwm_pin: backlight-pwm-pin {
 		pinctrl-single,pins = <OMAP4_IOPAD(0x1ce, PIN_INPUT_PULLDOWN | MUX_MODE7)>;
+	};
+
+	touchscreen_pins: touchscreen-pins {
+		pinctrl-single,pins =
+			<OMAP4_IOPAD(0x180, PIN_OUTPUT | MUX_MODE3)>,
+			<OMAP4_IOPAD(0x1a0, PIN_INPUT_PULLUP | MUX_MODE3)>;
 	};
 };
