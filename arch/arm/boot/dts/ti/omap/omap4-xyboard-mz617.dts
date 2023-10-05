@@ -25,13 +25,13 @@
 		regulator-always-on;
 	};
 
+	/* Not currently in use for lp8550, muxed to safe mode */
 	pwm8: dmtimer-pwm-8 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&backlight_pwm_pin>;
 		compatible = "ti,omap-dmtimer-pwm";
 		#pwm-cells = <3>;
 		ti,timers = <&timer8>;
-		ti,clock-source = <0x01>;
 	};
 };
 
@@ -40,11 +40,8 @@
 		compatible = "ti,lp8550";
 		reg = <0x2c>;
 		power-supply = <&lp8550_3v3_reg>;
-		dev-ctrl = /bits/ 8 <0x03>;
+		dev-ctrl = /bits/ 8 <0x05>;
 		init-brt = /bits/ 8 <0x80>;
-		pwm-period = <65536>;
-		pwms = <&pwm8 0 65536 0>;
-		pwm-names = "lp8550";
 
 		/*
 		 * Boost freq 312khz, PWM controled w/constant current,
@@ -101,9 +98,11 @@
 };
 
 &omap4_pmx_core {
-	backlight_pwm_pin: backlight_pwm_pin {
-		pinctrl-single,pins = <
-		OMAP4_IOPAD(0x1ce, PIN_OUTPUT | MUX_MODE1)	/* dmtimer8_pwm_evt (gpio_27) */
-		>;
+	/*
+	 * 0x4a1001ce dpm_emu16.safe_mode (gpio_27) ab2, dmtimer8_pwm_evt not in
+	 * use and gpio_27 pin is kept low as per lp8550 documentation.
+	 */
+	backlight_pwm_pin: backlight-pwm-pin {
+		pinctrl-single,pins = <OMAP4_IOPAD(0x1ce, PIN_INPUT_PULLDOWN | MUX_MODE7)>;
 	};
 };
