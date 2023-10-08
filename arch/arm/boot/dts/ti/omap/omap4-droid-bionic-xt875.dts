@@ -15,6 +15,14 @@
 		display0 = &lcd0;
 		display1 = &hdmi0;
 	};
+	
+	led_kl: led-kl {
+		compatible = "motorola,cpcap-led-kl";
+		vdd-supply = <&sw5>;
+		label = "button-backlight";
+		cpcap-phandle = <&cpcap>;
+	};
+	
 };
 
 &keypad {
