@@ -167,8 +167,17 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 		}
 
 		omap->phy[i] = phy;
+	}
 
-		if (pdata->port_mode[i] == OMAP_EHCI_PORT_MODE_PHY) {
+	/*
+	 * Bring up real phys before enabling runtime PM. Transceiverless modes
+	 * need to be enabled later after ehci init is done.
+	 */
+	for (i = 0; i < omap->nports; i++) {
+		if (pdata->port_mode[i] != OMAP_EHCI_PORT_MODE_PHY)
+			continue;
+
+		if (omap->phy[i]) {
 			usb_phy_init(omap->phy[i]);
 			/* bring PHY out of suspend */
 			usb_phy_set_suspend(omap->phy[i], 0);
