@@ -4,18 +4,27 @@
 $id: http://devicetree.org/schemas/phy/motorola,mapphone-mdm6600.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: Motorola Mapphone MDM6600 USB PHY
+title: Motorola Mapphone MDM6600 and MDM9600 USB PHY
 
 maintainers:
   - Tony Lindgren <tony@atomide.com>
 
 description: |
-  USB PHY found on Motorola Mapphone devices integrated in the MDM6600 modem.
+  USB PHY found on Motorola Mapphone devices integrated in the MDM6600 and
+  MDM9600 modems.
 
 properties:
   compatible:
     enum:
       - motorola,mapphone-mdm6600
+      - motorola,mapphone-mdm9600
+
+  clocks:
+    maxItems: 1
+
+  clock-names:
+    maxItems: 1
+    description: MDM9600 USB PHY clock
 
   "#phy-cells":
     const: 0
@@ -56,6 +65,24 @@ required:
   - motorola,mode-gpios
   - motorola,cmd-gpios
   - motorola,status-gpios
+
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            enum:
+              - motorola,mapphone-mdm9600
+    then:
+      properties:
+        motorola,cmd-gpios:
+          maxItems: 2
+        clocks:
+          minItems: 1
+          maxItems: 1
+        clock-names:
+          items:
+            - const: main_clk
 
 additionalProperties: false
 
