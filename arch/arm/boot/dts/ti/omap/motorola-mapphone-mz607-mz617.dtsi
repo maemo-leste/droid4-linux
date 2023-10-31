@@ -4,6 +4,28 @@
 #include "motorola-mapphone-common.dtsi"
 
 / {
+	/* HS USB Host PHY on port 1 for mdm9600 */
+	hsusb2_phy: usb-phy@2 {
+		compatible = "motorola,mapphone-mdm9600";
+		enable-gpios = <&gpio1 1 GPIO_ACTIVE_LOW>;	/* gpio_1 */
+		power-gpios = <&gpio2 22 GPIO_ACTIVE_HIGH>;	/* gpio_54 */
+		reset-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;	/* gpio_2 */
+		/* mode: gpio_154 gpio_62 */
+		motorola,mode-gpios = <&gpio5 26 GPIO_ACTIVE_HIGH>,
+				      <&gpio2 30 GPIO_ACTIVE_HIGH>;
+		/* cmd: gpio_95 gpio_102 */
+		motorola,cmd-gpios = <&gpio3 31 GPIO_ACTIVE_HIGH>,
+				     <&gpio4 6 GPIO_ACTIVE_HIGH>;
+		/* status: gpio_3 gpio_4 gpio_148 */
+		motorola,status-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>,
+					<&gpio1 4 GPIO_ACTIVE_HIGH>,
+					<&gpio5 20 GPIO_ACTIVE_HIGH>;
+		#phy-cells = <0>;
+		clocks = <&auxclk3_ck>;
+		clock-names = "main_clk";
+		clock-frequency = <19200000>;
+	};
+
 	/* LCD regulator from sw5 source */
 	lcd_regulator: regulator-lcd {
 		compatible = "regulator-fixed";
@@ -107,6 +129,15 @@
 		output-high;
 		line-name = "color_en gpio_45";
 	};
+};
+
+&usbhsehci {
+	phys = <&hsusb2_phy>;
+	phy-names = "usb2-phy";
+};
+
+&usbhshost {
+	port2-mode = "ehci-phy";
 };
 
 &i2c1 {
