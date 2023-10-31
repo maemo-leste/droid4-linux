@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
+#include <linux/phy.h>
 #include <linux/slab.h>
 #include <linux/usb/ulpi.h>
 #include <linux/pm_runtime.h>
@@ -53,6 +54,7 @@ static const char hcd_name[] = "ehci-omap";
 
 struct omap_hcd {
 	struct usb_phy *phy[OMAP3_HS_USB_PORTS]; /* one PHY for each port */
+	struct phy *generic_phy[OMAP3_HS_USB_PORTS];
 	int nports;
 };
 
@@ -69,6 +71,27 @@ static struct hc_driver __read_mostly ehci_omap_hc_driver;
 static const struct ehci_driver_overrides ehci_omap_overrides __initconst = {
 	.extra_priv_size = sizeof(struct omap_hcd),
 };
+
+static int ehci_omap_generic_phy_init(struct device *dev, struct omap_hcd *ddata, int port)
+{
+	struct phy *phy;
+	int ret;
+
+	phy = devm_phy_get(dev, "usb2-phy");
+	if (IS_ERR(phy)) {
+		ret = PTR_ERR(phy);
+		if (ret == -ENOSYS || ret == -ENODEV)
+			return 0;
+
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "Can't get usb2 phy for port %dL %d\n", port, ret);
+		return ret;
+	}
+
+	ddata->generic_phy[port] = phy;
+
+	return 0;
+}
 
 static int ehci_omap_usb_phy_init(struct device *dev, struct omap_hcd *ddata, int port)
 {
@@ -96,7 +119,17 @@ static int ehci_omap_usb_phy_init(struct device *dev, struct omap_hcd *ddata, in
 
 static int ehci_omap_enable_phy(struct omap_hcd *ddata, int port)
 {
-	if (ddata->phy[port]) {
+	int ret;
+
+	if (ddata->generic_phy[port]) {
+		ret = phy_init(ddata->generic_phy[port]);
+		if (ret < 0)
+			return ret;
+
+		ret = phy_power_on(ddata->generic_phy[port]);
+		if (ret < 0)
+			return ret;
+	} else if (ddata->phy[port]) {
 		usb_phy_init(ddata->phy[port]);
 		/* bring PHY out of suspend */
 		usb_phy_set_suspend(ddata->phy[port], 0);
@@ -107,8 +140,12 @@ static int ehci_omap_enable_phy(struct omap_hcd *ddata, int port)
 
 static void ehci_omap_disable_phy(struct omap_hcd *ddata, int port)
 {
-	if (ddata->phy[port])
+	if (ddata->generic_phy[port]) {
+		phy_power_off(ddata->generic_phy[port]);
+		phy_exit(ddata->generic_phy[port]);
+	} else if (ddata->phy[port]) {
 		usb_phy_shutdown(ddata->phy[port]);
+	}
 }
 
 /**
@@ -189,6 +226,10 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	for (i = 0 ; i < omap->nports ; i++) {
 		if (pdata->port_mode[i] == OMAP_USBHS_PORT_MODE_UNUSED)
 			continue;
+
+		ret = ehci_omap_generic_phy_init(dev, omap, i);
+		if (ret < 0)
+			goto err_phy;
 
 		ret = ehci_omap_usb_phy_init(dev, omap, i);
 		if (ret < 0)
