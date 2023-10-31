@@ -127,6 +127,16 @@ int serdev_ngsm_write(struct device *dev, struct gsm_serdev_dlci *ops,
 }
 EXPORT_SYMBOL_GPL(serdev_ngsm_write);
 
+struct gsm_serdev_dlci *
+serdev_ngsm_get_dlci(struct device *dev, int line)
+{
+	struct serdev_ngsm *ddata = gsm_serdev_get_drvdata(dev);
+	struct gsm_serdev *gsd = &ddata->gsd;
+
+	return gsm_serdev_tty_port_get_dlci(gsd, line);
+}
+EXPORT_SYMBOL_GPL(serdev_ngsm_get_dlci);
+
 static int serdev_ngsm_set_config(struct device *dev)
 {
 	struct serdev_ngsm *ddata = gsm_serdev_get_drvdata(dev);
