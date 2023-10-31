@@ -148,6 +148,9 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	for (i = 0 ; i < omap->nports ; i++) {
 		struct usb_phy *phy;
 
+		if (pdata->port_mode[i] == OMAP_USBHS_PORT_MODE_UNUSED)
+			continue;
+
 		/* get the PHY device */
 		phy = devm_usb_get_phy_by_phandle(dev, "phys", i);
 		if (IS_ERR(phy)) {
