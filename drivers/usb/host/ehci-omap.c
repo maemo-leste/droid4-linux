@@ -70,6 +70,30 @@ static const struct ehci_driver_overrides ehci_omap_overrides __initconst = {
 	.extra_priv_size = sizeof(struct omap_hcd),
 };
 
+static int ehci_omap_usb_phy_init(struct device *dev, struct omap_hcd *ddata, int port)
+{
+	struct usb_phy *phy;
+	int ret;
+
+	/* get the PHY device */
+	phy = devm_usb_get_phy_by_phandle(dev, "phys", port);
+	if (IS_ERR(phy)) {
+		ret = PTR_ERR(phy);
+		if (ret == -ENODEV) { /* no PHY */
+			phy = NULL;
+			return 0;
+		}
+
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "Can't get PHY for port %d: %d\n", port, ret);
+		return ret;
+	}
+
+	ddata->phy[port] = phy;
+
+	return 0;
+}
+
 static int ehci_omap_enable_phy(struct omap_hcd *ddata, int port)
 {
 	if (ddata->phy[port]) {
@@ -163,27 +187,12 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 
 	/* get the PHY devices if needed */
 	for (i = 0 ; i < omap->nports ; i++) {
-		struct usb_phy *phy;
-
 		if (pdata->port_mode[i] == OMAP_USBHS_PORT_MODE_UNUSED)
 			continue;
 
-		/* get the PHY device */
-		phy = devm_usb_get_phy_by_phandle(dev, "phys", i);
-		if (IS_ERR(phy)) {
-			ret = PTR_ERR(phy);
-			if (ret == -ENODEV) { /* no PHY */
-				phy = NULL;
-				continue;
-			}
-
-			if (ret != -EPROBE_DEFER)
-				dev_err(dev, "Can't get PHY for port %d: %d\n",
-					i, ret);
+		ret = ehci_omap_usb_phy_init(dev, omap, i);
+		if (ret < 0)
 			goto err_phy;
-		}
-
-		omap->phy[i] = phy;
 	}
 
 	/*
