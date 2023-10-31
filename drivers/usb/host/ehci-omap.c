@@ -70,6 +70,23 @@ static const struct ehci_driver_overrides ehci_omap_overrides __initconst = {
 	.extra_priv_size = sizeof(struct omap_hcd),
 };
 
+static int ehci_omap_enable_phy(struct omap_hcd *ddata, int port)
+{
+	if (ddata->phy[port]) {
+		usb_phy_init(ddata->phy[port]);
+		/* bring PHY out of suspend */
+		usb_phy_set_suspend(ddata->phy[port], 0);
+	}
+
+	return 0;
+}
+
+static void ehci_omap_disable_phy(struct omap_hcd *ddata, int port)
+{
+	if (ddata->phy[port])
+		usb_phy_shutdown(ddata->phy[port]);
+}
+
 /**
  * ehci_hcd_omap_probe - initialize TI-based HCDs
  * @pdev: Pointer to this platform device's information
@@ -177,11 +194,9 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 		if (pdata->port_mode[i] != OMAP_EHCI_PORT_MODE_PHY)
 			continue;
 
-		if (omap->phy[i]) {
-			usb_phy_init(omap->phy[i]);
-			/* bring PHY out of suspend */
-			usb_phy_set_suspend(omap->phy[i], 0);
-		}
+		ret = ehci_omap_enable_phy(omap, i);
+		if (ret)
+			goto err_phy;
 	}
 
 	pm_runtime_enable(dev);
@@ -213,13 +228,12 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	 * as a PHY device for reset control.
 	 */
 	for (i = 0; i < omap->nports; i++) {
-		if (!omap->phy[i] ||
-		     pdata->port_mode[i] == OMAP_EHCI_PORT_MODE_PHY)
+		if (pdata->port_mode[i] == OMAP_EHCI_PORT_MODE_PHY)
 			continue;
 
-		usb_phy_init(omap->phy[i]);
-		/* bring PHY out of suspend */
-		usb_phy_set_suspend(omap->phy[i], 0);
+		ret = ehci_omap_enable_phy(omap, i);
+		if (ret)
+			goto err_pm_runtime;
 	}
 
 	return 0;
@@ -230,8 +244,7 @@ err_pm_runtime:
 
 err_phy:
 	for (i = 0; i < omap->nports; i++) {
-		if (omap->phy[i])
-			usb_phy_shutdown(omap->phy[i]);
+		ehci_omap_disable_phy(omap, i);
 	}
 
 	usb_put_hcd(hcd);
@@ -258,8 +271,7 @@ static void ehci_hcd_omap_remove(struct platform_device *pdev)
 	usb_remove_hcd(hcd);
 
 	for (i = 0; i < omap->nports; i++) {
-		if (omap->phy[i])
-			usb_phy_shutdown(omap->phy[i]);
+		ehci_omap_disable_phy(omap, i);
 	}
 
 	usb_put_hcd(hcd);
