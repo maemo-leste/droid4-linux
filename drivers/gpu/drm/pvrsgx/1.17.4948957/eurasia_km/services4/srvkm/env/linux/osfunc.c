@@ -39,6 +39,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
+#include <linux/mm.h>
 #include <linux/version.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
@@ -3786,7 +3787,7 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
 #else
     psInfo->iNumPagesMapped = get_user_pages(
-		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages, NULL);
+		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages);
 #endif
 
     if (psInfo->iNumPagesMapped >= 0)
