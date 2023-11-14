@@ -24,6 +24,26 @@
 		reg = <0x80000000 0x3fd00000>;	/* 1021 MB */
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * The stock kernel has 2M@0xa0000000 for ram_console using the
+		 * old file format. That won't work for us, so let's ignore the
+		 * first 512K of that and just overwrite the rest and configure
+		 * only 384K instead of 2M.
+		 */
+		ramoops@a0080000 {
+			compatible = "ramoops";
+			reg = <0xa0080000 0x60000>;
+			record-size = <0x20000>;
+			console-size = <0x20000>;
+			ftrace-size = <0x20000>;
+		};
+	};
+
 	/* Poweroff GPIO probably connected to CPCAP */
 	gpio-poweroff {
 		compatible = "gpio-poweroff";

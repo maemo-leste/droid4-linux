@@ -784,6 +784,19 @@ static int cpu_notifier(struct notifier_block *nb, unsigned long cmd, void *v)
 }
 
 /*
+ * Some device need a longer reset for reboot to work. At least Motorola
+ * Mapphone devices need a 4ms RST_TIME1 value for cpcap PMIC to do a
+ * cold reset. Note that for watchdog reset, we need to use different
+ * RST_TIME1 value configured during init for pstore to to maintain the
+ * DDR.
+ */
+static void __maybe_unused prm_long_reset(void)
+{
+	omap4_prminst_global_reset_time(16, 200);
+	omap4_prminst_global_warm_sw_reset();
+}
+
+/*
  * XXX document
  */
 static struct prm_ll_data omap44xx_prm_ll_data = {
@@ -830,6 +843,19 @@ int __init omap44xx_prm_init(const struct omap_prcm_init_data *data)
 		nb.notifier_call = cpu_notifier;
 		cpu_pm_register_notifier(&nb);
 	}
+
+#ifdef CONFIG_PSTORE
+	/*
+	 * On droid4, the stock kernel configured reset times will clear
+	 * DDR on warm reset. Set the reset times to TRM defaults, the
+	 * stock kernel uses custom values of 16 and 200.
+	 */
+	if (of_machine_is_compatible("motorola,droid4") ||
+	    of_machine_is_compatible("motorola,bionic")) {
+		omap4_prminst_global_reset_time(16, 6);
+		omap44xx_prm_ll_data.reset_system = prm_long_reset;
+	}
+#endif
 
 	return prm_register(&omap44xx_prm_ll_data);
 }
