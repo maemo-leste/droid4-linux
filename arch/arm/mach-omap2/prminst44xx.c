@@ -174,6 +174,44 @@ int omap4_prminst_deassert_hardreset(u8 shift, u8 st_shift, u8 part, s16 inst,
 	return (c == MAX_MODULE_HARDRESET_WAIT) ? -EBUSY : 0;
 }
 
+/**
+ * omap4_prminst_global_reset_time - configure hardwar reset register
+ * @pwrdm_cycles: power domain reset duration in clock cycles
+ * @reset_cycles: reset duration in clock cycles
+ *
+ * Configures the PRM_RSTTIME as documented in TRM. If no values are passed,
+ * Use the TRM default reset values instead.
+ */
+void omap4_prminst_global_reset_time(int pwrdm_cycles,
+				     int reset_cycles)
+{
+	s32 inst = omap4_prmst_get_prm_dev_inst();
+	u32 v = 0;
+
+	if (inst == PRM_INSTANCE_UNKNOWN)
+		return;
+
+	/* The smallest writable values are 1, use defaults if not specified */
+	if (pwrdm_cycles < 1)
+		v = 0x10 << 10;
+	else
+		v = (pwrdm_cycles & 0x1f) << 10;
+
+	if (reset_cycles < 1)
+		v |= 0x6;
+	else
+		v |= reset_cycles & 0x3ff;
+
+	omap4_prminst_write_inst_reg(v, OMAP4430_PRM_PARTITION,
+				     inst, OMAP4_PRM_RSTTIME_OFFSET);
+
+	/* Flush posted write */
+	omap4_prminst_read_inst_reg(OMAP4430_PRM_PARTITION,
+				    inst, OMAP4_PRM_RSTTIME_OFFSET);
+
+	/* Wait somewhere above 40us for the new values to take effect */
+	udelay(50);
+}
 
 void omap4_prminst_global_warm_sw_reset(void)
 {
