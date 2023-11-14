@@ -3454,89 +3454,6 @@ typedef struct _sWrapMemInfo_
 #endif
 } sWrapMemInfo;
 
-
-/*!
-******************************************************************************
-
- @Function	*CPUVAddrToPFN
- 
- @Description 
- 
- Find the PFN associated with a given CPU virtual address, and return
- the associated page structure, if it exists.
- The page in question must be present (i.e. no fault handling required),
- and must be writable.  A get_page is done on the returned page structure.
- 
- @Input    psVMArea - pointer to VM area structure
-       uCPUVAddr - CPU virtual address
-       pui32PFN - Pointer to returned PFN.
-       ppsPAge - Pointer to returned page structure pointer.
-
- @Output   *pui32PFN - Set to PFN
- 	   *ppsPage - Pointer to the page structure if present, else NULL.
- @Return   IMG_TRUE if PFN lookup was succesful.
-
-******************************************************************************/
-static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCPUVAddr, IMG_UINT32 *pui32PFN, struct page **ppsPage)
-{
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,10))
-    pgd_t *psPGD;
-    pud_t *psPUD;
-    pmd_t *psPMD;
-    pte_t *psPTE;
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
-    p4d_t *psP4D;
-#endif
-    struct mm_struct *psMM = psVMArea->vm_mm;
-    spinlock_t *psPTLock;
-    IMG_BOOL bRet = IMG_FALSE;
-
-    *pui32PFN = 0;
-    *ppsPage = NULL;
-
-    psPGD = pgd_offset(psMM, uCPUVAddr);
-    if (pgd_none(*psPGD) || pgd_bad(*psPGD))
-        return bRet;
-
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
-    psP4D = p4d_offset(psPGD, uCPUVAddr);
-    if (p4d_none(*psP4D) || unlikely(p4d_bad(*psP4D)))
-        return bRet;
-
-    psPUD = pud_offset(psP4D, uCPUVAddr);
-#else
-    psPUD = pud_offset(psPGD, uCPUVAddr);
-#endif
-    if (pud_none(*psPUD) || pud_bad(*psPUD))
-        return bRet;
-
-    psPMD = pmd_offset(psPUD, uCPUVAddr);
-    if (pmd_none(*psPMD) || pmd_bad(*psPMD))
-        return bRet;
-
-    psPTE = (pte_t *)pte_offset_map_lock(psMM, psPMD, uCPUVAddr, &psPTLock);
-
-    if ((pte_none(*psPTE) == 0) && (pte_present(*psPTE) != 0) && (pte_write(*psPTE) != 0))
-    {
-        *pui32PFN = pte_pfn(*psPTE);
-	bRet = IMG_TRUE;
-
-        if (pfn_valid(*pui32PFN))
-        {
-            *ppsPage = pfn_to_page(*pui32PFN);
-
-            get_page(*ppsPage);
-        }
-    }
-
-    pte_unmap_unlock(psPTE, psPTLock);
-
-    return bRet;
-#else
-    return IMG_FALSE;
-#endif
-}
-
 /*!
 ******************************************************************************
 
@@ -3681,6 +3598,31 @@ err_out:
 }
 
 #endif /* defined(CONFIG_TI_TILER) && defined(CONFIG_DRM_OMAP_DMM_TILER) */
+
+static IMG_BOOL va_to_pfn(struct vm_area_struct *vma, unsigned long address,
+			  unsigned int *pfn, struct page **ppsPage)
+{
+	spinlock_t *ptl;
+	pte_t *ptep;
+	int ret;
+
+	if (!(vma->vm_flags & (VM_IO | VM_PFNMAP)))
+		return IMG_FALSE;
+
+	ret = follow_pte(vma->vm_mm, address, &ptep, &ptl);
+	if (ret < 0)
+		return IMG_FALSE;
+
+	*pfn = pte_pfn(ptep_get(ptep));
+	if (!pfn_valid(*pfn))
+		return IMG_FALSE;
+
+	*ppsPage = pfn_to_page(*pfn);
+	get_page(*ppsPage);
+	pte_unmap_unlock(ptep, ptl);
+
+	return IMG_TRUE;
+}
 
 /*!
 ******************************************************************************
@@ -3895,7 +3837,7 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 
 	PVR_ASSERT(i < psInfo->iNumPages);
 
-	if (!CPUVAddrToPFN(psVMArea, uAddr, &ui32PFN, &psInfo->ppsPages[i]))
+	if (!va_to_pfn(psVMArea, uAddr, &ui32PFN, &psInfo->ppsPages[i]))
 	{
             PVR_DPF((PVR_DBG_ERROR,
 	       "OSAcquirePhysPageAddr: Invalid CPU virtual address"));
