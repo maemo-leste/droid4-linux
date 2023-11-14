@@ -22,6 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/of.h>
+#include <linux/pm_runtime.h>
 #include <linux/property.h>
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
@@ -3076,8 +3077,15 @@ static const struct attribute_group mxt_attr_group = {
 	.attrs = mxt_attrs,
 };
 
-static void mxt_start(struct mxt_data *data)
+static int __maybe_unused mxt_runtime_resume(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
+	struct mxt_data *data = i2c_get_clientdata(client);
+	struct input_dev *input_dev = data->input_dev;
+
+	if (!input_dev)
+		return 0;
+
 	mxt_wakeup_toggle(data->client, true, false);
 
 	switch (data->suspend_mode) {
@@ -3098,10 +3106,19 @@ static void mxt_start(struct mxt_data *data)
 		mxt_t6_command(data, MXT_COMMAND_CALIBRATE, 1, false);
 		break;
 	}
+
+	return 0;
 }
 
-static void mxt_stop(struct mxt_data *data)
+static int __maybe_unused mxt_runtime_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
+	struct mxt_data *data = i2c_get_clientdata(client);
+	struct input_dev *input_dev = data->input_dev;
+
+	if (!input_dev)
+		return 0;
+
 	switch (data->suspend_mode) {
 	case MXT_SUSPEND_T9_CTRL:
 		/* Touch disable */
@@ -3116,22 +3133,31 @@ static void mxt_stop(struct mxt_data *data)
 	}
 
 	mxt_wakeup_toggle(data->client, false, false);
-}
-
-static int mxt_input_open(struct input_dev *dev)
-{
-	struct mxt_data *data = input_get_drvdata(dev);
-
-	mxt_start(data);
 
 	return 0;
 }
 
-static void mxt_input_close(struct input_dev *dev)
+static int mxt_input_open(struct input_dev *input_dev)
 {
-	struct mxt_data *data = input_get_drvdata(dev);
+	struct mxt_data *data = input_get_drvdata(input_dev);
+	struct device *dev = &data->client->dev;
+	int error;
 
-	mxt_stop(data);
+	error = pm_runtime_get_sync(dev);
+	if (error < 0) {
+		pm_runtime_put_noidle(dev);
+		return error;
+	}
+
+	return 0;
+}
+
+static void mxt_input_close(struct input_dev *input_dev)
+{
+	struct mxt_data *data = input_get_drvdata(input_dev);
+	struct device *dev = &data->client->dev;
+
+	pm_runtime_put_sync(dev);
 }
 
 static int mxt_parse_device_properties(struct mxt_data *data)
@@ -3217,6 +3243,7 @@ static const struct dmi_system_id chromebook_T9_suspend_dmi[] = {
 static int mxt_probe(struct i2c_client *client)
 {
 	struct mxt_data *data;
+	struct device *dev;
 	int error;
 
 	/*
@@ -3251,6 +3278,7 @@ static int mxt_probe(struct i2c_client *client)
 	snprintf(data->phys, sizeof(data->phys), "i2c-%u-%04x/input0",
 		 client->adapter->nr, client->addr);
 
+	dev = &client->dev;
 	data->client = client;
 	data->irq = client->irq;
 	i2c_set_clientdata(client, data);
@@ -3347,23 +3375,26 @@ static int mxt_probe(struct i2c_client *client)
 	device_property_read_u32(&client->dev, "atmel,wakeup-method",
 				 &data->wakeup_method);
 
+	pm_runtime_enable(dev);
+
 	error = mxt_initialize(data);
 	if (error)
-		goto err_disable_regulators;
+		goto err_disable_pm_runtime;
 
 	error = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
 	if (error) {
 		dev_err(&client->dev, "Failure %d creating sysfs group\n",
 			error);
-		goto err_free_object;
+		goto err_disable;
 	}
 
 	return 0;
 
-err_free_object:
+err_disable:
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
-err_disable_regulators:
+err_disable_pm_runtime:
+	pm_runtime_disable(dev);
 	regulator_bulk_disable(ARRAY_SIZE(data->regulators),
 			       data->regulators);
 	return error;
@@ -3372,11 +3403,13 @@ err_disable_regulators:
 static void mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
+	struct device *dev = &data->client->dev;
 
 	disable_irq(data->irq);
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
+	pm_runtime_disable(dev);
 	regulator_bulk_disable(ARRAY_SIZE(data->regulators),
 			       data->regulators);
 }
@@ -3393,7 +3426,7 @@ static int mxt_suspend(struct device *dev)
 	mutex_lock(&input_dev->mutex);
 
 	if (input_device_enabled(input_dev))
-		mxt_stop(data);
+		mxt_runtime_suspend(dev);
 
 	mutex_unlock(&input_dev->mutex);
 
@@ -3416,14 +3449,17 @@ static int mxt_resume(struct device *dev)
 	mutex_lock(&input_dev->mutex);
 
 	if (input_device_enabled(input_dev))
-		mxt_start(data);
+		mxt_runtime_resume(dev);
 
 	mutex_unlock(&input_dev->mutex);
 
 	return 0;
 }
 
-static DEFINE_SIMPLE_DEV_PM_OPS(mxt_pm_ops, mxt_suspend, mxt_resume);
+static const struct dev_pm_ops mxt_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(mxt_suspend, mxt_resume)
+	SET_RUNTIME_PM_OPS(mxt_runtime_suspend, mxt_runtime_resume, NULL)
+};
 
 static const struct of_device_id mxt_of_match[] = {
 	{ .compatible = "atmel,maxtouch", },
