@@ -9,6 +9,7 @@
  */
 
 #include <linux/atomic.h>
+#include <linux/console.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -21,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/sysrq.h>
 
 #include <linux/gpio/consumer.h>
 #include <linux/mfd/motorola-cpcap.h>
@@ -414,7 +416,12 @@ static int cpcap_usb_gpio_set_mode(struct cpcap_phy_ddata *ddata,
 
 static int cpcap_usb_set_uart_mode(struct cpcap_phy_ddata *ddata)
 {
-	int error;
+	int sysrq, error;
+
+	/* Disable sysrq to prevent random sysrq events on line glitches */
+	sysrq = sysrq_mask();
+	if (sysrq & 1)
+		sysrq_toggle_support(sysrq & ~1);
 
 	/* Disable lines to prevent glitches from waking up mdm6600 */
 	error = cpcap_usb_gpio_set_mode(ddata, CPCAP_UNKNOWN_DISABLED);
@@ -448,6 +455,9 @@ static int cpcap_usb_set_uart_mode(struct cpcap_phy_ddata *ddata)
 	error = cpcap_usb_gpio_set_mode(ddata, CPCAP_DM_DP);
 	if (error)
 		goto out_err;
+
+	if (sysrq & 1)
+		sysrq_toggle_support(sysrq);
 
 	return 0;
 
@@ -709,11 +719,38 @@ static void cpcap_usb_phy_remove(struct platform_device *pdev)
 	regulator_disable(ddata->vusb);
 }
 
+static int __maybe_unused cpcap_usb_suspend(struct device *dev)
+{
+	struct cpcap_phy_ddata *ddata = dev_get_drvdata(dev);
+
+	if (!console_suspend_enabled)
+		return 0;
+
+	regulator_disable(ddata->vusb);
+
+	return 0;
+}
+
+static int __maybe_unused cpcap_usb_resume(struct device *dev)
+{
+	struct cpcap_phy_ddata *ddata = dev_get_drvdata(dev);
+
+	if (!console_suspend_enabled)
+		return 0;
+
+	return regulator_enable(ddata->vusb);
+}
+
+static const struct dev_pm_ops cpcap_usb_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(cpcap_usb_suspend, cpcap_usb_resume)
+};
+
 static struct platform_driver cpcap_usb_phy_driver = {
 	.probe		= cpcap_usb_phy_probe,
 	.remove_new	= cpcap_usb_phy_remove,
 	.driver		= {
 		.name	= "cpcap-usb-phy",
+		.pm	= &cpcap_usb_pm_ops,
 		.of_match_table = of_match_ptr(cpcap_usb_phy_id_table),
 	},
 };
