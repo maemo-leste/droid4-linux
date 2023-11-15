@@ -84,14 +84,16 @@ static int clkdm_dbg_show_counter(struct clockdomain *clkdm, void *user)
 static int pwrdm_dbg_show_counter(struct powerdomain *pwrdm, void *user)
 {
 	struct seq_file *s = (struct seq_file *)user;
-	int i;
+	int hwstate, i;
 
 	if (strcmp(pwrdm->name, "emu_pwrdm") == 0 ||
 		strcmp(pwrdm->name, "wkup_pwrdm") == 0 ||
 		strncmp(pwrdm->name, "dpll", 4) == 0)
 		return 0;
 
-	if (pwrdm->state != pwrdm_read_pwrst(pwrdm))
+	/* Ignore powerdomains shut down by genpd */
+	hwstate = pwrdm_read_pwrst(pwrdm);
+	if (hwstate && pwrdm->state != hwstate)
 		printk(KERN_ERR "pwrdm state mismatch(%s) %d != %d\n",
 			pwrdm->name, pwrdm->state, pwrdm_read_pwrst(pwrdm));
 

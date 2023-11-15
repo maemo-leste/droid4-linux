@@ -14,6 +14,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_graph.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -74,14 +75,16 @@ static int omap2_mcbsp_set_clks_src(struct omap_mcbsp *mcbsp, u8 fck_src_id)
 		return 0;
 	}
 
-	pm_runtime_put_sync(mcbsp->dev);
+	if (mcbsp->active)
+		pm_runtime_put_sync(mcbsp->dev);
 
 	r = clk_set_parent(mcbsp->fclk, fck_src);
 	if (r)
 		dev_err(mcbsp->dev, "CLKS: could not clk_set_parent() to %s\n",
 			src);
 
-	pm_runtime_get_sync(mcbsp->dev);
+	if (mcbsp->active)
+		pm_runtime_get_sync(mcbsp->dev);
 
 	clk_put(fck_src);
 
@@ -1258,8 +1261,6 @@ static int omap_mcbsp_probe(struct snd_soc_dai *dai)
 {
 	struct omap_mcbsp *mcbsp = snd_soc_dai_get_drvdata(dai);
 
-	pm_runtime_enable(mcbsp->dev);
-
 	snd_soc_dai_init_dma_data(dai,
 				  &mcbsp->dma_data[SNDRV_PCM_STREAM_PLAYBACK],
 				  &mcbsp->dma_data[SNDRV_PCM_STREAM_CAPTURE]);
@@ -1267,18 +1268,8 @@ static int omap_mcbsp_probe(struct snd_soc_dai *dai)
 	return 0;
 }
 
-static int omap_mcbsp_remove(struct snd_soc_dai *dai)
-{
-	struct omap_mcbsp *mcbsp = snd_soc_dai_get_drvdata(dai);
-
-	pm_runtime_disable(mcbsp->dev);
-
-	return 0;
-}
-
 static const struct snd_soc_dai_ops mcbsp_dai_ops = {
 	.probe		= omap_mcbsp_probe,
-	.remove		= omap_mcbsp_remove,
 	.startup	= omap_mcbsp_dai_startup,
 	.shutdown	= omap_mcbsp_dai_shutdown,
 	.prepare	= omap_mcbsp_dai_prepare,
@@ -1288,22 +1279,6 @@ static const struct snd_soc_dai_ops mcbsp_dai_ops = {
 	.set_fmt	= omap_mcbsp_dai_set_dai_fmt,
 	.set_clkdiv	= omap_mcbsp_dai_set_clkdiv,
 	.set_sysclk	= omap_mcbsp_dai_set_dai_sysclk,
-};
-
-static struct snd_soc_dai_driver omap_mcbsp_dai = {
-	.playback = {
-		.channels_min = 1,
-		.channels_max = 16,
-		.rates = OMAP_MCBSP_RATES,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S32_LE,
-	},
-	.capture = {
-		.channels_min = 1,
-		.channels_max = 16,
-		.rates = OMAP_MCBSP_RATES,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S32_LE,
-	},
-	.ops = &mcbsp_dai_ops,
 };
 
 static const struct snd_soc_component_driver omap_mcbsp_component = {
@@ -1357,6 +1332,51 @@ static const struct of_device_id omap_mcbsp_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, omap_mcbsp_of_match);
 
+static int omap_mcbsp_init_dais(struct omap_mcbsp *mcbsp)
+{
+	struct device_node *np = mcbsp->dev->of_node;
+	int i;
+
+	if (np)
+		mcbsp->dai_count = of_graph_get_endpoint_count(np);
+
+	if (!mcbsp->dai_count)
+		mcbsp->dai_count = 1;
+
+	mcbsp->dais = devm_kcalloc(mcbsp->dev, mcbsp->dai_count,
+				   sizeof(*mcbsp->dais), GFP_KERNEL);
+	if (!mcbsp->dais)
+		return -ENOMEM;
+
+	for (i = 0; i < mcbsp->dai_count; i++) {
+		struct snd_soc_dai_driver *dai = &mcbsp->dais[i];
+
+		dai->name = devm_kasprintf(mcbsp->dev, GFP_KERNEL, "%s-dai%i",
+					   dev_name(mcbsp->dev), i);
+
+		dai->playback.channels_min = 1;
+		dai->playback.channels_max = 16;
+		dai->playback.rates = OMAP_MCBSP_RATES;
+		if (mcbsp->pdata->reg_size == 2)
+			dai->playback.formats = SNDRV_PCM_FMTBIT_S16_LE;
+		else
+			dai->playback.formats = SNDRV_PCM_FMTBIT_S16_LE |
+						SNDRV_PCM_FMTBIT_S32_LE;
+		dai->capture.channels_min = 1;
+		dai->capture.channels_max = 16;
+		dai->capture.rates = OMAP_MCBSP_RATES;
+		if (mcbsp->pdata->reg_size == 2)
+			dai->capture.formats = SNDRV_PCM_FMTBIT_S16_LE;
+		else
+			dai->capture.formats = SNDRV_PCM_FMTBIT_S16_LE |
+					       SNDRV_PCM_FMTBIT_S32_LE;
+
+		dai->ops = &mcbsp_dai_ops;
+	}
+
+	return 0;
+}
+
 static int asoc_mcbsp_probe(struct platform_device *pdev)
 {
 	struct omap_mcbsp_platform_data *pdata = dev_get_platdata(&pdev->dev);
@@ -1394,22 +1414,27 @@ static int asoc_mcbsp_probe(struct platform_device *pdev)
 	mcbsp->dev = &pdev->dev;
 	platform_set_drvdata(pdev, mcbsp);
 
+	ret = omap_mcbsp_init_dais(mcbsp);
+	if (ret)
+		return ret;
+
 	ret = omap_mcbsp_init(pdev);
 	if (ret)
 		return ret;
 
-	if (mcbsp->pdata->reg_size == 2) {
-		omap_mcbsp_dai.playback.formats = SNDRV_PCM_FMTBIT_S16_LE;
-		omap_mcbsp_dai.capture.formats = SNDRV_PCM_FMTBIT_S16_LE;
-	}
-
 	ret = devm_snd_soc_register_component(&pdev->dev,
 					      &omap_mcbsp_component,
-					      &omap_mcbsp_dai, 1);
+					      mcbsp->dais, mcbsp->dai_count);
 	if (ret)
 		return ret;
 
-	return sdma_pcm_platform_register(&pdev->dev, "tx", "rx");
+	ret = sdma_pcm_platform_register(&pdev->dev, "tx", "rx");
+	if (ret)
+		return ret;
+
+	pm_runtime_enable(mcbsp->dev);
+
+	return 0;
 }
 
 static void asoc_mcbsp_remove(struct platform_device *pdev)
@@ -1421,6 +1446,8 @@ static void asoc_mcbsp_remove(struct platform_device *pdev)
 
 	if (cpu_latency_qos_request_active(&mcbsp->pm_qos_req))
 		cpu_latency_qos_remove_request(&mcbsp->pm_qos_req);
+
+	pm_runtime_disable(mcbsp->dev);
 }
 
 static struct platform_driver asoc_mcbsp_driver = {

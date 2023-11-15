@@ -4,6 +4,7 @@
  * Copyright (C) 2018 Tony Lindgren <tony@atomide.com>
  */
 
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
@@ -18,11 +19,17 @@
 #include <linux/phy/phy.h>
 #include <linux/pinctrl/consumer.h>
 
-#define PHY_MDM6600_PHY_DELAY_MS	4000	/* PHY enable 2.2s to 3.5s */
+#define PHY_MDM6600_PHY_DELAY_MS	5000	/* PHY enable 2.2s to 5s */
 #define PHY_MDM6600_ENABLED_DELAY_MS	8000	/* 8s more total for MDM6600 */
+#define PHY_MDM9600_ENABLED_DELAY_MS	60000	/* At least 40s more total */
 #define PHY_MDM6600_WAKE_KICK_MS	600	/* time on after GPIO toggle */
 #define MDM6600_MODEM_IDLE_DELAY_MS	1000	/* modem after USB suspend */
 #define MDM6600_MODEM_WAKE_DELAY_MS	200	/* modem response after idle */
+
+enum phy_mdmx600_type {
+	MDM6600,
+	MDM9600,
+};
 
 enum phy_mdm6600_ctrl_lines {
 	PHY_MDM6600_ENABLE,			/* USB PHY enable */
@@ -66,6 +73,13 @@ enum phy_mdm6600_cmd {
 	PHY_MDM6600_CMD_UNDEFINED,
 };
 
+enum phy_mdm9600_cmd {
+	PHY_MDM9600_CMD_BP_PANIC_ACK,
+	PHY_MDM9600_CMD_USB_BYPASS,
+	PHY_MDM9600_CMD_NO_BYPASS,
+	PHY_MDM9600_CMD_BP_SHUTDOWN_REQ,
+};
+
 /*
  * MDM6600 status codes. These are based on Motorola Mapphone Linux
  * kernel tree.
@@ -91,6 +105,7 @@ struct phy_mdm6600 {
 	struct device *dev;
 	struct phy *generic_phy;
 	struct phy_provider *phy_provider;
+	struct clk *clk;
 	struct gpio_desc *ctrl_gpios[PHY_MDM6600_NR_CTRL_LINES];
 	struct gpio_descs *mode_gpios;
 	struct gpio_descs *status_gpios;
@@ -99,6 +114,7 @@ struct phy_mdm6600 {
 	struct delayed_work status_work;
 	struct delayed_work modem_wake_work;
 	struct completion ack;
+	enum phy_mdmx600_type type;
 	bool enabled;				/* mdm6600 phy enabled */
 	bool running;				/* mdm6600 boot done */
 	bool awake;				/* mdm6600 respnds on n_gsm */
@@ -127,12 +143,24 @@ static int phy_mdm6600_power_on(struct phy *x)
 	if (!ddata->enabled)
 		return -ENODEV;
 
-	error = pinctrl_pm_select_default_state(ddata->dev);
-	if (error)
-		dev_warn(ddata->dev, "%s: error with default_state: %i\n",
-			 __func__, error);
+	if (ddata->clk) {
+		error = clk_prepare_enable(ddata->clk);
+		if (error)
+			return error;
+	}
 
 	gpiod_set_value_cansleep(enable_gpio, 1);
+
+	/*
+	 * Unlike MDM6600, the MDM9600 enable_gpio needs to be toggled for the
+	 * modem to show up reliably. Note that the stock v3.0.8 based kernel
+	 * does not toggle the gpio probably as the modules never get unloaded.
+	 * It just gets set high in mapphone_hsusb_ext_ts_init().
+	 */
+	if (ddata->type == MDM9600) {
+		usleep_range(1000, 2000);
+		gpiod_set_value_cansleep(enable_gpio, 0);
+	}
 
 	/* Allow aggressive PM for USB, it's only needed for n_gsm port */
 	if (pm_runtime_enabled(&x->dev))
@@ -158,12 +186,11 @@ static int phy_mdm6600_power_off(struct phy *x)
 				 __func__, error);
 	}
 
-	gpiod_set_value_cansleep(enable_gpio, 0);
+	if (ddata->type == MDM6600)
+		gpiod_set_value_cansleep(enable_gpio, 0);
 
-	error = pinctrl_pm_select_sleep_state(ddata->dev);
-	if (error)
-		dev_warn(ddata->dev, "%s: error with sleep_state: %i\n",
-			 __func__, error);
+	if (ddata->clk)
+		clk_disable_unprepare(ddata->clk);
 
 	return 0;
 }
@@ -182,13 +209,31 @@ static const struct phy_ops gpio_usb_ops = {
  *
  * Configures the three command request GPIOs to the specified value.
  */
-static void phy_mdm6600_cmd(struct phy_mdm6600 *ddata, int val)
+static void phy_mdm6600_cmd(struct phy_mdm6600 *ddata, enum phy_mdm6600_cmd val)
 {
 	DECLARE_BITMAP(values, PHY_MDM6600_NR_CMD_LINES);
 
 	values[0] = val;
 
 	gpiod_set_array_value_cansleep(PHY_MDM6600_NR_CMD_LINES,
+				       ddata->cmd_gpios->desc,
+				       ddata->cmd_gpios->info, values);
+}
+
+/**
+ * phy_mdm9600_cmd() - send a command request to mdm9600
+ * @ddata: device driver data
+ * @val: value of cmd to be set
+ *
+ * Configures the two command request GPIOs to the specified value.
+ */
+static void phy_mdm9600_cmd(struct phy_mdm6600 *ddata, enum phy_mdm9600_cmd val)
+{
+	DECLARE_BITMAP(values, PHY_MDM6600_NR_CMD_LINES - 1);
+
+	values[0] = val;
+
+	gpiod_set_array_value_cansleep(PHY_MDM6600_NR_CMD_LINES - 1,
 				       ddata->cmd_gpios->desc,
 				       ddata->cmd_gpios->info, values);
 }
@@ -316,7 +361,7 @@ phy_mdm6600_ctrl_gpio_map[PHY_MDM6600_NR_CTRL_LINES] = {
 static int phy_mdm6600_init_lines(struct phy_mdm6600 *ddata)
 {
 	struct device *dev = ddata->dev;
-	int i;
+	int i, nr_cmd_lines;
 
 	/* MDM6600 control lines */
 	for (i = 0; i < ARRAY_SIZE(phy_mdm6600_ctrl_gpio_map); i++) {
@@ -350,13 +395,19 @@ static int phy_mdm6600_init_lines(struct phy_mdm6600 *ddata)
 	if (ddata->status_gpios->ndescs != PHY_MDM6600_NR_STATUS_LINES)
 		return -EINVAL;
 
-	/* MDM6600 cmd output lines */
+	/* MDM6600 cmd output lines, 9600 has two lines instead of tree */
+
+	if (ddata->type == MDM6600)
+		nr_cmd_lines = 3;
+	else
+		nr_cmd_lines = 2;
+
 	ddata->cmd_gpios = devm_gpiod_get_array(dev, "motorola,cmd",
 						GPIOD_OUT_LOW);
 	if (IS_ERR(ddata->cmd_gpios))
 		return PTR_ERR(ddata->cmd_gpios);
 
-	if (ddata->cmd_gpios->ndescs != PHY_MDM6600_NR_CMD_LINES)
+	if (ddata->cmd_gpios->ndescs != nr_cmd_lines)
 		return -EINVAL;
 
 	return 0;
@@ -375,6 +426,7 @@ static int phy_mdm6600_init_lines(struct phy_mdm6600 *ddata)
 static int phy_mdm6600_device_power_on(struct phy_mdm6600 *ddata)
 {
 	struct gpio_desc *mode_gpio0, *mode_gpio1, *reset_gpio, *power_gpio;
+	unsigned long firmware_startup_delay;
 	int error = 0, wakeirq;
 
 	mode_gpio0 = ddata->mode_gpios->desc[PHY_MDM6600_MODE0];
@@ -392,7 +444,10 @@ static int phy_mdm6600_device_power_on(struct phy_mdm6600 *ddata)
 	gpiod_set_value_cansleep(mode_gpio1, 0);
 
 	/* Request start-up mode */
-	phy_mdm6600_cmd(ddata, PHY_MDM6600_CMD_NO_BYPASS);
+	if (ddata->type == MDM6600)
+		phy_mdm6600_cmd(ddata, PHY_MDM6600_CMD_NO_BYPASS);
+	else
+		phy_mdm9600_cmd(ddata, PHY_MDM9600_CMD_NO_BYPASS);
 
 	/* Request a reset first */
 	gpiod_set_value_cansleep(reset_gpio, 0);
@@ -412,10 +467,19 @@ static int phy_mdm6600_device_power_on(struct phy_mdm6600 *ddata)
 	msleep(PHY_MDM6600_PHY_DELAY_MS);
 	ddata->enabled = true;
 
-	/* Booting up the rest of MDM6600 will take total about 8 seconds */
+	/*
+	 * Booting up the rest of MDM6600 will take total about 8 seconds.
+	 * Booting up MDM9600 takes much longer, at least 40 seconds. Note
+	 * that the USB PHY is already available earlier after the initial
+	 * PHY_MDM6600_PHY_DELAY_MS.
+	 */
+	if (ddata->type == MDM6600)
+		firmware_startup_delay = msecs_to_jiffies(PHY_MDM6600_ENABLED_DELAY_MS);
+	else
+		firmware_startup_delay = msecs_to_jiffies(PHY_MDM9600_ENABLED_DELAY_MS);
+
 	dev_info(ddata->dev, "Waiting for power up request to complete..\n");
-	if (wait_for_completion_timeout(&ddata->ack,
-			msecs_to_jiffies(PHY_MDM6600_ENABLED_DELAY_MS))) {
+	if (wait_for_completion_timeout(&ddata->ack, firmware_startup_delay)) {
 		if (ddata->status > PHY_MDM6600_STATUS_PANIC &&
 		    ddata->status < PHY_MDM6600_STATUS_SHUTDOWN_ACK)
 			dev_info(ddata->dev, "Powered up OK\n");
@@ -456,14 +520,29 @@ static void phy_mdm6600_device_power_off(struct phy_mdm6600 *ddata)
 {
 	struct gpio_desc *reset_gpio =
 		ddata->ctrl_gpios[PHY_MDM6600_RESET];
+	int error;
 
 	ddata->enabled = false;
-	phy_mdm6600_cmd(ddata, PHY_MDM6600_CMD_BP_SHUTDOWN_REQ);
+	if (ddata->type == MDM6600)
+		phy_mdm6600_cmd(ddata, PHY_MDM6600_CMD_BP_SHUTDOWN_REQ);
+	else
+		phy_mdm9600_cmd(ddata, PHY_MDM9600_CMD_BP_SHUTDOWN_REQ);
 	msleep(100);
 
 	gpiod_set_value_cansleep(reset_gpio, 1);
 
 	dev_info(ddata->dev, "Waiting for power down request to complete.. ");
+
+	if (ddata->type == MDM9600) {
+		if (wait_for_completion_timeout(&ddata->ack,
+						msecs_to_jiffies(5000))) {
+			if (ddata->status == PHY_MDM6600_STATUS_SHUTDOWN_ACK)
+				dev_info(ddata->dev, "Power down ack received\n");
+		} else {
+			dev_err(ddata->dev, "Timed out waiting for power down ack\n");
+		}
+	}
+
 	if (wait_for_completion_timeout(&ddata->ack,
 					msecs_to_jiffies(5000))) {
 		if (ddata->status == PHY_MDM6600_STATUS_PANIC)
@@ -471,6 +550,17 @@ static void phy_mdm6600_device_power_off(struct phy_mdm6600 *ddata)
 	} else {
 		dev_err(ddata->dev, "Timed out powering down\n");
 	}
+
+	/*
+	 * Keep reset gpio high with padconf internal pull-up resistor to
+	 * prevent modem from waking up during deeper SoC idle states. The
+	 * gpio bank lines can have glitches if not in the always-on wkup
+	 * domain.
+	 */
+	error = pinctrl_pm_select_sleep_state(ddata->dev);
+	if (error)
+		dev_warn(ddata->dev, "%s: error with sleep_state: %i\n",
+			 __func__, error);
 }
 
 static void phy_mdm6600_deferred_power_on(struct work_struct *work)
@@ -548,7 +638,8 @@ static const struct dev_pm_ops phy_mdm6600_pm_ops = {
 };
 
 static const struct of_device_id phy_mdm6600_id_table[] = {
-	{ .compatible = "motorola,mapphone-mdm6600", },
+	{ .compatible = "motorola,mapphone-mdm6600", .data = (void *)MDM6600, },
+	{ .compatible = "motorola,mapphone-mdm9600", .data = (void *)MDM9600, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, phy_mdm6600_id_table);
@@ -568,14 +659,16 @@ static int phy_mdm6600_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&ddata->modem_wake_work, phy_mdm6600_modem_wake);
 	init_completion(&ddata->ack);
 
+	ddata->type = (enum phy_mdmx600_type)of_device_get_match_data(&pdev->dev);
 	ddata->dev = &pdev->dev;
-	platform_set_drvdata(pdev, ddata);
 
-	/* Active state selected in phy_mdm6600_power_on() */
-	error = pinctrl_pm_select_sleep_state(ddata->dev);
-	if (error)
-		dev_warn(ddata->dev, "%s: error with sleep_state: %i\n",
-			 __func__, error);
+	if (ddata->type == MDM9600) {
+		ddata->clk = devm_clk_get(&pdev->dev, "main_clk");
+		if (IS_ERR(ddata->clk))
+			return PTR_ERR(ddata->clk);
+	}
+
+	platform_set_drvdata(pdev, ddata);
 
 	error = phy_mdm6600_init_lines(ddata);
 	if (error)
@@ -627,10 +720,12 @@ idle:
 	pm_runtime_put_autosuspend(ddata->dev);
 
 cleanup:
-	if (error < 0)
+	if (error < 0) {
 		phy_mdm6600_device_power_off(ddata);
-	pm_runtime_disable(ddata->dev);
-	pm_runtime_dont_use_autosuspend(ddata->dev);
+		pm_runtime_disable(ddata->dev);
+		pm_runtime_dont_use_autosuspend(ddata->dev);
+	}
+
 	return error;
 }
 
@@ -639,6 +734,7 @@ static void phy_mdm6600_remove(struct platform_device *pdev)
 	struct phy_mdm6600 *ddata = platform_get_drvdata(pdev);
 	struct gpio_desc *reset_gpio = ddata->ctrl_gpios[PHY_MDM6600_RESET];
 
+	pm_runtime_get_noresume(ddata->dev);
 	pm_runtime_dont_use_autosuspend(ddata->dev);
 	pm_runtime_put_sync(ddata->dev);
 	pm_runtime_disable(ddata->dev);
