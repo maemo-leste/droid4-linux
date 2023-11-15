@@ -15,6 +15,7 @@
 #include <linux/mm_inline.h>
 #include <asm/pgalloc.h>
 #include <asm/tlb.h>
+#include <linux/export.h>
 
 /*
  * If a p?d_bad entry is found while walking page tables, report
@@ -378,3 +379,4 @@ again:
 	pte_unmap_unlock(pte, ptl);
 	goto again;
 }
+EXPORT_SYMBOL_GPL(__pte_offset_map_lock);
