@@ -497,6 +497,26 @@
 	};
 };
 
+/*
+ * Disable unused mcbsp and mcspi instances so drivers do not claim the virtual
+ * dma channels unncessarily, they are limited limited to 32 on omap4.
+ */
+&mcbsp4 {
+	status = "disabled";
+};
+
+&mcspi2 {
+	status = "disabled";
+};
+
+&mcspi3 {
+	status = "disabled";
+};
+
+&mcspi4 {
+	status = "disabled";
+};
+
 &cpcap_audio_codec0 {
 	remote-endpoint = <&cpu_dai2>;
 };
