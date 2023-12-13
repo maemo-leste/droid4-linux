@@ -1,3 +1,10 @@
+omap-linux (6.1.67.0-1) unstable; urgency=medium
+
+  * update to latest linux stable
+  * Add boost frequencies for both n900 and mapphones
+
+ -- Carl Klemm <carl@uvos.xyz> Wed, 13 Dec 2023 23:34:28 +0100
+
 omap-linux (6.1.48.1-1) unstable; urgency=medium
 
   * Potentally fix the rx51 ir device
