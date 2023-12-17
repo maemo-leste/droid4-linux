@@ -16,6 +16,13 @@
 			/* cooling options */
 			#cooling-cells = <2>; /* min followed by max */
 		};
+		cpu1: cpu@1 {
+			/* OMAP443x variants OPP50-OPPNT */
+			operating-points-v2 = <&cpu0_opp_table0>;
+
+			/* cooling options */
+			#cooling-cells = <2>; /* min followed by max */
+		};
 	};
 
 	cpu0_opp_table0: opp-table {
