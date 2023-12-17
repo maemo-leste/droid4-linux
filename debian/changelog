@@ -1,3 +1,9 @@
+omap-linux (6.1.67.1-1) unstable; urgency=medium
+
+  * Fix omap443x opp table
+
+ -- Carl Klemm <carl@uvos.xyz> Sun, 17 Dec 2023 21:25:20 +0100
+
 omap-linux (6.1.67.0-1) unstable; urgency=medium
 
   * update to latest linux stable
