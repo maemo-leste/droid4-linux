@@ -59,7 +59,7 @@ install_linux_image () {
 
 	# Only some architectures with OF support have this target
 	if is_enabled CONFIG_OF_EARLY_FLATTREE && [ -d "${srctree}/arch/${SRCARCH}/boot/dts" ]; then
-		${MAKE} -f ${srctree}/Makefile INSTALL_DTBS_PATH="${pdir}/usr/lib/linux-image-${KERNELRELEASE}" dtbs_install
+		${MAKE} -f ${srctree}/Makefile INSTALL_DTBS_PATH="${pdir}/usr/lib/linux-image-omap" dtbs_install
 	fi
 
 	${MAKE} -f ${srctree}/Makefile INSTALL_MOD_PATH="${pdir}" modules_install
@@ -112,9 +112,23 @@ install_linux_image () {
 		export DEB_MAINT_PARAMS="\$*"
 
 		# Tell initramfs builder whether it's wanted
-		export INITRD=$(if_enabled_echo CONFIG_BLK_DEV_INITRD Yes No)
+		export INITRD=No
+
+        case "$script" in
+        postinst)
+               depmod $version
+               mkdir -p /boot/boot
+               rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb  /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap4-xyboard-mz609.dtb /boot/boot/omap4-xyboard-mz617.dtb
+               cp -f /boot/vmlinuz-$version /boot/boot/zImage
+               cp -f /usr/lib/linux-image-omap/omap4-droid4-xt894.dtb /usr/lib/linux-image-omap/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-omap/omap4-droid3-xt862.dtb /usr/lib/linux-image-omap/omap3-n900.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt912.dtb /usr/lib/linux-image-omap/omap4-xyboard-mz609.dtb /usr/lib/linux-image-omap/omap4-xyboard-mz617.dtb /boot/boot
+               ;;
+        postrm)
+               rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb  /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb /boot/boot/omap4-xyboard-mz609.dtb /boot/boot/omap4-xyboard-mz617.dtb
+               ;;
+        esac
 
 		test -d ${debhookdir}/${script}.d && run-parts --arg="${KERNELRELEASE}" --arg="/${installed_image_path}" ${debhookdir}/${script}.d
+
 		exit 0
 		EOF
 		chmod 755 "${pdir}/DEBIAN/${script}"
@@ -177,9 +191,9 @@ install_libc_headers () {
 
 	# move asm headers to /usr/include/<libc-machine>/asm to match the structure
 	# used by Debian-based distros (to support multi-arch)
-	host_arch=$(dpkg-architecture -a$DEB_HOST_ARCH -qDEB_HOST_MULTIARCH)
-	mkdir $pdir/usr/include/$host_arch
-	mv $pdir/usr/include/asm $pdir/usr/include/$host_arch/
+	#host_arch=$(dpkg-architecture -a$DEB_HOST_ARCH -qDEB_HOST_MULTIARCH)
+	#mkdir $pdir/usr/include/$host_arch
+	#mv $pdir/usr/include/asm $pdir/usr/include/$host_arch/
 }
 
 rm -f debian/files
@@ -195,8 +209,8 @@ do
 		install_linux_image_dbg debian/linux-image-dbg debian/linux-image;;
 	linux-image-*|user-mode-linux-*)
 		install_linux_image debian/linux-image ${package};;
-	linux-libc-dev)
-		install_libc_headers debian/linux-libc-dev;;
+	#linux-libc-dev)
+	#	install_libc_headers debian/linux-libc-dev;;
 	linux-headers-*)
 		install_kernel_headers debian/linux-headers ${package#linux-headers-};;
 	esac
@@ -209,10 +223,11 @@ do
 		create_package ${package} debian/linux-image-dbg;;
 	linux-image-*|user-mode-linux-*)
 		create_package ${package} debian/linux-image;;
-	linux-libc-dev)
-		create_package ${package} debian/linux-libc-dev;;
+	#linux-libc-dev)
+	#	create_package ${package} debian/linux-libc-dev;;
 	linux-headers-*)
-		create_package ${package} debian/linux-headers;;
+		create_package linux-headers-omap debian/linux-headers;;
+		#create_package ${package} debian/linux-headers;;
 	esac
 done
 
