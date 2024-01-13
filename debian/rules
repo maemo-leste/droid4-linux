@@ -1,8 +1,6 @@
 #!/usr/bin/make -f
 
 CONFIG = omap2plus_defconfig
-DTB    = omap4-droid4-xt894.dtb omap4-droid-bionic-xt875.dtb
-DEV    = droid4
 ARCH   = arm
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -16,14 +14,14 @@ endif
 
 build-arch:
 	$(MAKE) ARCH=$(ARCH) $(CONFIG)
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) zImage modules dtbs $(DTB)
+	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) zImage modules dtbs
 
 binary-arch:
 ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_TARGET_MULTIARCH))
-	$(MAKE) ARCH=$(ARCH) DEV=$(DEV) DTB=$(DTB) $(BUILD_FLAGS) intdeb-pkg
+	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) intdeb-pkg
 else
 	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc modules
-	$(MAKE) ARCH=$(ARCH) DEV=$(DEV) DTB=$(DTB) $(BUILD_FLAGS) \
+	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) \
 		HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc intdeb-pkg
 endif
 
