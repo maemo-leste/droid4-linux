@@ -1,3 +1,9 @@
+omap-linux (6.6-1) unstable; urgency=medium
+
+  * Initial 6.6 build
+
+ -- Merlijn Wajer <merlijn@wizzup.org> Sun, 14 Jan 2024 00:18:44 +0100
+
 omap-linux (6.1.67.1-1) unstable; urgency=medium
 
   * Fix omap443x opp table
