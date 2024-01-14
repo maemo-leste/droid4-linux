@@ -254,7 +254,7 @@
 		reg = <0x44>;
 
 		pinctrl-names = "default";
-		pinctrl-0 = <&als_proximity_pins>;
+		//pinctrl-0 = <&als_proximity_pins>;
 
 		interrupt-parent = <&gpio6>;
 		interrupts = <17 IRQ_TYPE_LEVEL_LOW>; /* gpio177 */
