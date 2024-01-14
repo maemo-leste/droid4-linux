@@ -116,14 +116,14 @@ install_linux_image () {
 
         case "$script" in
         postinst)
-               depmod $version
+               depmod ${KERNELRELEASE}
                mkdir -p /boot/boot
-               rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb  /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap4-xyboard-mz609.dtb /boot/boot/omap4-xyboard-mz617.dtb
-               cp -f /boot/vmlinuz-$version /boot/boot/zImage
-               cp -f /usr/lib/linux-image-omap/omap4-droid4-xt894.dtb /usr/lib/linux-image-omap/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-omap/omap4-droid3-xt862.dtb /usr/lib/linux-image-omap/omap3-n900.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt912.dtb /usr/lib/linux-image-omap/omap4-xyboard-mz609.dtb /usr/lib/linux-image-omap/omap4-xyboard-mz617.dtb /boot/boot
+               rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap3-n900.dtb  /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb /boot/boot/omap4-xyboard-mz609.dtb /boot/boot/omap4-xyboard-mz617.dtb
+               cp -f /boot/vmlinuz-${KERNELRELEASE} /boot/boot/zImage
+               cp -f /usr/lib/linux-image-omap/omap4-droid4-xt894.dtb /usr/lib/linux-image-omap/omap4-droid-bionic-xt875.dtb /usr/lib/linux-image-omap/omap3-n900.dtb /usr/lib/linux-image-omap/omap4-razr-xt910.dtb /usr/lib/linux-image-omap/omap4-razr-xt912.dtb /usr/lib/linux-image-omap/omap4-xyboard-mz609.dtb /usr/lib/linux-image-omap/omap4-xyboard-mz617.dtb /boot/boot
                ;;
         postrm)
-               rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap4-droid3-xt862.dtb /boot/boot/omap3-n900.dtb  /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb /boot/boot/omap4-xyboard-mz609.dtb /boot/boot/omap4-xyboard-mz617.dtb
+               rm -f /boot/boot/zImage /boot/boot/omap4-droid4-xt894.dtb /boot/boot/omap4-droid-bionic-xt875.dtb /boot/boot/omap3-n900.dtb  /boot/boot/omap4-razr-xt910.dtb /boot/boot/omap4-razr-xt912.dtb /boot/boot/omap4-xyboard-mz609.dtb /boot/boot/omap4-xyboard-mz617.dtb
                ;;
         esac
 
