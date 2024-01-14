@@ -18,11 +18,11 @@ build-arch:
 
 binary-arch:
 ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_TARGET_MULTIARCH))
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) intdeb-pkg
+	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) run-command KBUILD_RUN_COMMAND=scripts/package/builddeb
 else
 	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc modules
 	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) \
-		HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc intdeb-pkg
+		HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc run-command KBUILD_RUN_COMMAND=scripts/package/builddeb
 endif
 
 clean:
