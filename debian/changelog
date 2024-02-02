@@ -1,3 +1,10 @@
+omap-linux (6.1.76.0-1) unstable; urgency=medium
+
+  * Update to latest linux-stable
+  * Fix kernel nullpointer deref in usb ethernet device
+
+ -- Carl Klemm <carl@uvos.xyz> Fri, 02 Feb 2024 19:52:40 +0100
+
 omap-linux (6.1.67.1-1) unstable; urgency=medium
 
   * Fix omap443x opp table
