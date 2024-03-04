@@ -1,3 +1,9 @@
+omap-linux (6.6.2-1) unstable; urgency=medium
+
+  * Add D3 dts and some builddeb fixes
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 04 Mar 2024 14:06:57 +0100
+
 omap-linux (6.6.1-1) unstable; urgency=medium
 
   * Initial 6.6 build
