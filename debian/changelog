@@ -1,3 +1,9 @@
+omap-linux (6.6.5-1) unstable; urgency=medium
+
+  * Add N900 IR patches (requested by arno11)
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Fri, 03 May 2024 20:06:27 +0200
+
 omap-linux (6.6.4-1) unstable; urgency=medium
 
   * Make btrfs built in for now
