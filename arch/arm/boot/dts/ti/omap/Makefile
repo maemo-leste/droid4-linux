@@ -70,6 +70,7 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 dtb-$(CONFIG_ARCH_OMAP4) += \
 	omap4-droid-bionic-xt875.dtb \
 	omap4-droid4-xt894.dtb \
+	omap4-droid3-xt862.dts \
 	omap4-duovero-parlor.dtb \
 	omap4-epson-embt2ws.dtb \
 	omap4-kc1.dtb \
