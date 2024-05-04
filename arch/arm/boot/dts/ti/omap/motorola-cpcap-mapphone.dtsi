@@ -140,20 +140,6 @@
 			label = "status-led:blue";
 			cpcap-phandle = <&cpcap>;
 		};
-
-		led_adl: led-adl {
-			compatible = "motorola,cpcap-led-adl";
-			vdd-supply = <&sw5>;
-			label = "button-backlight";
-			cpcap-phandle = <&cpcap>;
-		};
-
-		led_cp: led-cp {
-			compatible = "motorola,cpcap-led-cp";
-			vdd-supply = <&sw5>;
-			label = "shift-key-light";
-			cpcap-phandle = <&cpcap>;
-		};
 	};
 };
 
