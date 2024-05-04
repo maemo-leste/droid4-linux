@@ -29,6 +29,23 @@
 	status = "disabled";
 };
 
+/* Disable cpu_thermal and bandgap, they causes oopses on mmc access in OFF
+   mode at the moment. Let's just disable thermal_zones as well, although the
+   system works without it...
+*/
+&cpu_thermal {
+	status = "disabled";
+};
+
+&bandgap {
+	status = "disabled";
+};
+
+&thermal_zones {
+	status = "disabled";
+};
+
+
 / {
 	model = "Nokia N900";
 	compatible = "nokia,omap3-n900", "ti,omap3430", "ti,omap3";
@@ -563,8 +580,8 @@
 			 MATRIX_KEY(0x06, 0x00, KEY_U)
 
 			 MATRIX_KEY(0x07, 0x00, KEY_I)
-			 MATRIX_KEY(0x07, 0x01, KEY_F7)
-			 MATRIX_KEY(0x07, 0x02, KEY_F8)
+			 MATRIX_KEY(0x07, 0x01, KEY_VOLUMEUP)
+			 MATRIX_KEY(0x07, 0x02, KEY_VOLUMEDOWN)
 			 >;
 };
 
@@ -754,7 +771,7 @@
 		ti,current-limit = <100>;
 		ti,weak-battery-voltage = <3400>;
 		ti,battery-regulation-voltage = <4200>;
-		ti,charge-current = <650>;
+		ti,charge-current = <950>;
 		ti,termination-current = <100>;
 		ti,resistor-sense = <68>;
 
@@ -768,7 +785,7 @@
 
 	clock-frequency = <400000>;
 
-	accelerometer@1d {
+	lis302dl: lis302dl@1d {
 		compatible = "st,lis302dl";
 		reg = <0x1d>;
 
@@ -776,8 +793,7 @@
 		vddio-supply = <&vio>;
 
 		interrupt-parent = <&gpio6>;
-		interrupts = <21 IRQ_TYPE_EDGE_RISING>,
-			     <20 IRQ_TYPE_EDGE_RISING>; /* 181 and 180 */
+		interrupts = <21 IRQ_TYPE_EDGE_RISING>, <20 IRQ_TYPE_EDGE_RISING>; /* 181 and 180 */
 
 		mount-matrix =	 "-1",  "0",  "0",
 				  "0",  "1",  "0",
@@ -1156,4 +1172,68 @@
 
 &ssi_port2 {
 	status = "disabled";
+};
+
+&cpus {
+	cpu: cpu@0 {
+		operating-points-v2 = <&cpu0_opp_table>;
+
+		clock-latency = <300000>; /* From legacy driver */
+		#cooling-cells = <2>;
+	};
+};
+
+&cpu0_opp_table: opp-table {
+	compatible = "operating-points-v2-ti-cpu";
+	syscon = <&scm_conf>;
+
+	opp1-125000000 {
+		status = "disabled";
+	};
+
+	opp2-250000000 {
+		opp-hz = /bits/ 64 <250000000>;
+		opp-microvolt = <1075000 1075000 1075000>;
+		opp-supported-hw = <0xffffffff 3>;
+		opp-suspend;
+	};
+
+	opp3-500000000 {
+		opp-hz = /bits/ 64 <500000000>;
+		opp-microvolt = <1200000 1200000 1200000>;
+		opp-supported-hw = <0xffffffff 3>;
+	};
+
+	opp4-550000000 {
+		opp-hz = /bits/ 64 <550000000>;
+		opp-microvolt = <1275000 1275000 1275000>;
+		opp-supported-hw = <0xffffffff 3>;
+	};
+
+	opp5-600000000 {
+		opp-hz = /bits/ 64 <600000000>;
+		opp-microvolt = <1350000 1350000 1350000>;
+		opp-supported-hw = <0xffffffff 3>;
+	};
+
+	opp6-720000000 {
+		opp-hz = /bits/ 64 <720000000>;
+		opp-microvolt = <1350000 1350000 1350000>;
+		opp-supported-hw = <0xffffffff 3>;
+		turbo-mode;
+	};
+
+	opp7-805000000 {
+		opp-hz = /bits/ 64 <805000000>;
+		opp-microvolt = <1350000 1350000 1350000>;
+		opp-supported-hw = <0xffffffff 3>;
+		turbo-mode;
+	};
+
+	opp8-850000000 {
+		opp-hz = /bits/ 64 <850000000>;
+		opp-microvolt = <1350000 1350000 1350000>;
+		opp-supported-hw = <0xffffffff 3>;
+		turbo-mode;
+	};
 };
