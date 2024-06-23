@@ -1,3 +1,9 @@
+omap-linux (6.6.7-1) unstable; urgency=medium
+
+  * Re-add cpufreq sysfs fix
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 23 Jun 2024 14:56:15 +0200
+
 omap-linux (6.6.6-1) unstable; urgency=medium
 
   * Revert IR patches for now
