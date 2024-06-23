@@ -1,3 +1,9 @@
+omap-linux (6.6.6-1) unstable; urgency=medium
+
+  * Revert IR patches for now
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 23 Jun 2024 12:24:58 +0200
+
 omap-linux (6.6.5-1) unstable; urgency=medium
 
   * Add N900 IR patches (requested by arno11)
