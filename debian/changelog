@@ -1,3 +1,9 @@
+omap-linux (6.6.29.0-1) unstable; urgency=medium
+
+  * Better versioning, fix droid3 dts typo
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Thu, 27 Jun 2024 01:02:05 +0200
+
 omap-linux (6.6.8-1) unstable; urgency=medium
 
   * 6.6 rebased on newer patches
