@@ -1,3 +1,9 @@
+omap-linux (6.6.29.1-1) unstable; urgency=medium
+
+  * Make regmap writable
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 29 Jun 2024 21:36:17 +0200
+
 omap-linux (6.6.29.0-1) unstable; urgency=medium
 
   * Better versioning, fix droid3 dts typo
