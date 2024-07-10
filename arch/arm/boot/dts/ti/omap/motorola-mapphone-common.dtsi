@@ -86,23 +86,46 @@
 	};
 
 	soundcard {
-		compatible = "audio-graph-card";
+		compatible = "audio-graph-card2";
 		label = "Mapphone Audio";
 
 		widgets =
 			"Speaker", "Earpiece",
 			"Speaker", "Loudspeaker",
 			"Headphone", "Headphone Jack",
-			"Microphone", "Internal Mic";
+			"Microphone", "Internal Mic",
+			"Input", "Modem";
 
 		routing =
 			"Earpiece", "EP",
 			"Loudspeaker", "SPKR",
 			"Headphone Jack", "HSL",
 			"Headphone Jack", "HSR",
-			"MICR", "Internal Mic";
+			"MICR", "Internal Mic",
+			"Voice Call Capture", "Modem",
+			"Modem", "Voice Call Playback";
 
-		dais = <&mcbsp2_port>, <&mcbsp3_port>;
+		links = <
+			&mcbsp2_port
+			&mcbsp3_port
+			&c2c_voice_call
+		>;
+
+		codec2codec {
+			ports {
+				c2c_voice_call: port@0 {
+					mot_mdm6600_audio_codec2_c2c: endpoint {
+						remote-endpoint = <&cpcap_audio_codec1_ep1>;
+					};
+				};
+				port@1 {
+					cpcap_audio_codec1_c2c: endpoint {
+						remote-endpoint = <&mot_mdm6600_audio_codec2_ep1>;
+					};
+				};
+			};
+		};
+
 	};
 };
 
@@ -423,8 +446,14 @@
 			#sound-dai-cells = <1>;
 
 			port@0 {
-				mot_mdm6600_audio_codec0: endpoint {
-					remote-endpoint = <&cpu_dai_mdm>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				mot_mdm6600_audio_codec2_ep0: endpoint@0 {
+				};
+
+				mot_mdm6600_audio_codec2_ep1: endpoint@1 {
 				};
 			};
 		};
@@ -480,8 +509,6 @@
 			cpu_dai2: endpoint@0 {
 				dai-format = "i2s";
 				remote-endpoint = <&cpcap_audio_codec0>;
-				frame-master = <&cpcap_audio_codec0>;
-				bitclock-master = <&cpcap_audio_codec0>;
 			};
 		};
 	};
@@ -501,17 +528,13 @@
 			cpu_dai3: endpoint@0 {
 				reg = <0>;
 				dai-format = "dsp_a";
-				frame-master = <&cpcap_audio_codec1>;
-				bitclock-master = <&cpcap_audio_codec1>;
-				remote-endpoint = <&cpcap_audio_codec1>;
+				remote-endpoint = <&cpcap_audio_codec1_ep0>;
 			};
 
 			cpu_dai_mdm: endpoint@1 {
 				reg = <1>;
 				dai-format = "dsp_a";
-				frame-master = <&cpcap_audio_codec1>;
-				bitclock-master = <&cpcap_audio_codec1>;
-				remote-endpoint = <&mot_mdm6600_audio_codec0>;
+				remote-endpoint = <&mot_mdm6600_audio_codec2_ep0>;
 			};
 		};
 	};
@@ -541,6 +564,18 @@
 	remote-endpoint = <&cpu_dai2>;
 };
 
-&cpcap_audio_codec1 {
+&cpcap_audio_codec1_ep0 {
 	remote-endpoint = <&cpu_dai3>;
+};
+
+&cpcap_audio_codec1_ep1 {
+	remote-endpoint = <&mot_mdm6600_audio_codec2_c2c>;
+};
+
+&mot_mdm6600_audio_codec2_ep0 {
+	remote-endpoint = <&cpu_dai_mdm>;
+};
+
+&mot_mdm6600_audio_codec2_ep1 {
+	remote-endpoint = <&cpcap_audio_codec1_c2c>;
 };
