@@ -26,7 +26,6 @@
 
 struct motmdm_driver_data {
 	struct snd_soc_component *component;
-	struct snd_soc_dai *master_dai;
 	struct device *modem;
 	struct gsm_serdev_dlci dlci;
 	struct regmap *regmap;
@@ -376,111 +375,6 @@ free:
 	return error;
 }
 
-static int
-motmdm_enable_primary_dai(struct snd_soc_component *component)
-{
-	struct motmdm_driver_data *ddata =
-		snd_soc_component_get_drvdata(component);
-	int error;
-
-	if (!ddata->master_dai)
-		return -ENODEV;
-
-	error = snd_soc_dai_set_sysclk(ddata->master_dai, 1, 19200000,
-				       SND_SOC_CLOCK_OUT);
-	if (error)
-		return error;
-
-	error = snd_soc_dai_set_fmt(ddata->master_dai,
-				    SND_SOC_DAIFMT_I2S |
-				    SND_SOC_DAIFMT_NB_NF |
-				    SND_SOC_DAIFMT_CBM_CFM);
-	if (error)
-		return error;
-
-	error = snd_soc_dai_set_tdm_slot(ddata->master_dai, 0, 1, 1, 8);
-	if (error)
-		return error;
-
-	return error;
-}
-
-static int
-motmdm_disable_primary_dai(struct snd_soc_component *component)
-{
-	struct motmdm_driver_data *ddata =
-		snd_soc_component_get_drvdata(component);
-	int error;
-
-	if (!ddata->master_dai)
-		return -ENODEV;
-
-	error = snd_soc_dai_set_sysclk(ddata->master_dai, 0, 26000000,
-				       SND_SOC_CLOCK_OUT);
-	if (error)
-		return error;
-
-	error = snd_soc_dai_set_fmt(ddata->master_dai,
-				    SND_SOC_DAIFMT_CBM_CFM);
-	if (error)
-		return error;
-
-	error = snd_soc_dai_set_tdm_slot(ddata->master_dai, 0, 0, 0, 48);
-	if (error)
-		return error;
-
-	return error;
-}
-
-static int motmdm_find_primary_dai(struct snd_soc_component *component,
-	const char *name)
-{
-	struct motmdm_driver_data *ddata =
-		snd_soc_component_get_drvdata(component);
-	struct device_node *bitclkmaster = NULL, *framemaster = NULL;
-	struct device_node *ep, *master_ep, *master = NULL;
-	struct snd_soc_dai_link_component dlc = { 0 };
-	unsigned int daifmt;
-
-	ep = of_graph_get_next_endpoint(component->dev->of_node, NULL);
-	if (!ep)
-		return -ENODEV;
-
-	master_ep = of_graph_get_remote_endpoint(ep);
-	of_node_put(ep);
-	if (!master_ep)
-		return -ENODEV;
-
-	daifmt = snd_soc_daifmt_parse_format(master_ep, NULL);
-	snd_soc_daifmt_parse_clock_provider_as_phandle(master_ep, NULL,
-					 &bitclkmaster, &framemaster);
-
-	of_node_put(master_ep);
-	if (bitclkmaster && framemaster)
-		master = of_graph_get_port_parent(bitclkmaster);
-	of_node_put(bitclkmaster);
-	of_node_put(framemaster);
-	if (!master)
-		return -ENODEV;
-
-	dlc.of_node = master;
-	dlc.dai_name = name;
-	ddata->master_dai = snd_soc_find_dai(&dlc);
-	of_node_put(master);
-	if (!ddata->master_dai)
-		return -EPROBE_DEFER;
-
-	dev_info(component->dev, "Master DAI is %s\n",
-		 dev_name(ddata->master_dai->dev));
-
-	return 0;
-}
-
-static int motmdm_parse_tdm(struct snd_soc_component *component)
-{
-	return motmdm_find_primary_dai(component, "cpcap-voice");
-}
-
 static const struct snd_kcontrol_new motmdm_snd_controls[] = {
         SOC_ENUM_EXT("Call Output", motmdm_out_enum,
                      motmdm_audio_out_get,
@@ -520,99 +414,6 @@ static struct snd_soc_dai_driver motmdm_dai[] = {
 		},
 	},
 };
-
-/* Parses the voice call state from unsolicited notifications on dlci1 */
-static void motmdm_voice_get_state(struct motmdm_driver_data *ddata,
-				   const unsigned char *buf,
-				   size_t len)
-{
-	struct device *dev = ddata->component->dev;
-	bool enable, notify = false;
-	unsigned char state[5 + 1];
-	unsigned long flags;
-
-	if (len < MOTMDM_HEADER_LEN + MOTMDM_VOICE_RESP_LEN + 5)
-		return;
-
-	/* We only care about the unsolicted messages */
-	if (buf[MOTMDM_HEADER_LEN] != '~')
-		return;
-
-	if (strncmp(buf + MOTMDM_HEADER_LEN + 1, "+CIEV=", 6))
-		return;
-
-	snprintf(state, 5 + 1, buf + MOTMDM_HEADER_LEN +
-		 MOTMDM_VOICE_RESP_LEN);
-	dev_info(dev, "%s: ciev=%s\n", __func__, state);
-
-	if (!strncmp(state, "1,1,0", 5) ||	/* connecting */
-	    !strncmp(state, "1,4,0", 5) ||	/* incoming call */
-	    !strncmp(state, "1,2,0", 5))	/* connected */
-		enable = true;
-	else if (!strncmp(state, "1,0,0", 5) ||	/* disconnected */
-		!strncmp(state, "1,0,2", 5) ||	/* call failed */
-		!strncmp(state, "1,0,7", 5) ||	/* line busy */
-		!strncmp(state, "1,0,9", 5))	/* emergency calls only */
-		enable = false;
-	else
-		return;
-
-	spin_lock_irqsave(&ddata->lock, flags);
-	if (ddata->enabled != enable) {
-		ddata->enabled = enable;
-		notify = true;
-	}
-	spin_unlock_irqrestore(&ddata->lock, flags);
-
-	if (!notify)
-		return;
-
-	if (enable)
-		motmdm_enable_primary_dai(ddata->component);
-	else
-		motmdm_disable_primary_dai(ddata->component);
-}
-
-static int receive_buf_voice(struct gsm_serdev_dlci *ops,
-			     const unsigned char *buf,
-			     size_t len)
-{
-	struct motmdm_driver_data *ddata = ops->drvdata;
-
-	motmdm_voice_get_state(ddata, buf, len);
-	if (ddata->receive_buf_orig)
-		return ddata->receive_buf_orig(ops, buf, len);
-
-	return len;
-}
-
-/* Read the voice status from dlci1 and let user space handle rest */
-static int motmdm_init_voice_dlci(struct motmdm_driver_data *ddata)
-{
-	struct gsm_serdev_dlci *dlci;
-
-	dlci = serdev_ngsm_get_dlci(ddata->modem, MOTMDM_VOICE_DLCI);
-	if (!dlci)
-		return -ENODEV;
-
-	dlci->drvdata = ddata;
-	ddata->receive_buf_orig = dlci->receive_buf;
-	dlci->receive_buf = receive_buf_voice;
-
-	return 0;
-}
-
-static void motmdm_free_voice_dlci(struct motmdm_driver_data *ddata)
-{
-	struct gsm_serdev_dlci *dlci;
-
-	dlci = serdev_ngsm_get_dlci(ddata->modem, MOTMDM_VOICE_DLCI);
-	if (!dlci)
-		return;
-
-	dlci->receive_buf = ddata->receive_buf_orig;
-	dlci->drvdata = NULL;
-}
 
 static int motmdm_soc_probe(struct snd_soc_component *component)
 {
@@ -661,28 +462,13 @@ static int motmdm_soc_probe(struct snd_soc_component *component)
 	if (error)
 		goto unregister_regmap;
 
-	error = motmdm_parse_tdm(component);
-	if (error)
-		goto unregister_dlci;
-
 	regcache_sync(ddata->regmap);
 
 	error = motmdm_send_command(ddata, cmd, strlen(cmd));
 	if (error < 0)
 		goto unregister_dlci;
 
-	error = motmdm_init_voice_dlci(ddata);
-	if (error)
-		goto unregister_dlci;
-
-	error = motmdm_disable_primary_dai(ddata->component);
-	if (error)
-		goto unregister_voice;
-
 	return 0;
-
-unregister_voice:
-	motmdm_free_voice_dlci(ddata);
 
 unregister_dlci:
 	serdev_ngsm_unregister_dlci(ddata->modem, dlci);
@@ -706,7 +492,6 @@ static void motmdm_soc_remove(struct snd_soc_component *component)
 
 	ddata = snd_soc_component_get_drvdata(component);
 	dlci = &ddata->dlci;
-	motmdm_free_voice_dlci(ddata);
 	serdev_ngsm_unregister_dlci(ddata->modem, dlci);
 	regmap_exit(ddata->regmap);
 	kfree(ddata->buf);
