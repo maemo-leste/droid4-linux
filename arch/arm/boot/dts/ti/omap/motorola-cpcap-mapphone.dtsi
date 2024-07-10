@@ -81,8 +81,17 @@
 				};
 			};
 			port@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				bitclock-master;
+				frame-master;
+
 				reg = <1>;
-				cpcap_audio_codec1: endpoint {
+				cpcap_audio_codec1_ep0: endpoint@0 {
+				};
+				cpcap_audio_codec1_ep1: endpoint@1 {
+					dai-format = "i2s";
 				};
 			};
 		};
