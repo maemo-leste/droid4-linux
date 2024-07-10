@@ -418,11 +418,9 @@ static int __graph_parse_node(struct asoc_simple_priv *priv,
 	}
 
 	graph_parse_mclk_fs(ep, dai_props);
-
 	ret = asoc_graph_parse_dai(dev, ep, dlc, &is_single_links);
 	if (ret < 0)
 		return ret;
-
 	ret = asoc_simple_parse_tdm(ep, dai);
 	if (ret < 0)
 		return ret;
@@ -508,16 +506,15 @@ static int __graph_parse_node(struct asoc_simple_priv *priv,
 
 static int graph_parse_node(struct asoc_simple_priv *priv,
 			    enum graph_type gtype,
-			    struct device_node *port,
+			    struct device_node *ep,
 			    struct link_info *li, int is_cpu)
 {
-	struct device_node *ep;
 	int ret = 0;
+	struct device_node *port = of_get_parent(ep);
+	bool is_multi = graph_lnk_is_multi(port);
 
-	if (graph_lnk_is_multi(port)) {
+	if (is_multi) {
 		int idx;
-
-		of_node_get(port);
 
 		for (idx = 0;; idx++) {
 			ep = graph_get_next_multi_ep(&port);
@@ -532,9 +529,8 @@ static int graph_parse_node(struct asoc_simple_priv *priv,
 		}
 	} else {
 		/* Single CPU / Codec */
-		ep = port_to_endpoint(port);
+		of_node_put(port);
 		ret = __graph_parse_node(priv, gtype, ep, li, is_cpu, 0);
-		of_node_put(ep);
 	}
 
 	return ret;
@@ -591,22 +587,20 @@ static void graph_parse_daifmt(struct device_node *node,
 }
 
 static void graph_link_init(struct asoc_simple_priv *priv,
-			    struct device_node *port,
+			    struct device_node *ep,
 			    struct link_info *li,
 			    int is_cpu_node)
 {
 	struct snd_soc_dai_link *dai_link = simple_priv_to_link(priv, li->link);
-	struct device_node *ep;
+	struct device_node *port = of_get_parent(ep);
+	bool is_multi = graph_lnk_is_multi(port);
 	struct device_node *ports;
 	unsigned int daifmt = 0, daiclk = 0;
 	unsigned int bit_frame = 0;
 
-	if (graph_lnk_is_multi(port)) {
-		of_node_get(port);
+	if (is_multi) {
 		ep = graph_get_next_multi_ep(&port);
 		port = of_get_parent(ep);
-	} else {
-		ep = port_to_endpoint(port);
 	}
 
 	ports = of_get_parent(port);
@@ -642,6 +636,9 @@ static void graph_link_init(struct asoc_simple_priv *priv,
 	dai_link->ops		= &graph_ops;
 	if (priv->ops)
 		dai_link->ops	= priv->ops;
+
+	of_node_put(port);
+	of_node_put(ports);
 }
 
 int audio_graph2_link_normal(struct asoc_simple_priv *priv,
@@ -650,7 +647,7 @@ int audio_graph2_link_normal(struct asoc_simple_priv *priv,
 {
 	struct device_node *cpu_port = lnk;
 	struct device_node *cpu_ep = port_to_endpoint(cpu_port);
-	struct device_node *codec_port = of_graph_get_remote_port(cpu_ep);
+	struct device_node *codec_ep = of_graph_get_remote_endpoint(cpu_ep);
 	int ret;
 
 	/*
@@ -658,20 +655,20 @@ int audio_graph2_link_normal(struct asoc_simple_priv *priv,
 	 * see
 	 *	__graph_parse_node() :: DAI Naming
 	 */
-	ret = graph_parse_node(priv, GRAPH_NORMAL, codec_port, li, 0);
+	ret = graph_parse_node(priv, GRAPH_NORMAL, codec_ep, li, 0);
 	if (ret < 0)
 		goto err;
 
 	/*
 	 * call CPU, and set DAI Name
 	 */
-	ret = graph_parse_node(priv, GRAPH_NORMAL, cpu_port, li, 1);
+	ret = graph_parse_node(priv, GRAPH_NORMAL, cpu_ep, li, 1);
 	if (ret < 0)
 		goto err;
 
-	graph_link_init(priv, cpu_port, li, 1);
+	graph_link_init(priv, cpu_ep, li, 1);
 err:
-	of_node_put(codec_port);
+	of_node_put(codec_ep);
 	of_node_put(cpu_ep);
 
 	return ret;
@@ -684,7 +681,6 @@ int audio_graph2_link_dpcm(struct asoc_simple_priv *priv,
 {
 	struct device_node *ep = port_to_endpoint(lnk);
 	struct device_node *rep = of_graph_get_remote_endpoint(ep);
-	struct device_node *rport = of_graph_get_remote_port(ep);
 	struct snd_soc_dai_link *dai_link = simple_priv_to_link(priv, li->link);
 	struct simple_dai_props *dai_props = simple_priv_to_props(priv, li->link);
 	int is_cpu = asoc_graph_is_ports0(lnk);
@@ -718,7 +714,7 @@ int audio_graph2_link_dpcm(struct asoc_simple_priv *priv,
 		dai_link->dynamic		= 1;
 		dai_link->dpcm_merged_format	= 1;
 
-		ret = graph_parse_node(priv, GRAPH_DPCM, rport, li, 1);
+		ret = graph_parse_node(priv, GRAPH_DPCM, rep, li, 1);
 		if (ret)
 			goto err;
 	} else {
@@ -751,7 +747,7 @@ int audio_graph2_link_dpcm(struct asoc_simple_priv *priv,
 		dai_link->no_pcm		= 1;
 		dai_link->be_hw_params_fixup	= asoc_simple_be_hw_params_fixup;
 
-		ret = graph_parse_node(priv, GRAPH_DPCM, rport, li, 0);
+		ret = graph_parse_node(priv, GRAPH_DPCM, rep, li, 0);
 		if (ret < 0)
 			goto err;
 	}
@@ -761,11 +757,10 @@ int audio_graph2_link_dpcm(struct asoc_simple_priv *priv,
 
 	snd_soc_dai_link_set_capabilities(dai_link);
 
-	graph_link_init(priv, rport, li, is_cpu);
+	graph_link_init(priv, rep, li, is_cpu);
 err:
 	of_node_put(ep);
 	of_node_put(rep);
-	of_node_put(rport);
 
 	return ret;
 }
@@ -777,7 +772,7 @@ int audio_graph2_link_c2c(struct asoc_simple_priv *priv,
 {
 	struct snd_soc_dai_link *dai_link = simple_priv_to_link(priv, li->link);
 	struct device_node *port0, *port1, *ports;
-	struct device_node *codec0_port, *codec1_port;
+	struct device_node *codec0_ep, *codec1_ep;
 	struct device_node *ep0, *ep1;
 	u32 val = 0;
 	int ret = -EINVAL;
@@ -834,31 +829,31 @@ int audio_graph2_link_c2c(struct asoc_simple_priv *priv,
 	ep0 = port_to_endpoint(port0);
 	ep1 = port_to_endpoint(port1);
 
-	codec0_port = of_graph_get_remote_port(ep0);
-	codec1_port = of_graph_get_remote_port(ep1);
+	codec0_ep = of_graph_get_remote_endpoint(ep0);
+	codec1_ep = of_graph_get_remote_endpoint(ep1);
 
 	/*
 	 * call Codec first.
 	 * see
 	 *	__graph_parse_node() :: DAI Naming
 	 */
-	ret = graph_parse_node(priv, GRAPH_C2C, codec1_port, li, 0);
+	ret = graph_parse_node(priv, GRAPH_C2C, codec1_ep, li, 0);
 	if (ret < 0)
 		goto err2;
 
 	/*
 	 * call CPU, and set DAI Name
 	 */
-	ret = graph_parse_node(priv, GRAPH_C2C, codec0_port, li, 1);
+	ret = graph_parse_node(priv, GRAPH_C2C, codec0_ep, li, 1);
 	if (ret < 0)
 		goto err2;
 
-	graph_link_init(priv, codec0_port, li, 1);
+	graph_link_init(priv, codec0_ep, li, 1);
 err2:
 	of_node_put(ep0);
 	of_node_put(ep1);
-	of_node_put(codec0_port);
-	of_node_put(codec1_port);
+	of_node_put(codec0_ep);
+	of_node_put(codec1_ep);
 err1:
 	of_node_put(ports);
 	of_node_put(port0);
