@@ -1,3 +1,10 @@
+omap-linux (6.6.36.1-1) unstable; urgency=medium
+
+  * merge cpcap wip patches
+  * fix n900 opp tables
+
+ -- Carl Klemm <carl@uvos.xyz> Wed, 10 Jul 2024 22:32:36 +0200
+
 omap-linux (6.6.36.0-1) unstable; urgency=medium
 
   * Switch to 6.6.36
