@@ -73,13 +73,28 @@
 				<&cpcap 9 0>,
 				<&cpcap 10 0>;
 			interrupt-names = "hs", "mb2";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
 
-			port@0 {
-				cpcap_audio_codec0: endpoint {
+				port@0 {
+					bitclock-master;
+					frame-master;
+
+					reg = <0>;
+					cpcap_audio_codec0: endpoint {
+					};
 				};
-			};
-			port@1 {
-				cpcap_audio_codec1: endpoint {
+				port@1 {
+					bitclock-master;
+					frame-master;
+
+					reg = <1>;
+					cpcap_audio_codec1_ep0: endpoint@0 {
+					};
+					cpcap_audio_codec1_ep1: endpoint@1 {
+						dai-format = "i2s";
+					};
 				};
 			};
 		};
