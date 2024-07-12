@@ -212,7 +212,7 @@ do
 	#linux-libc-dev)
 	#	install_libc_headers debian/linux-libc-dev;;
 	linux-headers-*)
-		install_kernel_headers debian/linux-headers ${version};;
+		install_kernel_headers debian/linux-headers ${KERNELRELEASE};;
 	esac
 done
 
