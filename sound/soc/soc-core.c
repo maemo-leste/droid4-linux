@@ -2844,6 +2844,8 @@ static const struct snd_soc_dapm_widget simple_widgets[] = {
 	SND_SOC_DAPM_LINE("Line", NULL),
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_SPK("Speaker", NULL),
+	SND_SOC_DAPM_INPUT("Input"),
+	SND_SOC_DAPM_OUTPUT("Output"),
 };
 
 int snd_soc_of_parse_audio_simple_widgets(struct snd_soc_card *card,
