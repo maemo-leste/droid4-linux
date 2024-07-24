@@ -179,6 +179,28 @@ install_kernel_headers () {
 
 	mkdir -p $pdir/lib/modules/$version/
 	ln -s /usr/src/linux-headers-$version $pdir/lib/modules/$version/build
+	mkdir -m 755 -p "debian/linux-headers/DEBIAN"
+	cat <<EOF > "debian/linux-headers/DEBIAN/postinst"
+#!/usr/bin/perl
+# Author: Michael Gilbert <michael.s.gilbert@gmail.com>
+# Origin: Stripped down version of the linux-headers postinst from Ubuntu's
+#         2.6.32-14-generic kernel, which was itself derived from a
+#         Debian linux-image postinst script.
+
+$|=1;
+my \$version  = "$version";
+
+if (-d "/etc/kernel/header_postinst.d") {
+  system ("run-parts --report --exit-on-error --arg=\$version " .
+          "/etc/kernel/header_postinst.d") &&
+            die "Failed to process /etc/kernel/header_postinst.d";
+}
+
+exit 0;
+
+__END__
+EOF
+	chmod 755 "debian/linux-headers/DEBIAN/postinst"
 }
 
 install_libc_headers () {
