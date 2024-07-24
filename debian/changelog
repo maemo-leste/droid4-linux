@@ -1,3 +1,9 @@
+omap-linux (6.6.36.5-1) unstable; urgency=medium
+
+  * Fix DKMS postinst for kernel headers
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Wed, 24 Jul 2024 17:50:51 +0200
+
 omap-linux (6.6.36.4-1) unstable; urgency=medium
 
   * Correct n900 accelerometer orientation
