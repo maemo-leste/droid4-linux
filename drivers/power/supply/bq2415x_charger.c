@@ -832,6 +832,8 @@ static int bq2415x_notifier_call(struct notifier_block *nb,
 	if (ret != 0)
 		return NOTIFY_OK;
 
+	power_supply_changed(bq->charger);
+
 	if (!bq2415x_update_reported_mode(bq, prop.intval))
 		return NOTIFY_OK;
 
