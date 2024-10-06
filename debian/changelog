@@ -1,3 +1,9 @@
+omap-linux (6.6.58.1-1) unstable; urgency=medium
+
+  * bq2415x_charger: report events to userspace
+
+ -- Carl Klemm <carl@uvos.xyz> Sun, 06 Oct 2024 15:31:15 +0200
+
 omap-linux (6.6.58.0-1) unstable; urgency=medium
 
   * update to 6.6.58
