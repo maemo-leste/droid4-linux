@@ -160,7 +160,7 @@ struct bq2415x_device {
 	struct bq2415x_platform_data init_data;
 	struct power_supply *charger;
 	struct power_supply_desc charger_desc;
-	struct delayed_work work;
+	struct delayed_work timer_work;
 	struct device_node *notify_node;
 	struct notifier_block nb;
 	enum bq2415x_mode reported_mode;/* mode reported by hook function */
@@ -841,7 +841,7 @@ static int bq2415x_notifier_call(struct notifier_block *nb,
 	if (bq->automode < 1)
 		return NOTIFY_OK;
 
-	schedule_delayed_work(&bq->work, 0);
+	schedule_delayed_work(&bq->timer_work, 0);
 
 	return NOTIFY_OK;
 }
@@ -861,11 +861,11 @@ static void bq2415x_set_autotimer(struct bq2415x_device *bq, int state)
 	bq->autotimer = state;
 
 	if (state) {
-		schedule_delayed_work(&bq->work, BQ2415X_TIMER_TIMEOUT * HZ);
+		schedule_delayed_work(&bq->timer_work, BQ2415X_TIMER_TIMEOUT * HZ);
 		bq2415x_exec_command(bq, BQ2415X_TIMER_RESET);
 		bq->timer_error = NULL;
 	} else {
-		cancel_delayed_work_sync(&bq->work);
+		cancel_delayed_work_sync(&bq->timer_work);
 	}
 
 	mutex_unlock(&bq2415x_timer_mutex);
@@ -884,10 +884,10 @@ static void bq2415x_timer_error(struct bq2415x_device *bq, const char *msg)
 }
 
 /* delayed work function for auto resetting chip timer */
-static void bq2415x_timer_work(struct work_struct *work)
+static void bq2415x_timer_work(struct work_struct *timer_work)
 {
-	struct bq2415x_device *bq = container_of(work, struct bq2415x_device,
-						 work.work);
+	struct bq2415x_device *bq = container_of(timer_work, struct bq2415x_device,
+						 timer_work.work);
 	int ret;
 	int error;
 	int boost;
@@ -984,7 +984,7 @@ static void bq2415x_timer_work(struct work_struct *work)
 		}
 	}
 
-	schedule_delayed_work(&bq->work, BQ2415X_TIMER_TIMEOUT * HZ);
+	schedule_delayed_work(&bq->timer_work, BQ2415X_TIMER_TIMEOUT * HZ);
 }
 
 /**** power supply interface code ****/
@@ -1040,7 +1040,7 @@ static void bq2415x_power_supply_exit(struct bq2415x_device *bq)
 	bq->autotimer = 0;
 	if (bq->automode > 0)
 		bq->automode = 0;
-	cancel_delayed_work_sync(&bq->work);
+	cancel_delayed_work_sync(&bq->timer_work);
 	power_supply_unregister(bq->charger);
 	kfree(bq->model);
 }
@@ -1686,7 +1686,7 @@ static int bq2415x_probe(struct i2c_client *client)
 		}
 	}
 
-	INIT_DELAYED_WORK(&bq->work, bq2415x_timer_work);
+	INIT_DELAYED_WORK(&bq->timer_work, bq2415x_timer_work);
 	bq2415x_set_autotimer(bq, 1);
 
 	dev_info(bq->dev, "driver registered\n");
