@@ -33,6 +33,9 @@
 /* timeout for resetting chip timer */
 #define BQ2415X_TIMER_TIMEOUT		10
 
+/* input source detection interval. insanely long! */
+#define BQ2415X_DETECTION_INTERVAL	9
+
 #define BQ2415X_REG_STATUS		0x00
 #define BQ2415X_REG_CONTROL		0x01
 #define BQ2415X_REG_VOLTAGE		0x02
@@ -161,6 +164,7 @@ struct bq2415x_device {
 	struct power_supply *charger;
 	struct power_supply_desc charger_desc;
 	struct delayed_work timer_work;
+	struct delayed_work refresh_work;
 	struct device_node *notify_node;
 	struct notifier_block nb;
 	enum bq2415x_mode reported_mode;/* mode reported by hook function */
@@ -841,6 +845,13 @@ static int bq2415x_notifier_call(struct notifier_block *nb,
 	if (bq->automode < 1)
 		return NOTIFY_OK;
 
+	/*
+	 * Sometimes the chip takes more than 5s to update its internal state.
+	 * Therefore schedule a late refresh of reported supply properties.
+	 */
+	cancel_delayed_work(&bq->refresh_work);
+	schedule_delayed_work(&bq->refresh_work, BQ2415X_DETECTION_INTERVAL * HZ);
+
 	schedule_delayed_work(&bq->timer_work, 0);
 
 	return NOTIFY_OK;
@@ -987,6 +998,15 @@ static void bq2415x_timer_work(struct work_struct *timer_work)
 	schedule_delayed_work(&bq->timer_work, BQ2415X_TIMER_TIMEOUT * HZ);
 }
 
+/* delayed work function for refreshing properties on input source detection */
+static void bq2415x_refresh_work(struct work_struct *refresh_work)
+{
+	struct bq2415x_device *bq = container_of(refresh_work, struct bq2415x_device,
+						 refresh_work.work);
+	power_supply_changed(bq->charger);
+}
+
+
 /**** power supply interface code ****/
 
 static enum power_supply_property bq2415x_power_supply_props[] = {
@@ -1041,6 +1061,7 @@ static void bq2415x_power_supply_exit(struct bq2415x_device *bq)
 	if (bq->automode > 0)
 		bq->automode = 0;
 	cancel_delayed_work_sync(&bq->timer_work);
+	cancel_delayed_work_sync(&bq->refresh_work);
 	power_supply_unregister(bq->charger);
 	kfree(bq->model);
 }
@@ -1687,6 +1708,7 @@ static int bq2415x_probe(struct i2c_client *client)
 	}
 
 	INIT_DELAYED_WORK(&bq->timer_work, bq2415x_timer_work);
+	INIT_DELAYED_WORK(&bq->refresh_work, bq2415x_refresh_work);
 	bq2415x_set_autotimer(bq, 1);
 
 	dev_info(bq->dev, "driver registered\n");
