@@ -90,9 +90,16 @@
 
 		links = <
 			&mcbsp2_port
-			&mcbsp3_port
 		>;
 	};
+};
+
+&mcbsp3 {
+	status = "disabled";
+};
+
+&cpcap_audio {
+	ext-amp-gpios = <&gpio6 31 GPIO_ACTIVE_HIGH>;
 };
 
 &dsi1 {
@@ -192,7 +199,55 @@
 				};
 			};
 		};
-        };
+	};
+};
+
+&i2c4 {
+	lis3dh: accelerometer@19 {
+		compatible = "st,lis3dh-accel";
+		reg = <0x19>;
+
+		vdd-supply = <&vhvio>;
+
+		rotation-matrix = "0", "-1", "0",
+				  "1", "0", "0",
+				  "0", "0", "1";
+	};
+
+	ak8975: magnetometer@c {
+		compatible = "asahi-kasei,ak8975";
+		reg = <0x0c>;
+
+		vdd-supply = <&vhvio>;
+
+		interrupt-parent = <&gpio6>;
+		interrupts = <15 IRQ_TYPE_EDGE_RISING>; /* gpio175 */
+
+		rotation-matrix = "-1", "0", "0",
+				  "0", "1", "0",
+				  "0", "0", "-1";
+
+	};
+
+	l3g4200d: l3g4200d@68 {
+		compatible = "st,l3g4200d-gyro";
+		st,drdy-int-pin = <2>;
+		reg = <0x68>;
+		vdd-supply = <&vhvio>;
+		vddio-supply = <&vhvio>;
+
+		interrupt-parent = <&gpio5>;
+		interrupts = <25 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	bmp085: pressure@77 {
+		compatible = "bosch,bmp085";
+		reg = <0x77>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <18 IRQ_TYPE_EDGE_RISING>; /* gpio178 */
+		vddd-supply = <&vhvio>;
+		vdda-supply = <&vhvio>;
+	};
 };
 
 &keypad {
