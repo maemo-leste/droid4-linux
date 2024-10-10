@@ -59,6 +59,50 @@
 		pwm-names = "enable", "direction";
 		direction-duty-cycle-ns = <10000000>;
 	};
+	
+	soundcard {
+		compatible = "audio-graph-card2";
+		label = "Mapphone Audio";
+
+		widgets =
+			"Speaker", "Earpiece",
+			"Speaker", "Loudspeaker",
+			"Headphone", "Headphone Jack",
+			"Microphone", "Internal Mic",
+			"Input", "Modem";
+
+		routing =
+			"Earpiece", "EP",
+			"Loudspeaker", "SPKR",
+			"Headphone Jack", "HSL",
+			"Headphone Jack", "HSR",
+			"MICR", "Internal Mic",
+			"Voice Call Capture", "Modem",
+			"Modem", "Voice Call Playback";
+
+		links = <
+			&mcbsp2_port
+			&mcbsp3_port
+			&c2c_voice_call
+		>;
+
+		codec2codec {
+			ports {
+				c2c_voice_call: port@0 {
+					mot_mdm6600_audio_codec2_c2c: endpoint {
+						remote-endpoint = <&cpcap_audio_codec1_ep1>;
+					};
+				};
+				port@1 {
+					cpcap_audio_codec1_c2c: endpoint {
+						remote-endpoint = <&mot_mdm6600_audio_codec2_ep1>;
+					};
+				};
+			};
+		};
+
+	};
+	
 };
 
 /* Battery NVRAM on 1-wire handled by w1_ds250x driver */
@@ -231,4 +275,37 @@
 				  "0", "0", "-1";
 
 	};
+};
+
+&mcbsp3 {
+	ports {
+		mcbsp3_port: port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			cpu_dai3: endpoint@0 {
+				reg = <0>;
+				dai-format = "dsp_a";
+				remote-endpoint = <&cpcap_audio_codec1_ep0>;
+			};
+
+			cpu_dai_mdm: endpoint@1 {
+				reg = <1>;
+				dai-format = "dsp_a";
+				remote-endpoint = <&mot_mdm6600_audio_codec2_ep0>;
+			};
+		};
+	};
+};
+
+&cpcap_audio_codec1_ep1 {
+	remote-endpoint = <&mot_mdm6600_audio_codec2_c2c>;
+};
+
+&mot_mdm6600_audio_codec2_ep0 {
+	remote-endpoint = <&cpu_dai_mdm>;
+};
+
+&mot_mdm6600_audio_codec2_ep1 {
+	remote-endpoint = <&cpcap_audio_codec1_c2c>;
 };
