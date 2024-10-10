@@ -60,6 +60,28 @@
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&lcd_regulator>;
 	};
+
+	soundcard {
+		compatible = "audio-graph-card2";
+		label = "Mapphone Tablet Audio";
+
+		widgets =
+			"Speaker", "Loudspeaker",
+			"Headphone", "Headphone Jack",
+			"Microphone", "Internal Mic";
+
+		routing =
+			"Loudspeaker", "LINEL",
+			"Loudspeaker", "LINER",
+			"Headphone Jack", "HSL",
+			"Headphone Jack", "HSR",
+			"MICR", "Internal Mic";
+
+		links = <
+			&mcbsp2_port
+			&mcbsp3_port
+		>;
+	};
 };
 
 &dsi1 {
