@@ -1851,7 +1851,6 @@ static void bq27xxx_battery_update_unlocked(struct bq27xxx_device_info *di)
 		cache.capacity = bq27xxx_battery_read_soc(di);
 		if (di->regs[BQ27XXX_REG_AE] != INVALID_REG_ADDR)
 			cache.energy = bq27xxx_battery_read_energy(di);
-		di->cache.flags = cache.flags;
 		cache.health = bq27xxx_battery_read_health(di);
 		if (di->regs[BQ27XXX_REG_CYCT] != INVALID_REG_ADDR)
 			cache.cycle_count = bq27xxx_battery_read_cyct(di);
