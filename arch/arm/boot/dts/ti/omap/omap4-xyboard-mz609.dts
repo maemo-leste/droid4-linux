@@ -22,6 +22,17 @@
 		brightness-levels = <31 63 95 127 159 191 223 255>;
 		default-brightness-level = <6>;
 	};
+
+	lcd: panel {
+		compatible = "boe,bp082wx1-100";
+		power-supply = <&vcc_3v3_reg>;
+		backlight = <&backlight>;
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&lvds_out>;
+			};
+		};
+	};
 };
 
 &i2c1 {
@@ -43,4 +54,8 @@
 			label = ":backlight";
 		};
 	};
+};
+
+&lvds_out {
+	remote-endpoint = <&panel_in>;
 };
