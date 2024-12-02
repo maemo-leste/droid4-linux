@@ -69,13 +69,29 @@
 
 		cpcap_audio: audio-codec {
 			#sound-dai-cells = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			interrupts-extended = <&cpcap 9 0>;
+			interrupt-names = "hpplugged";
 
 			port@0 {
+				reg = <0>;
 				cpcap_audio_codec0: endpoint {
 				};
 			};
 			port@1 {
-				cpcap_audio_codec1: endpoint {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				bitclock-master;
+				frame-master;
+
+				reg = <1>;
+				cpcap_audio_codec1_ep0: endpoint@0 {
+				};
+				cpcap_audio_codec1_ep1: endpoint@1 {
+					dai-format = "i2s";
 				};
 			};
 		};

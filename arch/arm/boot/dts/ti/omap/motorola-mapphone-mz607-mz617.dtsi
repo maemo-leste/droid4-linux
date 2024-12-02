@@ -3,6 +3,165 @@
 
 #include "motorola-mapphone-common.dtsi"
 
+/ {
+	/* HS USB Host PHY on port 1 for mdm9600 */
+	hsusb2_phy: usb-phy@2 {
+		compatible = "motorola,mapphone-mdm9600";
+		enable-gpios = <&gpio1 1 GPIO_ACTIVE_LOW>;	/* gpio_1 */
+		power-gpios = <&gpio2 22 GPIO_ACTIVE_HIGH>;	/* gpio_54 */
+		reset-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;	/* gpio_2 */
+		/* mode: gpio_154 gpio_62 */
+		motorola,mode-gpios = <&gpio5 26 GPIO_ACTIVE_HIGH>,
+				      <&gpio2 30 GPIO_ACTIVE_HIGH>;
+		/* cmd: gpio_95 gpio_102 */
+		motorola,cmd-gpios = <&gpio3 31 GPIO_ACTIVE_HIGH>,
+				     <&gpio4 6 GPIO_ACTIVE_HIGH>;
+		/* status: gpio_3 gpio_4 gpio_148 */
+		motorola,status-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>,
+					<&gpio1 4 GPIO_ACTIVE_HIGH>,
+					<&gpio5 20 GPIO_ACTIVE_HIGH>;
+		#phy-cells = <0>;
+		clocks = <&auxclk3_ck>;
+		clock-names = "main_clk";
+		clock-frequency = <19200000>;
+	};
+
+	/* LCD regulator from sw5 source */
+	lcd_regulator: regulator-lcd {
+		compatible = "regulator-fixed";
+		regulator-name = "lcd";
+		regulator-min-microvolt = <5050000>;
+		regulator-max-microvolt = <5050000>;
+		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;	/* gpio_96 */
+		enable-active-high;
+		vin-supply = <&sw5>;
+	};
+
+	vcc_1v2_reg: regulator-vcc-1v2 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-1v2";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-always-on;
+	};
+
+	vcc_1v8_reg: regulator-vcc-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
+	vcc_3v3_reg: regulator-vcc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&lcd_regulator>;
+	};
+};
+
+&dsi1 {
+	status = "okay";
+	vdd-supply = <&vcsi>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			dsi1_out: endpoint {
+				remote-endpoint = <&bridge_in>;
+				lanes = <0 1 2 3 4 5 6 7 8 9>;
+			};
+		};
+	};
+};
+
+&dss {
+	status = "okay";
+};
+
+&gpio2 {
+	/*
+	 * Note that writing to the lvds eeprom with gpio_40 down will cause a
+	 * blank lcd also for Android until eeprom is restored.
+	 */
+	gpio-40 {
+		gpio-hog;
+		gpios = <8 GPIO_ACTIVE_HIGH>;		/* gpio_40 */
+		output-high;
+		line-name = "lvds eeprom wp";
+	};
+
+	gpio-46 {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_HIGH>;		/* gpio_46 */
+		output-high;
+		line-name = "lvds eeprom reset";
+	};
+
+	gpio-44 {
+		gpio-hog;
+		gpios = <12 GPIO_ACTIVE_HIGH>;		/* gpio_44 */
+		output-high;
+		line-name = "disp_cabc_en gpio_44";
+	};
+
+	gpio-45 {
+		gpio-hog;
+		gpios = <13 GPIO_ACTIVE_HIGH>;		/* gpio_45 */
+		output-high;
+		line-name = "color_en gpio_45";
+	};
+};
+
+&modem {
+	phys = <&hsusb2_phy>;
+};
+
+&usbhsehci {
+	phys = <&hsusb2_phy>;
+	phy-names = "usb2-phy";
+};
+
+&usbhshost {
+	port2-mode = "ehci-phy";
+};
+
+&i2c1 {
+	lvds_bridge: bridge@f {
+		compatible = "toshiba,tc358765";
+		reg = <0xf>;
+		vdd-supply = <&lcd_regulator>;
+		vddio-supply = <&vcc_1v8_reg>;
+		reset-gpios = <&gpio4 5 GPIO_ACTIVE_LOW>;	/* gpio_101 */
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				bridge_in: endpoint {
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&dsi1_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				lvds_out: endpoint {
+					/* Panel added in board specific file */
+				};
+			};
+		};
+        };
+};
+
 &keypad {
 	keypad,num-rows = <8>;
 	keypad,num-columns = <8>;

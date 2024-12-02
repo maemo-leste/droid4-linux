@@ -83,6 +83,16 @@ properties:
       - port@0
       - port@1
 
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: toshiba,tc358765
+    then:
+      properties:
+        stby-gpios: false
+
 required:
   - compatible
   - reg

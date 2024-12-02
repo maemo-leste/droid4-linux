@@ -15,14 +15,7 @@
 #include <sound/core.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
-
-/* Register 512 CPCAP_REG_VAUDIOC --- Audio Regulator and Bias Voltage */
-#define CPCAP_BIT_AUDIO_LOW_PWR           6
-#define CPCAP_BIT_AUD_LOWPWR_SPEED        5
-#define CPCAP_BIT_VAUDIOPRISTBY           4
-#define CPCAP_BIT_VAUDIO_MODE1            2
-#define CPCAP_BIT_VAUDIO_MODE0            1
-#define CPCAP_BIT_V_AUDIO_EN              0
+#include <sound/jack.h>
 
 /* Register 513 CPCAP_REG_CC     --- CODEC */
 #define CPCAP_BIT_CDC_CLK2                15
@@ -229,7 +222,6 @@ struct cpcap_reg_info {
 };
 
 static const struct cpcap_reg_info cpcap_default_regs[] = {
-	{ CPCAP_REG_VAUDIOC, 0x003F, 0x0000 },
 	{ CPCAP_REG_CC, 0xFFFF, 0x0000 },
 	{ CPCAP_REG_CC, 0xFFFF, 0x0000 },
 	{ CPCAP_REG_CDI, 0xBFFF, 0x0000 },
@@ -252,8 +244,14 @@ enum cpcap_dai {
 };
 
 struct cpcap_audio {
+	struct device *dev;
 	struct snd_soc_component *component;
 	struct regmap *regmap;
+	struct snd_soc_jack *hp_jack;
+
+	struct delayed_work jack_detect_work;
+
+	int hp_irq;
 
 	u16 vendor;
 
@@ -602,6 +600,21 @@ static int cpcap_input_left_mux_put_enum(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+
+static struct snd_soc_jack_pin headset_jack_pins[] = {
+	{
+		.pin = "Headset Right Playback Route",
+		.mask = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin = "Headset Left Playback Route",
+		.mask = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin = "Headphones",
+		.mask = SND_JACK_HEADPHONE,
+	}
+};
 
 static const struct snd_kcontrol_new cpcap_input_left_mux =
 	SOC_DAPM_ENUM_EXT("Input Left", cpcap_input_left_mux_enum,
@@ -1254,6 +1267,7 @@ static int cpcap_voice_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_component *component = dai->component;
 	struct device *dev = component->dev;
 	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
@@ -1287,7 +1301,7 @@ static int cpcap_voice_hw_params(struct snd_pcm_substream *substream,
 			return err;
 	}
 
-	return 0;
+	return snd_soc_runtime_set_dai_fmt(rtd, rtd->dai_link->dai_fmt);
 }
 
 static int cpcap_voice_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
@@ -1380,121 +1394,8 @@ static int cpcap_voice_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	return 0;
 }
 
-
-/*
- * Configure codec for voice call if requested.
- *
- * We can configure most with snd_soc_dai_set_sysclk(), snd_soc_dai_set_fmt()
- * and snd_soc_dai_set_tdm_slot(). This function configures the rest of the
- * cpcap related hardware as CPU is not involved in the voice call.
- */
-static int cpcap_voice_call(struct cpcap_audio *cpcap, struct snd_soc_dai *dai,
-			    bool voice_call)
-{
-	int mask, err;
-
-	/* Modem to codec VAUDIO_MODE1 */
-	mask = BIT(CPCAP_BIT_VAUDIO_MODE1);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_VAUDIOC,
-				 mask, voice_call ? mask : 0);
-	if (err)
-		return err;
-
-	/* Clear MIC1_MUX for call */
-	mask = BIT(CPCAP_BIT_MIC1_MUX);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_TXI,
-				 mask, voice_call ? 0 : mask);
-	if (err)
-		return err;
-
-	/* Set MIC2_MUX for call */
-	mask = BIT(CPCAP_BIT_MB_ON1L) | BIT(CPCAP_BIT_MB_ON1R) |
-		BIT(CPCAP_BIT_MIC2_MUX) | BIT(CPCAP_BIT_MIC2_PGA_EN);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_TXI,
-				 mask, voice_call ? mask : 0);
-	if (err)
-		return err;
-
-	/* Enable LDSP for call */
-	mask = BIT(CPCAP_BIT_A2_LDSP_L_EN) | BIT(CPCAP_BIT_A2_LDSP_R_EN);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_RXOA,
-				 mask, voice_call ? mask : 0);
-	if (err)
-		return err;
-
-	/* Enable CPCAP_BIT_PGA_CDC_EN for call */
-	mask = BIT(CPCAP_BIT_PGA_CDC_EN);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_RXCOA,
-				 mask, voice_call ? mask : 0);
-	if (err)
-		return err;
-
-	/* Unmute voice for call */
-	if (dai) {
-		err = snd_soc_dai_digital_mute(dai, !voice_call,
-					       SNDRV_PCM_STREAM_PLAYBACK);
-		if (err)
-			return err;
-	}
-
-	/* Set modem to codec mic CDC and HPF for call */
-	mask = BIT(CPCAP_BIT_MIC2_CDC_EN) | BIT(CPCAP_BIT_CDC_EN_RX) |
-	       BIT(CPCAP_BIT_AUDOHPF_1) | BIT(CPCAP_BIT_AUDOHPF_0) |
-	       BIT(CPCAP_BIT_AUDIHPF_1) | BIT(CPCAP_BIT_AUDIHPF_0);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_CC,
-				 mask, voice_call ? mask : 0);
-	if (err)
-		return err;
-
-	/* Enable modem to codec CDC for call*/
-	mask = BIT(CPCAP_BIT_CDC_CLK_EN);
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_CDI,
-				 mask, voice_call ? mask : 0);
-
-	return err;
-}
-
-static int cpcap_voice_set_tdm_slot(struct snd_soc_dai *dai,
-				    unsigned int tx_mask, unsigned int rx_mask,
-				    int slots, int slot_width)
-{
-	struct snd_soc_component *component = dai->component;
-	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
-	int err, ts_mask, mask;
-	bool voice_call;
-
-	/*
-	 * Primitive test for voice call, probably needs more checks
-	 * later on for 16-bit calls detected, Bluetooth headset etc.
-	 */
-	if (tx_mask == 0 && rx_mask == 1 && slot_width == 8)
-		voice_call = true;
-	else
-		voice_call = false;
-
-	ts_mask = 0x7 << CPCAP_BIT_MIC2_TIMESLOT0;
-	ts_mask |= 0x7 << CPCAP_BIT_MIC1_RX_TIMESLOT0;
-
-	mask = (tx_mask & 0x7) << CPCAP_BIT_MIC2_TIMESLOT0;
-	mask |= (rx_mask & 0x7) << CPCAP_BIT_MIC1_RX_TIMESLOT0;
-
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_CDI,
-				 ts_mask, mask);
-	if (err)
-		return err;
-
-	err = cpcap_set_samprate(cpcap, CPCAP_DAI_VOICE, slot_width * 1000);
-	if (err)
-		return err;
-
-	err = cpcap_voice_call(cpcap, dai, voice_call);
-	if (err)
-		return err;
-
-	return 0;
-}
-
-static int cpcap_voice_set_mute(struct snd_soc_dai *dai, int mute, int direction)
+static int cpcap_voice_set_mute(struct snd_soc_dai *dai,
+				int mute, int direction)
 {
 	struct snd_soc_component *component = dai->component;
 	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
@@ -1515,7 +1416,6 @@ static const struct snd_soc_dai_ops cpcap_dai_voice_ops = {
 	.hw_params	= cpcap_voice_hw_params,
 	.set_sysclk	= cpcap_voice_set_dai_sysclk,
 	.set_fmt	= cpcap_voice_set_dai_fmt,
-	.set_tdm_slot	= cpcap_voice_set_tdm_slot,
 	.mute_stream	= cpcap_voice_set_mute,
 	.no_capture_mute = 1,
 };
@@ -1561,8 +1461,6 @@ static int cpcap_dai_mux(struct cpcap_audio *cpcap, bool swap_dai_configuration)
 	u16 voice_mask = BIT(CPCAP_BIT_DIG_AUD_IN);
 	int err;
 
-
-
 	if (!swap_dai_configuration) {
 		/* Codec on DAI0, HiFi on DAI1 */
 		voice_val = 0;
@@ -1582,6 +1480,45 @@ static int cpcap_dai_mux(struct cpcap_audio *cpcap, bool swap_dai_configuration)
 				 hifi_mask, hifi_val);
 	if (err)
 		return err;
+
+	return 0;
+}
+
+static irqreturn_t cpcap_hp_irq_thread(int irq, void *arg)
+{
+	struct cpcap_audio *cpcap = arg;
+	int val = -1;
+	bool plugged;
+
+	regmap_read(cpcap->regmap, CPCAP_REG_INTS1, &val);
+	plugged = val & (1<<9);
+
+	if (!cpcap->component) {
+		dev_warn(cpcap->dev, "%s called before component is ready.", __func__);
+		return IRQ_HANDLED;
+	}
+
+	if (!cpcap->hp_jack) {
+		dev_warn(cpcap->dev, "%s called before jack is ready.", __func__);
+		return IRQ_HANDLED;
+	}
+
+	dev_info(cpcap->dev, "%s jack state: %i", __func__, plugged ? 0 : SND_JACK_HEADPHONE);
+	snd_soc_jack_report(cpcap->hp_jack, plugged ? 0 : SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
+
+	return IRQ_HANDLED;
+}
+
+static int cpcap_set_jack_detect(struct snd_soc_component *component,
+	struct snd_soc_jack *hp_jack, void *data)
+{
+	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
+
+	if (!cpcap->hp_jack) {
+		dev_info(cpcap->dev, "registering jack");
+		cpcap->hp_jack = hp_jack;
+		snd_soc_jack_add_pins(hp_jack, ARRAY_SIZE(headset_jack_pins), headset_jack_pins);
+	}
 
 	return 0;
 }
@@ -1628,13 +1565,9 @@ static int cpcap_audio_reset(struct snd_soc_component *component,
 
 static int cpcap_soc_probe(struct snd_soc_component *component)
 {
-	struct cpcap_audio *cpcap;
+	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
 	int err;
 
-	cpcap = devm_kzalloc(component->dev, sizeof(*cpcap), GFP_KERNEL);
-	if (!cpcap)
-		return -ENOMEM;
-	snd_soc_component_set_drvdata(component, cpcap);
 	cpcap->component = component;
 
 	cpcap->regmap = dev_get_regmap(component->dev->parent, NULL);
@@ -1657,6 +1590,7 @@ static struct snd_soc_component_driver soc_codec_dev_cpcap = {
 	.num_dapm_widgets	= ARRAY_SIZE(cpcap_dapm_widgets),
 	.dapm_routes		= intercon,
 	.num_dapm_routes	= ARRAY_SIZE(intercon),
+	.set_jack			= cpcap_set_jack_detect,
 	.idle_bias_on		= 1,
 	.use_pmdown_time	= 1,
 	.endianness		= 1,
@@ -1664,15 +1598,45 @@ static struct snd_soc_component_driver soc_codec_dev_cpcap = {
 
 static int cpcap_codec_probe(struct platform_device *pdev)
 {
-	struct device_node *codec_node =
-		of_get_child_by_name(pdev->dev.parent->of_node, "audio-codec");
+	struct cpcap_audio *cpcap;
+	struct device_node *codec_node;
+	int ret;
+
+	codec_node = of_get_child_by_name(pdev->dev.parent->of_node, "audio-codec");
+	pdev->dev.of_node = codec_node;
+
 	if (!codec_node)
 		return -ENODEV;
 
-	pdev->dev.of_node = codec_node;
+	cpcap = devm_kzalloc(&pdev->dev, sizeof(*cpcap), GFP_KERNEL);
+	if (!cpcap)
+		return -ENOMEM;
+	dev_set_drvdata(&pdev->dev, cpcap);
 
-	return devm_snd_soc_register_component(&pdev->dev, &soc_codec_dev_cpcap,
+	ret = devm_snd_soc_register_component(&pdev->dev, &soc_codec_dev_cpcap,
 				      cpcap_dai, ARRAY_SIZE(cpcap_dai));
+	if (ret < 0)
+		return ret;
+
+	cpcap->hp_irq = platform_get_irq_byname(pdev, "hpplugged");
+	if (cpcap->hp_irq < 0)
+		return -ENODEV;
+
+	cpcap->dev = &pdev->dev;
+
+	ret = devm_request_threaded_irq(&pdev->dev, cpcap->hp_irq, NULL,
+					  cpcap_hp_irq_thread,
+					  IRQF_TRIGGER_RISING |
+					  IRQF_TRIGGER_FALLING |
+					  IRQF_ONESHOT,
+					  "cpcap-codec-headphone", cpcap);
+	if (ret) {
+		dev_err(&pdev->dev, "could not get irq: %i\n",
+			ret);
+		return ret;
+	}
+
+	return 0;
 }
 
 static struct platform_driver cpcap_codec_driver = {

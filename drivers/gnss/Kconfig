@@ -13,6 +13,14 @@ menuconfig GNSS
 
 if GNSS
 
+config GNSS_MOTMDM
+	tristate "Motorola Modem TS 27.010 serdev GNSS receiver support"
+	depends on SERIAL_DEV_N_GSM
+	help
+	  Say Y here if you have a Motorola modem using TS 27.010 line
+	  discipline for GNSS such as a Motorola Mapphone series device
+	  like Droid 4.
+
 config GNSS_SERIAL
 	tristate
 

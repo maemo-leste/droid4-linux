@@ -630,6 +630,7 @@ int simple_util_dai_init(struct snd_soc_pcm_runtime *rtd)
 	struct simple_util_priv *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct simple_dai_props *props = simple_priv_to_props(priv, rtd->num);
 	struct simple_util_dai *dai;
+	struct snd_soc_component *component;
 	int i, ret;
 
 	for_each_prop_dai_codec(props, i, dai) {
@@ -646,6 +647,26 @@ int simple_util_dai_init(struct snd_soc_pcm_runtime *rtd)
 	ret = simple_init_for_codec2codec(rtd, props);
 	if (ret < 0)
 		return ret;
+
+	for_each_rtd_components(rtd, i, component) {
+		if (component->driver->set_jack) {
+			if (!priv->hp_jack) {
+				struct snd_soc_jack_pin *pin = devm_kzalloc(priv->snd_card.dev, sizeof(*pin), GFP_KERNEL);
+				pin->pin = "Headphones";
+				pin->mask = SND_JACK_HEADPHONE;
+
+
+				priv->hp_jack = devm_kzalloc(priv->snd_card.dev,
+					sizeof(*priv->hp_jack), GFP_KERNEL);
+				snd_soc_card_jack_new_pins(&priv->snd_card,
+					"Headphones",
+					SND_JACK_HEADPHONE,
+					&priv->hp_jack->jack,
+					pin, 1);
+			}
+			snd_soc_component_set_jack(component, &priv->hp_jack->jack, NULL);
+		}
+	}
 
 	return 0;
 }
@@ -754,7 +775,7 @@ int simple_util_parse_pin_switches(struct snd_soc_card *card,
 EXPORT_SYMBOL_GPL(simple_util_parse_pin_switches);
 
 int simple_util_init_jack(struct snd_soc_card *card,
-			  struct simple_util_jack *sjack,
+			  struct simple_util_jack **sjack,
 			  int is_hp, char *prefix,
 			  char *pin)
 {
@@ -787,22 +808,26 @@ int simple_util_init_jack(struct snd_soc_card *card,
 		return error;
 
 	if (desc) {
+		struct asoc_simple_jack *sjack_d;
+
 		error = gpiod_set_consumer_name(desc, gpio_name);
 		if (error)
 			return error;
 
-		sjack->pin.pin		= pin_name;
-		sjack->pin.mask		= mask;
+		sjack = devm_kzalloc(dev, sizeof(*(*sjack)), GFP_KERNEL);
+		sjack_d = *sjack;
+		sjack_d->pin.pin		= pin_name;
+		sjack_d->pin.mask		= mask;
+		sjack_d->gpio.name	= gpio_name;
+		sjack_d->gpio.report	= mask;
+		sjack_d->gpio.desc	= desc;
+		sjack_d->gpio.debounce_time = 150;
 
-		sjack->gpio.name	= gpio_name;
-		sjack->gpio.report	= mask;
-		sjack->gpio.desc	= desc;
-		sjack->gpio.debounce_time = 150;
+		snd_soc_card_jack_new_pins(card, pin_name, mask,
+				      &sjack_d->jack,
+				      &sjack_d->pin, 1);
 
-		snd_soc_card_jack_new_pins(card, pin_name, mask, &sjack->jack,
-					   &sjack->pin, 1);
-
-		snd_soc_jack_add_gpios(&sjack->jack, 1, &sjack->gpio);
+		snd_soc_jack_add_gpios(&sjack_d->jack, 1, &sjack_d->gpio);
 	}
 
 	return 0;

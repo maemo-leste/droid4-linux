@@ -64,8 +64,8 @@ struct simple_util_priv {
 		struct prop_nums num;
 		unsigned int mclk_fs;
 	} *dai_props;
-	struct simple_util_jack hp_jack;
-	struct simple_util_jack mic_jack;
+	struct simple_util_jack *hp_jack;
+	struct simple_util_jack *mic_jack;
 	struct snd_soc_jack *aux_jacks;
 	struct snd_soc_dai_link *dai_link;
 	struct simple_util_dai *dais;
@@ -184,7 +184,7 @@ int simple_util_parse_pin_switches(struct snd_soc_card *card,
 				   char *prefix);
 
 int simple_util_init_jack(struct snd_soc_card *card,
-			       struct simple_util_jack *sjack,
+			       struct simple_util_jack **sjack,
 			       int is_hp, char *prefix, char *pin);
 int simple_util_init_aux_jacks(struct simple_util_priv *priv,
 				char *prefix);
