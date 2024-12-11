@@ -18,6 +18,7 @@
 #include <linux/of_platform.h>
 #include <linux/phy/phy.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/usb.h>
 
 #define PHY_MDM6600_PHY_DELAY_MS	5000	/* PHY enable 2.2s to 5s */
 #define PHY_MDM6600_ENABLED_DELAY_MS	8000	/* 8s more total for MDM6600 */
@@ -106,6 +107,8 @@ struct phy_mdm6600 {
 	struct phy *generic_phy;
 	struct phy_provider *phy_provider;
 	struct clk *clk;
+	struct usb_device *udev;
+	struct notifier_block nb;
 	struct gpio_desc *ctrl_gpios[PHY_MDM6600_NR_CTRL_LINES];
 	struct gpio_descs *mode_gpios;
 	struct gpio_descs *status_gpios;
@@ -340,6 +343,42 @@ static void phy_mdm6600_init_irq(struct phy_mdm6600 *ddata)
 			dev_warn(dev, "no modem status irq%i: %i\n",
 				 irq, error);
 	}
+}
+
+/**
+ * phy_mdm6600_usb_wakeirq_thread - handle USB line OOB wake
+ * @irq: interrupt
+ * @data: interrupt handler data
+ *
+ */
+static irqreturn_t phy_mdm6600_usb_wakeirq_thread(int irq, void *data)
+{
+	struct phy_mdm6600 *ddata = data;
+	struct usb_device *udev = ddata->udev;
+	struct usb_interface *intf;
+
+	dev_dbg(ddata->dev, "OOB wake on usb-wake\n");
+
+	if (!udev)
+		return IRQ_HANDLED;
+
+	/*
+	 * We want to resume AT modem interface only, that results in QMI to
+	 * become active as well.
+	 */
+	intf = usb_ifnum_to_if(udev, 4);
+	if (intf) {
+		int error = usb_autopm_get_interface(intf);
+
+		if (error == 0)
+			usb_autopm_put_interface_async(intf);
+		else {
+			dev_err(ddata->dev, "get interface returned err %d\n",
+				error);
+		}
+	}
+
+	return IRQ_HANDLED;
 }
 
 struct phy_mdm6600_map {
@@ -644,10 +683,29 @@ static const struct of_device_id phy_mdm6600_id_table[] = {
 };
 MODULE_DEVICE_TABLE(of, phy_mdm6600_id_table);
 
+static int phy_mdm6600_usb_notify_cb(struct notifier_block *nb,
+				     unsigned long action, void *dev)
+{
+	struct usb_device *udev = (struct usb_device *)dev;
+	struct phy_mdm6600 *ddata = container_of(nb, struct phy_mdm6600, nb);
+	struct usb_device_descriptor *desc;
+
+	if (action != USB_DEVICE_ADD && action != USB_DEVICE_REMOVE)
+		return NOTIFY_DONE;
+
+	desc = &udev->descriptor;
+
+	if (desc->idVendor == 0x22b8 && desc->idProduct == 0x2a70)
+		ddata->udev = action == USB_DEVICE_ADD ? udev : NULL;
+
+	return NOTIFY_OK;
+}
+
 static int phy_mdm6600_probe(struct platform_device *pdev)
 {
 	struct phy_mdm6600 *ddata;
 	int error;
+	int wakeirq;
 
 	ddata = devm_kzalloc(&pdev->dev, sizeof(*ddata), GFP_KERNEL);
 	if (!ddata)
@@ -673,6 +731,26 @@ static int phy_mdm6600_probe(struct platform_device *pdev)
 	error = phy_mdm6600_init_lines(ddata);
 	if (error)
 		return error;
+
+	wakeirq = platform_get_irq(pdev, 0);
+	if (wakeirq <= 0)
+		return wakeirq;
+
+	error = devm_request_threaded_irq(ddata->dev, wakeirq, NULL,
+					  phy_mdm6600_usb_wakeirq_thread,
+					  IRQF_TRIGGER_RISING |
+					  IRQF_TRIGGER_FALLING |
+					  IRQF_ONESHOT,
+					  "mdm6600-usb-wake",
+					  ddata);
+	if (error) {
+		dev_warn(ddata->dev, "no modem USB wakeirq irq%i: %i\n",
+			 wakeirq, error);
+		return error;
+	}
+
+	ddata->nb.notifier_call = phy_mdm6600_usb_notify_cb;
+	usb_register_notify(&ddata->nb);
 
 	phy_mdm6600_init_irq(ddata);
 	schedule_delayed_work(&ddata->bootup_work, 0);
@@ -721,6 +799,7 @@ idle:
 
 cleanup:
 	if (error < 0) {
+		usb_unregister_notify(&ddata->nb);
 		phy_mdm6600_device_power_off(ddata);
 		pm_runtime_disable(ddata->dev);
 		pm_runtime_dont_use_autosuspend(ddata->dev);
@@ -733,6 +812,8 @@ static void phy_mdm6600_remove(struct platform_device *pdev)
 {
 	struct phy_mdm6600 *ddata = platform_get_drvdata(pdev);
 	struct gpio_desc *reset_gpio = ddata->ctrl_gpios[PHY_MDM6600_RESET];
+
+	usb_unregister_notify(&ddata->nb);
 
 	pm_runtime_get_noresume(ddata->dev);
 	pm_runtime_dont_use_autosuspend(ddata->dev);
