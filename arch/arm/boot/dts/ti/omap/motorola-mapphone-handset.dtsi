@@ -25,6 +25,8 @@
 					<&gpio2 21 GPIO_ACTIVE_HIGH>,
 					<&gpio2 23 GPIO_ACTIVE_HIGH>;
 		#phy-cells = <0>;
+		interrupts-extended = <&omap4_pmx_core 0xc0>;	/* gpio_115 */
+		wakeup-source;
 	};
 
 	/* HS USB host TLL nop-phy on port 2 for w3glte */
@@ -167,6 +169,9 @@
 		/* enable 0x4a1000d8 usbb1_ulpitll_dat7.gpio_95 ag16 */
 		OMAP4_IOPAD(0x0d8, PIN_INPUT | MUX_MODE3)
 
+		/* enable 0x4a100100 abe_mcbsp1_dr.gpio_115 ac25 */
+		OMAP4_IOPAD(0x100, PIN_INPUT | MUX_MODE3)
+
 		/* power 0x4a10007c gpmc_nwp.gpio_54 c25 */
 		OMAP4_IOPAD(0x07c, PIN_OUTPUT | MUX_MODE3)
 
@@ -203,6 +208,7 @@
 	usb_mdm6600_sleep_pins: usb-mdm6600-sleep-pins {
 		pinctrl-single,pins = <
 		OMAP4_IOPAD(0x0d8, PIN_INPUT | MUX_MODE3)
+		OMAP4_IOPAD(0x100, PIN_INPUT | MUX_MODE3)
 		OMAP4_IOPAD(0x07c, PIN_OUTPUT | MUX_MODE3)
 		OMAP4_IOPAD(0x072, PIN_INPUT_PULLUP | MUX_MODE7) /* Keep gpio_49 reset high */
 		OMAP4_IOPAD(0x14e, PIN_OUTPUT | MUX_MODE3)
