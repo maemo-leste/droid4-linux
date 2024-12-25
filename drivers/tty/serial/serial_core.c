@@ -177,13 +177,23 @@ static void uart_start(struct tty_struct *tty)
 static void
 uart_update_mctrl(struct uart_port *port, unsigned int set, unsigned int clear)
 {
+	struct serial_port_device *port_dev = port->port_dev;
 	unsigned int old;
+	int err;
 
-	guard(uart_port_lock_irqsave)(port);
-	old = port->mctrl;
-	port->mctrl = (old & ~clear) | set;
-	if (old != port->mctrl && !(port->rs485.flags & SER_RS485_ENABLED))
-		port->ops->set_mctrl(port, port->mctrl);
+	err = pm_runtime_resume_and_get(&port_dev->dev);
+	if (err)
+		return;
+
+	scoped_guard(uart_port_lock_irqsave,port) {
+		old = port->mctrl;
+		port->mctrl = (old & ~clear) | set;
+		if (old != port->mctrl && !(port->rs485.flags & SER_RS485_ENABLED))
+			port->ops->set_mctrl(port, port->mctrl);
+	}
+
+	pm_runtime_mark_last_busy(&port_dev->dev);
+	pm_runtime_put_autosuspend(&port_dev->dev);
 }
 
 #define uart_set_mctrl(port, set)	uart_update_mctrl(port, set, 0)
