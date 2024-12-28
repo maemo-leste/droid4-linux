@@ -131,6 +131,10 @@
 	};
 };
 
+&modem {
+	phys = <&hsusb2_phy>;
+};
+
 &usbhsehci {
 	phys = <&hsusb2_phy>;
 	phy-names = "usb2-phy";
