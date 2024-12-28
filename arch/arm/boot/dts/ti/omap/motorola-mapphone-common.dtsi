@@ -428,6 +428,44 @@
 			       &omap4_pmx_core 0x110>;
 	uart-has-rtscts;
 	current-speed = <115200>;
+
+	modem: modem {
+		compatible = "motorola,mapphone-mdm6600-serial";
+		ttymask = <0 0x00001ffe>;
+		phys = <&fsusb1_phy>;
+		phy-names = "usb";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dlci@2 {
+			reg = <2>;
+			mot_mdm6600_audio: audio-codec {
+				compatible = "motorola,mapphone-mdm6600-codec";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#sound-dai-cells = <1>;
+
+				port@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+
+					mot_mdm6600_audio_codec2_ep0: endpoint@0 {
+					};
+
+					mot_mdm6600_audio_codec2_ep1: endpoint@1 {
+					};
+				};
+			};
+		};
+
+		dlci@4 {
+			reg = <4>;
+			gnss {
+				compatible = "motorola,mapphone-mdm6600-gnss";
+			};
+		};
+	};
 };
 
 &uart3 {
