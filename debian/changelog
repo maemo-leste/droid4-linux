@@ -1,3 +1,9 @@
+omap-linux (6.6.92.0-1) unstable; urgency=medium
+
+  * rebase on 6.6.92
+
+ -- Carl Klemm <carl@uvos.xyz> Sun, 15 Jun 2025 10:34:30 +0200
+
 omap-linux (6.6.58.4-1) unstable; urgency=medium
 
   * omap2plus_defconfig: enable PROC_EVENTS
