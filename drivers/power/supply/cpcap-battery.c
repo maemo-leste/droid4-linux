@@ -225,7 +225,7 @@ static int cpcap_battery_get_current(struct cpcap_battery_ddata *ddata)
 		return 0;
 	}
 
-	return value * 1000;
+	return -value * 1000;
 }
 
 static int cpcap_battery_get_charge_current_reg(struct cpcap_battery_ddata *ddata)
@@ -296,10 +296,10 @@ static int cpcap_battery_cc_to_ua(struct cpcap_battery_ddata *ddata,
 				  s32 sample, s32 accumulator,
 				  s16 offset)
 {
-	return cpcap_battery_cc_raw_div(ddata, sample,
-					accumulator, offset,
-					sample *
-					CPCAP_BATTERY_CC_SAMPLE_PERIOD_MS);
+	return -cpcap_battery_cc_raw_div(ddata, sample,
+					 accumulator, offset,
+					 sample *
+					 CPCAP_BATTERY_CC_SAMPLE_PERIOD_MS);
 }
 
 /**
@@ -562,7 +562,7 @@ static bool cpcap_battery_low(struct cpcap_battery_ddata *ddata)
 	struct cpcap_battery_state_data *state = cpcap_battery_latest(ddata);
 	static bool is_low;
 
-	if (state->current_ua > 0 && (state->voltage <= 3350000 || is_low))
+	if (state->current_ua <= 0 && (state->voltage <= 3350000 || is_low))
 		is_low = true;
 	else
 		is_low = false;
@@ -924,7 +924,7 @@ static irqreturn_t cpcap_battery_irq_thread(int irq, void *data)
 		dev_info(ddata->dev, "Coulomb counter calibration done\n");
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_BATTERY_LOW:
-		if (latest->current_ua >= 0 &&
+		if (latest->current_ua <= 0 &&
 		    !delayed_work_pending((&ddata->low_irq_work))) {
 			dev_warn(ddata->dev, "Battery low at %imV!\n",
 				latest->voltage / 1000);
@@ -933,7 +933,7 @@ static irqreturn_t cpcap_battery_irq_thread(int irq, void *data)
 		}
 		break;
 	case CPCAP_BATTERY_IRQ_ACTION_POWEROFF:
-		if (latest->current_ua >= 0 && latest->voltage <= 3200000) {
+		if (latest->current_ua <= 0 && latest->voltage <= 3200000) {
 			dev_emerg(ddata->dev,
 				  "Battery empty at %imV, powering off\n",
 				  latest->voltage / 1000);
