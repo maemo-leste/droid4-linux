@@ -1,3 +1,11 @@
+omap-linux (6.6.116.1-1) unstable; urgency=medium
+
+  * rebase on 6.6.116
+  * enable CONFIG_MTD_NAND_NANDSIM=m
+  * power: supply: cpcap_battery: Fix uevent properties sign
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 08 Mar 2026 10:36:23 +0200
+
 omap-linux (6.6.92.0-1) unstable; urgency=medium
 
   * rebase on 6.6.92
