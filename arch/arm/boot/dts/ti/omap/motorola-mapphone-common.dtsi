@@ -202,6 +202,14 @@
 	};
 };
 
+&mmc4 {
+	status = "disabled";
+};
+
+&mmc5 {
+	status = "disabled";
+};
+
 &omap4_pmx_core {
 
 	/* hdmi_hpd.gpio_63 */
@@ -515,6 +523,22 @@
 			};
 		};
 	};
+};
+
+&mcbsp4 {
+	status = "disabled";
+};
+
+&mcspi2 {
+	status = "disabled";
+};
+
+&mcspi3 {
+	status = "disabled";
+};
+
+&mcspi4 {
+	status = "disabled";
 };
 
 &cpcap_audio_codec0 {
