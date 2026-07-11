@@ -393,6 +393,19 @@ static int cpcap_usb_init_interrupts(struct platform_device *pdev,
 	return 0;
 }
 
+static void cpcap_usb_fini_interrupts(struct platform_device *pdev,
+				     struct cpcap_phy_ddata *ddata)
+{
+	int i, irq;
+
+	for (i = 0; i < ARRAY_SIZE(cpcap_phy_irqs); i++) {
+		irq = platform_get_irq_byname(pdev, cpcap_phy_irqs[i]);
+
+		if (irq >= 0)
+			devm_free_irq(ddata->dev, irq, ddata);
+	}
+}
+
 /*
  * Optional pins and modes. At least Motorola mapphone devices
  * are using two GPIOs and dynamic pinctrl to multiplex PHY pins
@@ -691,6 +704,8 @@ static void cpcap_usb_phy_remove(struct platform_device *pdev)
 	int error;
 
 	atomic_set(&ddata->active, 0);
+	cpcap_usb_fini_interrupts(pdev, ddata);
+	cancel_delayed_work_sync(&ddata->detect_work);
 	error = cpcap_usb_set_uart_mode(ddata);
 	if (error)
 		dev_err(ddata->dev, "could not set UART mode\n");
@@ -698,7 +713,6 @@ static void cpcap_usb_phy_remove(struct platform_device *pdev)
 	cpcap_usb_try_musb_mailbox(ddata, MUSB_VBUS_OFF);
 
 	usb_remove_phy(&ddata->phy);
-	cancel_delayed_work_sync(&ddata->detect_work);
 	regulator_disable(ddata->vusb);
 }
 
