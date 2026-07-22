@@ -70,6 +70,8 @@ struct omap_usb {
 
 #define	phy_to_omapusb(x)	container_of((x), struct omap_usb, phy)
 
+static int omap_usb_set_host(struct usb_otg *otg, struct usb_bus *host);
+
 struct usb_phy_data {
 	const char *label;
 	u8 flags;
@@ -112,6 +114,36 @@ int omap_usb2_set_comparator(struct phy_companion *comparator)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(omap_usb2_set_comparator);
+
+/**
+ * omap_usb2_set_phy_comparator() - associate a comparator with an OMAP USB2 PHY
+ *
+ * @omap_phy: OMAP USB2 PHY instance
+ * @comparator: companion PHY providing comparator operations
+ *
+ * The phy companion driver should call this API with the companion PHY
+ * implementation containing the callbacks required by @omap_phy.
+ *
+ * For use by phy companion drivers.
+ */
+int omap_usb2_set_phy_comparator(struct usb_phy *omap_phy,
+				 struct phy_companion *comparator)
+{
+	struct omap_usb	*phy;
+
+	if (!omap_phy)
+		return -EINVAL;
+
+	if (WARN_ON(!omap_phy->otg ||
+		    omap_phy->otg->set_host != omap_usb_set_host))
+		return -EINVAL;
+
+	phy = phy_to_omapusb(omap_phy);
+	phy->comparator = comparator;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(omap_usb2_set_phy_comparator);
 
 static int omap_usb_set_vbus(struct usb_otg *otg, bool enabled)
 {
