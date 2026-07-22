@@ -60,6 +60,7 @@
 			io-channel-names = "battdetb", "battp",
 					   "vbus", "chg_isense",
 					   "batti";
+			usb-phy = <&usb2_phy>;
 		};
 
 		cpcap_regulator: regulator {
@@ -163,6 +164,10 @@
 		label = "status-led:blue";
 		cpcap-phandle = <&cpcap>;
 	};
+};
+
+&usb2_phy {
+	extcon = <&cpcap_usb2_phy>;
 };
 
 &cpcap_regulators {
