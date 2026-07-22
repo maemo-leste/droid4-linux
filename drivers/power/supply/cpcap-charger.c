@@ -135,6 +135,10 @@ struct cpcap_charger_ddata {
 	struct power_supply *usb;
 
 	struct phy_companion comparator;	/* For USB VBUS */
+
+	struct usb_phy *phy;
+	struct notifier_block phy_nb;
+
 	unsigned int vbus_enabled:1;
 	unsigned int feeding_vbus:1;
 	atomic_t active;
@@ -830,6 +834,96 @@ out_err:
 	return error;
 }
 
+static int cpcap_charger_get_phy_current_limit(struct cpcap_charger_ddata *ddata)
+{
+	struct usb_phy *phy = ddata->phy;
+	int limit = 0;
+
+	if (phy->chg_state != USB_CHARGER_PRESENT)
+		return 0;
+
+	switch (phy->chg_type) {
+	case DCP_TYPE:
+		limit = 1596000;
+		break;
+	case SDP_TYPE:
+		limit = phy->chg_cur.sdp_max * 1000;
+		break;
+	default:
+		dev_warn(ddata->dev, "Unknown charger type: %d\n",
+			 phy->chg_type);
+		break;
+	}
+
+	return limit;
+}
+
+static int cpcap_usb_limit_current(struct cpcap_charger_ddata *ddata, int limit)
+{
+	union power_supply_propval val = {
+			.intval = limit,
+	};
+
+	if (limit == ddata->limit_current)
+		return 0;
+
+	return power_supply_set_property(ddata->usb,
+					 POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
+					 &val);
+}
+
+static int cpcap_charger_usb_phy_event(struct notifier_block *nb,
+				       unsigned long max, void *data)
+{
+	struct cpcap_charger_ddata *ddata =
+			container_of(nb, struct cpcap_charger_ddata, phy_nb);
+	struct usb_phy *phy = ddata->phy;
+	int limit;
+	int error;
+
+	/*
+	 * Ignore events from other USB PHY users. Also ignore charger events
+	 * before VBUS is established for SDP, as the negotiated current limit
+	 * is not valid yet.
+	 */
+	if (data != phy ||
+	    (phy->chg_state == USB_CHARGER_PRESENT &&
+	     phy->chg_type == SDP_TYPE && phy->last_event != USB_EVENT_VBUS))
+		return NOTIFY_OK;
+
+	limit = cpcap_charger_get_phy_current_limit(ddata);
+
+	error = cpcap_usb_limit_current(ddata, limit);
+	if (error)
+		return notifier_from_errno(error);
+
+	return NOTIFY_OK;
+}
+
+static int cpcap_charger_init_phy(struct cpcap_charger_ddata *ddata)
+{
+	struct device_node *np;
+	struct usb_phy *phy;
+
+	np = of_parse_phandle(ddata->dev->of_node, "usb-phy", 0);
+	if (!np) {
+		dev_dbg(ddata->dev, "No USB PHY configured");
+		return 0;
+	}
+
+	ddata->phy_nb.notifier_call = cpcap_charger_usb_phy_event;
+	phy = devm_usb_get_phy_by_node(ddata->dev, np, &ddata->phy_nb);
+	of_node_put(np);
+
+	if (IS_ERR(phy))
+		return dev_err_probe(ddata->dev, PTR_ERR(phy),
+				     "failed to get USB PHY");
+
+	ddata->phy = phy;
+
+	return 0;
+}
+
 static char *cpcap_charger_supplied_to[] = {
 	"battery",
 };
@@ -864,7 +958,6 @@ static int cpcap_charger_probe(struct platform_device *pdev)
 
 	ddata->dev = &pdev->dev;
 	ddata->voltage = 4200000;
-	ddata->limit_current = 532000;
 
 	ddata->reg = dev_get_regmap(ddata->dev->parent, NULL);
 	if (!ddata->reg)
@@ -897,15 +990,35 @@ static int cpcap_charger_probe(struct platform_device *pdev)
 		return error;
 	}
 
+	error = cpcap_charger_init_phy(ddata);
+	if (error)
+		return error;
+
+	if (ddata->phy)
+		ddata->limit_current = cpcap_charger_get_phy_current_limit(ddata);
+	else
+		ddata->limit_current = 532000;
+
 	error = cpcap_usb_init_interrupts(pdev, ddata);
 	if (error)
 		return error;
 
 	ddata->comparator.set_vbus = cpcap_charger_set_vbus;
-	error = omap_usb2_set_comparator(&ddata->comparator);
-	if (error == -ENODEV) {
-		dev_info(ddata->dev, "charger needs phy, deferring probe\n");
-		return -EPROBE_DEFER;
+
+	if (ddata->phy) {
+		error = omap_usb2_set_phy_comparator(ddata->phy,
+						     &ddata->comparator);
+		if (error) {
+			dev_err(ddata->dev,
+				"could not set USB comparator: %i\n", error);
+			return error;
+		}
+	} else {
+		error = omap_usb2_set_comparator(&ddata->comparator);
+		if (error == -ENODEV) {
+			dev_info(ddata->dev, "charger needs phy, deferring probe\n");
+			return -EPROBE_DEFER;
+		}
 	}
 
 	cpcap_charger_init_optional_gpios(ddata);
@@ -921,7 +1034,12 @@ static void cpcap_charger_shutdown(struct platform_device *pdev)
 	int error;
 
 	atomic_set(&ddata->active, 0);
-	error = omap_usb2_set_comparator(NULL);
+
+	if (ddata->phy)
+		error = omap_usb2_set_phy_comparator(ddata->phy, NULL);
+	else
+		error = omap_usb2_set_comparator(NULL);
+
 	if (error)
 		dev_warn(ddata->dev, "could not clear USB comparator: %i\n",
 			 error);
