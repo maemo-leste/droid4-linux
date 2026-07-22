@@ -641,6 +641,8 @@ static void cpcap_battery_external_power_changed(struct power_supply *psy)
 	union power_supply_propval prop;
 
 	power_supply_get_property(psy, POWER_SUPPLY_PROP_STATUS, &prop);
+	power_supply_get_property(psy, POWER_SUPPLY_PROP_CURRENT_NOW, &prop);
+	power_supply_get_property(psy, POWER_SUPPLY_PROP_CURRENT_AVG, &prop);
 }
 
 static enum power_supply_property cpcap_battery_props[] = {
