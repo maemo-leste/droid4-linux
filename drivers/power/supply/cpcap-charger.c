@@ -683,28 +683,8 @@ static void cpcap_usb_detect(struct work_struct *work)
 
 	if (!ddata->feeding_vbus && cpcap_charger_vbus_valid(ddata) &&
 	    s.chrgcurr1) {
-		int max_current;
+		int max_current = 1596000;
 		int vchrg, ichrg;
-		union power_supply_propval val;
-		struct power_supply *battery;
-
-		battery = power_supply_get_by_name("battery");
-		if (!battery) {
-			dev_err(ddata->dev, "battery power_supply not available\n");
-			return;
-		}
-
-		error = power_supply_get_property(battery, POWER_SUPPLY_PROP_PRESENT, &val);
-		power_supply_put(battery);
-		if (error)
-			goto out_err;
-
-		if (val.intval) {
-			max_current = 1596000;
-		} else {
-			dev_info(ddata->dev, "battery not inserted, charging disabled\n");
-			max_current = 0;
-		}
 
 		if (max_current > ddata->limit_current)
 			max_current = ddata->limit_current;
