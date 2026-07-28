@@ -1,6 +1,6 @@
-omap-linux (6.18.13-1) unstable; urgency=medium
+omap-linux (6.18.39.0-1) unstable; urgency=medium
 
-  * rebase on 6.18.13
+  * rebase on 6.18.39
 
  -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 25 Jul 2026 00:37:02 +0200
 
