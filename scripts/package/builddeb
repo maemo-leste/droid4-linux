@@ -151,20 +151,19 @@ install_linux_image_dbg () {
 
 install_kernel_headers () {
 	pdir=debian/$1
-	version=${1#linux-headers-}
 
 	# Override $CC only for cross-compiles, to not unnecessarily rebuild
 	# scripts/ including plugins, which may lead to a full kernel rebuild.
 	if [ -n "${CROSS_COMPILE}" ]; then
-		CC="${DEB_HOST_GNU_TYPE}-gcc" "${srctree}/scripts/package/install-extmod-build" "${pdir}/usr/src/linux-headers-${version}"
+		CC="${DEB_HOST_GNU_TYPE}-gcc" "${srctree}/scripts/package/install-extmod-build" "${pdir}/usr/src/linux-headers-${KERNELRELEASE}"
 	else
-		"${srctree}/scripts/package/install-extmod-build" "${pdir}/usr/src/linux-headers-${version}"
+		"${srctree}/scripts/package/install-extmod-build" "${pdir}/usr/src/linux-headers-${KERNELRELEASE}"
 	fi
 
-	mkdir -p $pdir/lib/modules/$version/
-	ln -s /usr/src/linux-headers-$version $pdir/lib/modules/$version/build
-       mkdir -m 755 -p "debian/linux-headers/DEBIAN"
-       cat <<EOF > "debian/linux-headers/DEBIAN/postinst"
+	mkdir -p $pdir/lib/modules/${KERNELRELEASE}
+	ln -s /usr/src/linux-headers-${KERNELRELEASE} $pdir/lib/modules/${KERNELRELEASE}/build
+	mkdir -m 755 -p "debian/linux-headers-omap/DEBIAN"
+	cat <<EOF > "debian/linux-headers-omap/DEBIAN/postinst"
 #!/usr/bin/perl
 # Author: Michael Gilbert <michael.s.gilbert@gmail.com>
 # Origin: Stripped down version of the linux-headers postinst from Ubuntu's
@@ -172,7 +171,7 @@ install_kernel_headers () {
 #         Debian linux-image postinst script.
 
 $|=1;
-my \$version  = "$version";
+my \$version  = "${KERNELRELEASE}";
 
 if (-d "/etc/kernel/header_postinst.d") {
   system ("run-parts --report --exit-on-error --arg=\$version " .
@@ -184,7 +183,7 @@ exit 0;
 
 __END__
 EOF
-       chmod 755 "debian/linux-headers/DEBIAN/postinst"
+       chmod 755 "debian/linux-headers-omap/DEBIAN/postinst"
 
 }
 
@@ -209,5 +208,5 @@ linux-image-*|user-mode-linux-*)
 #linux-libc-dev)
 #	install_libc_headers "${package}";;
 linux-headers-*)
-	install_kernel_headers "linux-headers-omap";;
+	install_kernel_headers "${package}";;
 esac
