@@ -3,7 +3,7 @@ Section: kernel
 Priority: optional
 Maintainer: Carl Klemm <carl@uvos.xyz>
 Build-Depends:
- debhelper (>= 10),
+ debhelper (>= 12),
  rsync,
  kmod,
  bc,
@@ -14,6 +14,7 @@ Build-Depends:
  u-boot-tools,
  device-tree-compiler
 Standards-Version: 4.3.0
+Rules-Requires-Root: no
 Homepage: https://www.kernel.org/
 
 Package: linux-image-omap
