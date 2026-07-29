@@ -2,35 +2,40 @@
 
 CONFIG = omap2plus_defconfig
 ARCH   = arm
+PACKAGES = linux-image-omap linux-image-omap-dbg linux-headers-omap
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 	BUILD_FLAGS += -j$(NUMJOBS)
 endif
 
-ifneq ($(DEB_BUILD_GNU_TYPE),$(DEB_TARGET_MULTIARCH))
-	BUILD_FLAGS += CROSS_COMPILE=$(DEB_TARGET_MULTIARCH)-
+ifneq ($(DEB_BUILD_GNU_TYPE),$(DEB_HOST_GNU_TYPE))
+	BUILD_FLAGS += CROSS_COMPILE=$(DEB_HOST_GNU_TYPE)-
 endif
 
-build-arch:
+BUILD_FLAGS += LOCALVERSION=
+
+.stamp-build:
 	$(MAKE) ARCH=$(ARCH) $(CONFIG)
 	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) zImage modules dtbs
+	touch $@
 
-binary-arch: build-arch
-ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_TARGET_MULTIARCH))
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) run-command KBUILD_RUN_COMMAND="scripts/package/builddeb linux-image-omap"
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) run-command KBUILD_RUN_COMMAND="scripts/package/builddeb linux-headers-omap"
-else
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc modules
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) \
-	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) \
-		HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc run-command KBUILD_RUN_COMMAND="scripts/package/builddeb linux-image-omap"
-		HOSTCC=$(DEB_TARGET_MULTIARCH)-gcc run-command KBUILD_RUN_COMMAND="scripts/package/builddeb linux-headers-omap"
-endif
+build-arch: .stamp-build
+
+binary-arch: build-arch $(addprefix package-,$(PACKAGES))
+
+package-%:
+	mkdir -p "debian/$*/DEBIAN"
+	+$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) \
+		run-command KBUILD_RUN_COMMAND='scripts/package/builddeb $*'
+	dpkg-gencontrol -p$* -Pdebian/$*
+	dh_md5sums -p$* -Pdebian/$*
+	dpkg-deb -b debian/$* ..
 
 clean:
-	rm -rf debian/*tmp debian/files debian/linux-headers \
-		debian/linux-image debian/linux-image-dbg
+	rm -rf .stamp-build debian/*tmp debian/files \
+		$(addprefix debian/,$(PACKAGES))
+
 	$(MAKE) ARCH=$(ARCH) $(BUILD_FLAGS) mrproper
 
 build:  build-arch
