@@ -431,9 +431,19 @@ static void hdmi4_bridge_hpd_notify(struct drm_bridge *bridge,
 				    enum drm_connector_status status)
 {
 	struct omap_hdmi *hdmi = drm_bridge_to_hdmi(bridge);
+	struct device *dev = &hdmi->audio_pdev->dev;
+	struct omap_hdmi_audio_pdata *ha = dev_get_platdata(dev);
 
-	if (status == connector_status_disconnected)
+	if (ha->audio_hpd)
+		ha->audio_hpd(dev, status == connector_status_connected);
+
+	if (status == connector_status_disconnected) {
+		if (hdmi_runtime_get(hdmi))
+			return;
+
 		hdmi4_cec_set_phys_addr(&hdmi->core, CEC_PHYS_ADDR_INVALID);
+		hdmi_runtime_put(hdmi);
+	}
 }
 
 static const struct drm_edid *hdmi4_bridge_edid_read(struct drm_bridge *bridge,
