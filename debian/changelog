@@ -1,3 +1,11 @@
+omap-linux (6.18.39.1-1) unstable; urgency=medium
+
+  * drm/omap: Report HDMI hotplug events to the ASoC HDMI codec
+  * drm/omap: dsi: avoid sending bta sync all the time in writes
+  * drop ASoC: core: Support INPUT and OUTPUT DAPM widgets in DT
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Thu, 06 Aug 2026 10:50:51 +0300
+
 omap-linux (6.18.39.0-1) unstable; urgency=medium
 
   * rebase on 6.18.39
