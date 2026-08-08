@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Sensor hub drivers
+#
+
+config IIO_MSP430
+	tristate "Motorola TI MSP430 sensor hub"
+	depends on I2C
+	select IIO_TRIGGERED_BUFFER
+	help
+	  Say yes here to build support for the TI MSP430 sensor processor
+	  found in Motorola mapphone devices (e.g., Droid RAZR XT910/XT912).
+	  The MSP430 acts as a sensor hub and exposes accelerometer, gyroscope,
+	  magnetometer, pressure and temperature data over an I2C register
+	  protocol.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called msp430.

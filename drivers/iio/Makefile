@@ -43,6 +43,7 @@ obj-y += potentiostat/
 obj-y += pressure/
 obj-y += proximity/
 obj-y += resolver/
+obj-y += sensor-hub/
 obj-y += temperature/
 obj-y += test/
 obj-y += trigger/
