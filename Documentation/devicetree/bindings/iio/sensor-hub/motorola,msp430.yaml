@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/iio/sensor-hub/motorola,msp430.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Motorola TI MSP430 sensor hub
+
+maintainers:
+  - Merlijn Wajer <merlijn@wizzup.org>
+
+description: |
+  The Motorola mapphone RAZR (XT910/XT912) does not have individual sensor
+  chips on the OMAP I2C bus; instead all sensors (accelerometer, gyroscope,
+  magnetometer, pressure, temperature) are connected to a Texas Instruments
+  MSP430 microcontroller at I2C address 0x48 which acts as a sensor hub. It
+  exposes the aggregated sensor data over a custom I2C register protocol and
+  raises an interrupt on GPIO when new data is available.
+
+properties:
+  compatible:
+    const: motorola,msp430-sensors
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+    description: |
+      interrupt line asserted (rising edge) by the MSP430 when sensor data is
+      ready. Connected to the msp430_int GPIO.
+
+  vdd-supply:
+    description: regulator providing the MSP430 supply voltage (vhvio).
+
+  reset-gpios:
+    maxItems: 1
+    description: |
+      MSP430 reset line (active low). Toggled to bring the hub out of reset
+      into normal mode.
+
+  test-gpios:
+    maxItems: 1
+    description: |
+      MSP430 test/boot-mode select line (active high). Kept low for normal
+      operating mode; used to select bootloader mode for firmware updates.
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - vdd-supply
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/irq.h>
+    #include <dt-bindings/gpio/gpio.h>
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        sensor-hub@48 {
+            compatible = "motorola,msp430-sensors";
+            reg = <0x48>;
+            vdd-supply = <&vhvio>;
+            interrupt-parent = <&gpio1>;
+            interrupts = <6 IRQ_TYPE_EDGE_RISING>;
+            reset-gpios = <&gpio1 30 GPIO_ACTIVE_LOW>;
+            test-gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;
+        };
+    };
