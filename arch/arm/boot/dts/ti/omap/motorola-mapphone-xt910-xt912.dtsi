@@ -77,6 +77,22 @@
 	};
 };
 
+&i2c4 {
+	/* TI MSP430 sensor hub: all RAZR sensors (accel/gyro/magn/baro/temp) */
+	sensor-hub@48 {
+		compatible = "motorola,msp430-sensors";
+		reg = <0x48>;
+
+		vdd-supply = <&vhvio>;
+
+		interrupt-parent = <&gpio1>;
+		interrupts = <6 IRQ_TYPE_EDGE_RISING>; /* gpio_6 = msp430_int */
+
+		reset-gpios = <&gpio1 30 GPIO_ACTIVE_LOW>;  /* gpio_30 = msp430_reset */
+		test-gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;   /* gpio_99 = msp430_test */
+	};
+};
+
 &keypad {
 	keypad,num-rows = <8>;
 	keypad,num-columns = <8>;
