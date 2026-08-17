@@ -1790,6 +1790,9 @@ static int omap8250_runtime_suspend(struct device *dev)
 	if (priv->line >= 0)
 		up = serial8250_get_port(priv->line);
 
+	if (up && priv->wakeirq)
+		disable_irq(up->port.irq);
+
 	if (priv->habit & UART_ERRATA_CLOCK_DISABLE) {
 		int ret;
 
@@ -1798,10 +1801,15 @@ static int omap8250_runtime_suspend(struct device *dev)
 			return ret;
 
 		if (up) {
+			struct uart_port *port = &up->port;
+
 			/* Restore to UART mode after reset (for wakeup) */
 			omap8250_update_mdr1(up, priv);
 			/* Restore wakeup enable register */
 			serial_out(up, UART_OMAP_WER, priv->wer);
+			/* restore modem control */
+			__omap8250_set_mctrl(port, port->mctrl);
+
 		}
 	}
 
@@ -1840,6 +1848,9 @@ static int omap8250_runtime_resume(struct device *dev)
 	atomic_set(&priv->active, 1);
 	priv->latency = priv->calc_latency;
 	schedule_work(&priv->qos_work);
+
+	if (up && priv->wakeirq)
+		enable_irq(up->port.irq);
 
 	return 0;
 }
