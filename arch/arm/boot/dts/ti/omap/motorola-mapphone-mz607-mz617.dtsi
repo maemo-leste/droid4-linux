@@ -202,6 +202,10 @@
 	};
 };
 
+&lcd_regulator {
+	regulator-boot-on;
+};
+
 &i2c4 {
 	lis3dh: accelerometer@19 {
 		compatible = "st,lis3dh-accel";
