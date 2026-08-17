@@ -25,6 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/ptrace.h>
 #include <linux/poll.h>
+#include <linux/pm_runtime.h>
 
 #include <linux/slab.h>
 #include <linux/errno.h>
@@ -690,6 +691,7 @@ static int hci_ti_probe(struct serdev_device *serdev)
 	struct ll_device *lldev;
 	struct nvmem_cell *bdaddr_cell;
 	u32 max_speed = 3000000;
+	int err;
 
 	lldev = devm_kzalloc(&serdev->dev, sizeof(struct ll_device), GFP_KERNEL);
 	if (!lldev)
@@ -715,7 +717,7 @@ static int hci_ti_probe(struct serdev_device *serdev)
 	/* optional BD address from nvram */
 	bdaddr_cell = nvmem_cell_get(&serdev->dev, "bd-address");
 	if (IS_ERR(bdaddr_cell)) {
-		int err = PTR_ERR(bdaddr_cell);
+		err = PTR_ERR(bdaddr_cell);
 
 		if (err == -EPROBE_DEFER)
 			return err;
@@ -758,12 +760,22 @@ static int hci_ti_probe(struct serdev_device *serdev)
 		kfree(bdaddr);
 	}
 
-	return hci_uart_register_device(hu, &llp);
+	err = hci_uart_register_device(hu, &llp);
+
+	if (err)
+		return err;
+
+	pm_runtime_mark_last_busy(&serdev->ctrl->dev);
+	pm_runtime_put_autosuspend(&serdev->ctrl->dev);
+
+	return 0;
 }
 
 static void hci_ti_remove(struct serdev_device *serdev)
 {
 	struct ll_device *lldev = serdev_device_get_drvdata(serdev);
+
+	pm_runtime_get(&serdev->ctrl->dev);
 
 	hci_uart_unregister_device(&lldev->hu);
 }
