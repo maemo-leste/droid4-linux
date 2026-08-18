@@ -1,3 +1,10 @@
+omap-linux (6.18.44.0-1) unstable; urgency=medium
+
+  * serial: 8250_omap: serialize UART IRQ with runtime suspend
+  * bluetooth: hci_uart: Manage runtime PM for TI HCI UART
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 18 Aug 2026 17:37:37 +0300
+
 omap-linux (6.18.39.1-1) unstable; urgency=medium
 
   * drm/omap: Report HDMI hotplug events to the ASoC HDMI codec
