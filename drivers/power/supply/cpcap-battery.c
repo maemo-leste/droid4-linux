@@ -1098,10 +1098,10 @@ static int cpcap_battery_probe(struct platform_device *pdev)
 	if (!ddata)
 		return -ENOMEM;
 
-	cpcap_battery_detect_battery_type(ddata);
-
 	INIT_LIST_HEAD(&ddata->irq_list);
 	ddata->dev = &pdev->dev;
+
+	cpcap_battery_detect_battery_type(ddata);
 
 	ddata->reg = dev_get_regmap(ddata->dev->parent, NULL);
 	if (!ddata->reg)
