@@ -1,3 +1,9 @@
+omap-linux (6.18.51.1-1) unstable; urgency=medium
+
+  * enable CONNECTOR=y
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Tue, 22 Sep 2026 10:20:27 +0300
+
 omap-linux (6.18.51.0-1) unstable; urgency=medium
 
   * new upstream release
