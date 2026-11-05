@@ -334,10 +334,6 @@ static const struct snd_kcontrol_new cpcap_snd_controls[] = {
 		CPCAP_REG_RXEPOA, CPCAP_BIT_MONO_EXT0, 1, 0),
 };
 
-static const char * const cpcap_out_mux_texts[] = {
-	"Off", "Voice", "HiFi", "Ext"
-};
-
 static const char * const cpcap_in_right_mux_texts[] = {
 	"Off", "Mic 1", "Headset Mic", "EMU Mic", "Ext Right"
 };
@@ -354,109 +350,6 @@ static SOC_ENUM_SINGLE_EXT_DECL(cpcap_input_left_mux_enum,
 				cpcap_in_left_mux_texts);
 static SOC_ENUM_SINGLE_EXT_DECL(cpcap_input_right_mux_enum,
 				cpcap_in_right_mux_texts);
-
-/*
- * mux uses same bit in CPCAP_REG_RXCOA, CPCAP_REG_RXSDOA & CPCAP_REG_RXEPOA;
- * even though the register layout makes it look like a mixer, this is a mux.
- * Enabling multiple inputs will result in no audio being forwarded.
- */
-static SOC_ENUM_SINGLE_DECL(cpcap_earpiece_mux_enum, 0, 0, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_spkr_r_mux_enum, 0, 1, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_spkr_l_mux_enum, 0, 2, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_line_r_mux_enum, 0, 3, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_line_l_mux_enum, 0, 4, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_hs_r_mux_enum, 0, 5, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_hs_l_mux_enum, 0, 6, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_emu_l_mux_enum, 0, 7, cpcap_out_mux_texts);
-static SOC_ENUM_SINGLE_DECL(cpcap_emu_r_mux_enum, 0, 8, cpcap_out_mux_texts);
-
-static int cpcap_output_mux_get_enum(struct snd_kcontrol *kcontrol,
-				     struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_soc_dapm_kcontrol_component(kcontrol);
-	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int shift = e->shift_l;
-	int reg_voice, reg_hifi, reg_ext, status;
-	int err;
-
-	err = regmap_read(cpcap->regmap, CPCAP_REG_RXCOA, &reg_voice);
-	if (err)
-		return err;
-	err = regmap_read(cpcap->regmap, CPCAP_REG_RXSDOA, &reg_hifi);
-	if (err)
-		return err;
-	err = regmap_read(cpcap->regmap, CPCAP_REG_RXEPOA, &reg_ext);
-	if (err)
-		return err;
-
-	reg_voice = (reg_voice >> shift) & 1;
-	reg_hifi = (reg_hifi >> shift) & 1;
-	reg_ext = (reg_ext >> shift) & 1;
-	status = reg_ext << 2 | reg_hifi << 1 | reg_voice;
-
-	switch (status) {
-	case 0x04:
-		ucontrol->value.enumerated.item[0] = 3;
-		break;
-	case 0x02:
-		ucontrol->value.enumerated.item[0] = 2;
-		break;
-	case 0x01:
-		ucontrol->value.enumerated.item[0] = 1;
-		break;
-	default:
-		ucontrol->value.enumerated.item[0] = 0;
-		break;
-	}
-
-	return 0;
-}
-
-static int cpcap_output_mux_put_enum(struct snd_kcontrol *kcontrol,
-				     struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_soc_dapm_kcontrol_component(kcontrol);
-	struct cpcap_audio *cpcap = snd_soc_component_get_drvdata(component);
-	struct snd_soc_dapm_context *dapm =
-		snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int muxval = ucontrol->value.enumerated.item[0];
-	unsigned int mask = BIT(e->shift_l);
-	u16 reg_voice = 0x00, reg_hifi = 0x00, reg_ext = 0x00;
-	int err;
-
-	switch (muxval) {
-	case 1:
-		reg_voice = mask;
-		break;
-	case 2:
-		reg_hifi = mask;
-		break;
-	case 3:
-		reg_ext = mask;
-		break;
-	default:
-		break;
-	}
-
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_RXCOA,
-				 mask, reg_voice);
-	if (err)
-		return err;
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_RXSDOA,
-				 mask, reg_hifi);
-	if (err)
-		return err;
-	err = regmap_update_bits(cpcap->regmap, CPCAP_REG_RXEPOA,
-				 mask, reg_ext);
-	if (err)
-		return err;
-
-	snd_soc_dapm_mux_update_power(dapm, kcontrol, muxval, e, NULL);
-
-	return 0;
-}
 
 static int cpcap_input_right_mux_get_enum(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
@@ -629,33 +522,30 @@ static const struct snd_kcontrol_new cpcap_input_right_mux =
 	SOC_DAPM_ENUM_EXT("Input Right", cpcap_input_right_mux_enum,
 			  cpcap_input_right_mux_get_enum,
 			  cpcap_input_right_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_emu_left_mux =
-	SOC_DAPM_ENUM_EXT("EMU Left", cpcap_emu_l_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_emu_right_mux =
-	SOC_DAPM_ENUM_EXT("EMU Right", cpcap_emu_r_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_hs_left_mux =
-	SOC_DAPM_ENUM_EXT("Headset Left", cpcap_hs_l_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_hs_right_mux =
-	SOC_DAPM_ENUM_EXT("Headset Right", cpcap_hs_r_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_line_left_mux =
-	SOC_DAPM_ENUM_EXT("Line Left", cpcap_line_l_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_line_right_mux =
-	SOC_DAPM_ENUM_EXT("Line Right", cpcap_line_r_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_speaker_left_mux =
-	SOC_DAPM_ENUM_EXT("Speaker Left", cpcap_spkr_l_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_speaker_right_mux =
-	SOC_DAPM_ENUM_EXT("Speaker Right", cpcap_spkr_r_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
-static const struct snd_kcontrol_new cpcap_earpiece_mux =
-	SOC_DAPM_ENUM_EXT("Earpiece", cpcap_earpiece_mux_enum,
-			  cpcap_output_mux_get_enum, cpcap_output_mux_put_enum);
+/*
+ * Every output can be fed from any of the three playback sources, and the
+ * sources are summed on their way into the output amplifier.  Each output
+ * therefore gets one switch per source rather than a selector: enabling
+ * more than one at a time mixes them.
+ *
+ * The bit position of a given output is the same in all three registers.
+ */
+#define CPCAP_OUTPUT_MIXER_CONTROLS(_out, _shift)				\
+static const struct snd_kcontrol_new cpcap_##_out##_mix_controls[] = {	\
+	SOC_DAPM_SINGLE("Voice Switch", CPCAP_REG_RXCOA,  (_shift), 1, 0),	\
+	SOC_DAPM_SINGLE("HiFi Switch",  CPCAP_REG_RXSDOA, (_shift), 1, 0),	\
+	SOC_DAPM_SINGLE("Ext Switch",   CPCAP_REG_RXEPOA, (_shift), 1, 0),	\
+}
+
+CPCAP_OUTPUT_MIXER_CONTROLS(earpiece, 0);
+CPCAP_OUTPUT_MIXER_CONTROLS(spkr_r, 1);
+CPCAP_OUTPUT_MIXER_CONTROLS(spkr_l, 2);
+CPCAP_OUTPUT_MIXER_CONTROLS(line_r, 3);
+CPCAP_OUTPUT_MIXER_CONTROLS(line_l, 4);
+CPCAP_OUTPUT_MIXER_CONTROLS(hs_r, 5);
+CPCAP_OUTPUT_MIXER_CONTROLS(hs_l, 6);
+CPCAP_OUTPUT_MIXER_CONTROLS(emu_l, 7);
+CPCAP_OUTPUT_MIXER_CONTROLS(emu_r, 8);
 
 static const struct snd_kcontrol_new cpcap_hifi_mono_mixer_controls[] = {
 	SOC_DAPM_SINGLE("HiFi Mono Playback Switch",
@@ -778,25 +668,34 @@ static const struct snd_soc_dapm_widget cpcap_dapm_widgets[] = {
 	SOC_MIXER_ARRAY("Ext Mono Right Mixer", SND_SOC_NOPM, 0, 0,
 		cpcap_ext_mono_mixer_controls),
 
-	/* Output Routes */
-	SND_SOC_DAPM_MUX("Earpiece Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_earpiece_mux),
-	SND_SOC_DAPM_MUX("Speaker Right Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_speaker_right_mux),
-	SND_SOC_DAPM_MUX("Speaker Left Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_speaker_left_mux),
-	SND_SOC_DAPM_MUX("Lineout Right Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_line_right_mux),
-	SND_SOC_DAPM_MUX("Lineout Left Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_line_left_mux),
-	SND_SOC_DAPM_MUX("Headset Right Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_hs_right_mux),
-	SND_SOC_DAPM_MUX("Headset Left Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_hs_left_mux),
-	SND_SOC_DAPM_MUX("EMU Right Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_emu_right_mux),
-	SND_SOC_DAPM_MUX("EMU Left Playback Route", SND_SOC_NOPM, 0, 0,
-		&cpcap_emu_left_mux),
+	/* Output Mixers */
+	SND_SOC_DAPM_MIXER("Earpiece Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_earpiece_mix_controls,
+			   ARRAY_SIZE(cpcap_earpiece_mix_controls)),
+	SND_SOC_DAPM_MIXER("Speaker Right Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_spkr_r_mix_controls,
+			   ARRAY_SIZE(cpcap_spkr_r_mix_controls)),
+	SND_SOC_DAPM_MIXER("Speaker Left Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_spkr_l_mix_controls,
+			   ARRAY_SIZE(cpcap_spkr_l_mix_controls)),
+	SND_SOC_DAPM_MIXER("Lineout Right Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_line_r_mix_controls,
+			   ARRAY_SIZE(cpcap_line_r_mix_controls)),
+	SND_SOC_DAPM_MIXER("Lineout Left Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_line_l_mix_controls,
+			   ARRAY_SIZE(cpcap_line_l_mix_controls)),
+	SND_SOC_DAPM_MIXER("Headset Right Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_hs_r_mix_controls,
+			   ARRAY_SIZE(cpcap_hs_r_mix_controls)),
+	SND_SOC_DAPM_MIXER("Headset Left Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_hs_l_mix_controls,
+			   ARRAY_SIZE(cpcap_hs_l_mix_controls)),
+	SND_SOC_DAPM_MIXER("EMU Left Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_emu_l_mix_controls,
+			   ARRAY_SIZE(cpcap_emu_l_mix_controls)),
+	SND_SOC_DAPM_MIXER("EMU Right Mixer", SND_SOC_NOPM, 0, 0,
+			   cpcap_emu_r_mix_controls,
+			   ARRAY_SIZE(cpcap_emu_r_mix_controls)),
 
 	/* Output Amplifier */
 	SND_SOC_DAPM_PGA("Earpiece PGA",
@@ -891,51 +790,47 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"Ext Mono Left Mixer", NULL, "Ext Left Enable"},
 	{"Ext Mono Left Mixer", "Ext Mono Playback Switch", "Ext Right Enable"},
 
-	/* HiFi Mono Mixer -> Output Route */
-	{"Earpiece Playback Route", "HiFi", "HiFi Mono Right Mixer"},
-	{"Speaker Right Playback Route", "HiFi", "HiFi Mono Right Mixer"},
-	{"Speaker Left Playback Route", "HiFi", "HiFi Mono Left Mixer"},
-	{"Lineout Right Playback Route", "HiFi", "HiFi Mono Right Mixer"},
-	{"Lineout Left Playback Route", "HiFi", "HiFi Mono Left Mixer"},
-	{"Headset Right Playback Route", "HiFi", "HiFi Mono Right Mixer"},
-	{"Headset Left Playback Route", "HiFi", "HiFi Mono Left Mixer"},
-	{"EMU Right Playback Route", "HiFi", "HiFi Mono Right Mixer"},
-	{"EMU Left Playback Route", "HiFi", "HiFi Mono Left Mixer"},
+	/* Playback sources -> Output Mixers */
+	{"Earpiece Mixer", "Voice Switch", "Voice PGA"},
+	{"Earpiece Mixer", "HiFi Switch", "HiFi Mono Right Mixer"},
+	{"Earpiece Mixer", "Ext Switch", "Ext Mono Right Mixer"},
+	{"Speaker Right Mixer", "Voice Switch", "Voice PGA"},
+	{"Speaker Right Mixer", "HiFi Switch", "HiFi Mono Right Mixer"},
+	{"Speaker Right Mixer", "Ext Switch", "Ext Mono Right Mixer"},
+	{"Speaker Left Mixer", "Voice Switch", "Voice PGA"},
+	{"Speaker Left Mixer", "HiFi Switch", "HiFi Mono Left Mixer"},
+	{"Speaker Left Mixer", "Ext Switch", "Ext Mono Left Mixer"},
+	{"Lineout Right Mixer", "Voice Switch", "Voice PGA"},
+	{"Lineout Right Mixer", "HiFi Switch", "HiFi Mono Right Mixer"},
+	{"Lineout Right Mixer", "Ext Switch", "Ext Mono Right Mixer"},
+	{"Lineout Left Mixer", "Voice Switch", "Voice PGA"},
+	{"Lineout Left Mixer", "HiFi Switch", "HiFi Mono Left Mixer"},
+	{"Lineout Left Mixer", "Ext Switch", "Ext Mono Left Mixer"},
+	{"Headset Right Mixer", "Voice Switch", "Voice PGA"},
+	{"Headset Right Mixer", "HiFi Switch", "HiFi Mono Right Mixer"},
+	{"Headset Right Mixer", "Ext Switch", "Ext Mono Right Mixer"},
+	{"Headset Left Mixer", "Voice Switch", "Voice PGA"},
+	{"Headset Left Mixer", "HiFi Switch", "HiFi Mono Left Mixer"},
+	{"Headset Left Mixer", "Ext Switch", "Ext Mono Left Mixer"},
+	{"EMU Right Mixer", "Voice Switch", "Voice PGA"},
+	{"EMU Right Mixer", "HiFi Switch", "HiFi Mono Right Mixer"},
+	{"EMU Right Mixer", "Ext Switch", "Ext Mono Right Mixer"},
+	{"EMU Left Mixer", "Voice Switch", "Voice PGA"},
+	{"EMU Left Mixer", "HiFi Switch", "HiFi Mono Left Mixer"},
+	{"EMU Left Mixer", "Ext Switch", "Ext Mono Left Mixer"},
 
-	/* Voice PGA -> Output Route */
-	{"Earpiece Playback Route", "Voice", "Voice PGA"},
-	{"Speaker Right Playback Route", "Voice", "Voice PGA"},
-	{"Speaker Left Playback Route", "Voice", "Voice PGA"},
-	{"Lineout Right Playback Route", "Voice", "Voice PGA"},
-	{"Lineout Left Playback Route", "Voice", "Voice PGA"},
-	{"Headset Right Playback Route", "Voice", "Voice PGA"},
-	{"Headset Left Playback Route", "Voice", "Voice PGA"},
-	{"EMU Right Playback Route", "Voice", "Voice PGA"},
-	{"EMU Left Playback Route", "Voice", "Voice PGA"},
-
-	/* Ext Mono Mixer -> Output Route */
-	{"Earpiece Playback Route", "Ext", "Ext Mono Right Mixer"},
-	{"Speaker Right Playback Route", "Ext", "Ext Mono Right Mixer"},
-	{"Speaker Left Playback Route", "Ext", "Ext Mono Left Mixer"},
-	{"Lineout Right Playback Route", "Ext", "Ext Mono Right Mixer"},
-	{"Lineout Left Playback Route", "Ext", "Ext Mono Left Mixer"},
-	{"Headset Right Playback Route", "Ext", "Ext Mono Right Mixer"},
-	{"Headset Left Playback Route", "Ext", "Ext Mono Left Mixer"},
-	{"EMU Right Playback Route", "Ext", "Ext Mono Right Mixer"},
-	{"EMU Left Playback Route", "Ext", "Ext Mono Left Mixer"},
-
-	/* Output Route -> Output Amplifier */
-	{"Earpiece PGA", NULL, "Earpiece Playback Route"},
-	{"Speaker Right PGA", NULL, "Speaker Right Playback Route"},
-	{"Speaker Left PGA", NULL, "Speaker Left Playback Route"},
-	{"Lineout Right PGA", NULL, "Lineout Right Playback Route"},
-	{"Lineout Left PGA", NULL, "Lineout Left Playback Route"},
+	/* Output Mixers -> Output Amplifier */
+	{"Earpiece PGA", NULL, "Earpiece Mixer"},
+	{"Speaker Right PGA", NULL, "Speaker Right Mixer"},
+	{"Speaker Left PGA", NULL, "Speaker Left Mixer"},
+	{"Lineout Right PGA", NULL, "Lineout Right Mixer"},
+	{"Lineout Left PGA", NULL, "Lineout Left Mixer"},
 	{"Lineout Speaker Amp", NULL, "Lineout Right PGA"},
 	{"Lineout Speaker Amp", NULL, "Lineout Left PGA"},
-	{"Headset Right PGA", NULL, "Headset Right Playback Route"},
-	{"Headset Left PGA", NULL, "Headset Left Playback Route"},
-	{"EMU Right PGA", NULL, "EMU Right Playback Route"},
-	{"EMU Left PGA", NULL, "EMU Left Playback Route"},
+	{"Headset Right PGA", NULL, "Headset Right Mixer"},
+	{"Headset Left PGA", NULL, "Headset Left Mixer"},
+	{"EMU Right PGA", NULL, "EMU Right Mixer"},
+	{"EMU Left PGA", NULL, "EMU Left Mixer"},
 
 	/* Output Amplifier -> Output */
 	{"EP", NULL, "Earpiece PGA"},
